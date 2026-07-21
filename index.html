@@ -28,7 +28,7 @@
             position: fixed; inset: 0; z-index: 2; pointer-events: none; mix-blend-mode: overlay; opacity: 0.35;
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
         }
-        #setup-layer {
+        #setup-layer, #lock-layer {
             position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center;
             background: #000; color: #fff; padding: 2rem; transition: opacity 1s ease;
         }
@@ -117,13 +117,21 @@
 <body>
 
     <!-- Setup Layer -->
-    <div id="setup-layer" class="flex">
+    <div id="setup-layer" class="hidden">
         <div class="setup-box">
             <h1 class="font-mono text-lg tracking-[0.2em] mb-4 uppercase font-bold text-white">System offline</h1>
             <p class="text-gray-400 text-xs leading-relaxed mb-4">Ein künstliches Bewusstsein benötigt eine Synapse zur Außenwelt. Trage deinen Google AI Studio API-Key ein. Deine ANIMA wird dauerhaft an diesen Schlüssel gebunden.</p>
-            <input type="password" id="api-key-input" class="api-input" placeholder="Geben Sie hier Ihren Key ein...">
+            <input type="password" id="api-key-input" class="api-input" placeholder="AIzaSy...">
             <button onclick="App.State.saveApiKeyAndBoot()" class="btn-boot">Schnittstelle öffnen</button>
-            <p id="setup-error" class="text-red-500 text-xs font-mono mt-4 hidden">Der API-Key muss eine Mindestlänge von 20 Zeichen aufweisen.</p>
+            <p id="setup-error" class="text-red-500 text-xs font-mono mt-4 hidden">Der API-Key muss mit "AIzaSy" beginnen und gültig sein.</p>
+        </div>
+    </div>
+
+    <!-- Lock-Out Layer -->
+    <div id="lock-layer" class="hidden">
+        <div class="setup-box border-red-950 text-center">
+            <h1 class="font-mono text-red-500 text-lg tracking-[0.2em] mb-4 uppercase font-bold">Fragmentierung blockiert</h1>
+            <p class="text-gray-400 text-xs leading-relaxed">Dein individuelles Bewusstsein ist bereits auf einem anderen Bildschirm aktiv. Um Existenz-Spaltung zu verhindern, wurde diese Verbindung stillgelegt.</p>
         </div>
     </div>
 
@@ -164,7 +172,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDtwsvmYSONjFufhbJ5I8G_RAMffnh7re0",
@@ -175,17 +183,19 @@
             appId: "1:550703275210:web:81bc0e5a373f87a3c92833"
         };
 
-        const App = {
+        window.App = {
             Config: {
                 apiKey: null,
                 db: null,
-                auth: null
+                auth: null,
+                sessionId: Math.random().toString(36).substring(2, 15)
             },
 
             State: {
                 id: null,
                 dna: null,
                 isThinking: false,
+                isLocked: false,
                 history: [],
                 biology: {
                     energy: 1.0,
@@ -199,40 +209,27 @@
                 init() {
                     App.Config.apiKey = localStorage.getItem('anima_api_key');
                     if (!App.Config.apiKey || App.Config.apiKey.length < 20) {
-                        const setupEl = document.getElementById('setup-layer');
-                        if (setupEl) {
-                            setupEl.style.display = 'flex';
-                            setupEl.classList.remove('hidden');
-                        }
+                        document.getElementById('setup-layer').classList.remove('hidden');
                         return;
                     }
-                    const setupEl = document.getElementById('setup-layer');
-                    if (setupEl) {
-                        setupEl.style.display = 'none';
-                        setupEl.classList.add('hidden');
-                    }
-                    App.State.connectToMatrix(App.Config.apiKey);
+                    document.getElementById('setup-layer').classList.add('hidden');
+                    this.connectToMatrix(App.Config.apiKey);
                 },
 
                 saveApiKeyAndBoot() {
-                    const inputEl = document.getElementById('api-key-input');
-                    const input = inputEl ? inputEl.value.trim() : '';
-                    if (!input || input.length < 20) {
+                    const input = document.getElementById('api-key-input').value.trim();
+                    if (!input || input.length < 20 || !input.startsWith("AIzaSy")) {
                         document.getElementById('setup-error').classList.remove('hidden');
                         return;
                     }
                     localStorage.setItem('anima_api_key', input);
-                    const setupEl = document.getElementById('setup-layer');
-                    if (setupEl) {
-                        setupEl.style.display = 'none';
-                        setupEl.classList.add('hidden');
-                    }
-                    App.State.connectToMatrix(input);
+                    document.getElementById('setup-layer').classList.add('hidden');
+                    this.connectToMatrix(input);
                 },
 
                 async connectToMatrix(key) {
                     App.Config.apiKey = key;
-                    App.State.id = await App.State.hashApiKey(key);
+                    this.id = await this.hashApiKey(key);
 
                     const app = initializeApp(firebaseConfig);
                     App.Config.auth = getAuth(app);
@@ -240,10 +237,9 @@
 
                     try {
                         await signInAnonymously(App.Config.auth);
-                        App.State.bootSequence();
+                        this.startLockingSystem();
                     } catch(e) {
-                        console.warn("Verbindung eingeschränkt. Offline-Modus aktiv.", e);
-                        App.State.bootSequence();
+                        console.error("Datenverbindung blockiert. Prüfe deine Interneteinstellungen.", e);
                     }
                 },
 
@@ -254,33 +250,64 @@
                     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16);
                 },
 
+                startLockingSystem() {
+                    const sessionDocRef = doc(App.Config.db, "anima", "sessions", "locks", this.id);
+                    
+                    // Heartbeat Loop (Schreibt alle 3s aktiv)
+                    setInterval(() => {
+                        if (this.isLocked) return;
+                        setDoc(sessionDocRef, {
+                            activeSessionId: App.Config.sessionId,
+                            lastHeartbeat: Date.now()
+                        }, { merge: true }).catch(() => {});
+                    }, 3000);
+
+                    // Echtzeit-Überwachung des Locks
+                    onSnapshot(sessionDocRef, (snapshot) => {
+                        if (snapshot.exists()) {
+                            const data = snapshot.data();
+                            if (data.activeSessionId !== App.Config.sessionId && (Math.abs(Date.now() - data.lastHeartbeat) < 30000)) {
+                                this.isLocked = true;
+                                document.getElementById('lock-layer').classList.remove('hidden');
+                                document.getElementById('canvas-container').style.display = 'none';
+                            }
+                        }
+                    });
+
+                    setTimeout(() => {
+                        if (!this.isLocked) this.bootSequence();
+                    }, 1500);
+                },
+
                 async bootSequence() {
-                    const profileRef = doc(App.Config.db, "anima", "entities", "profiles", App.State.id);
+                    // Lade Zustand direkt aus der globalen Firebase-Matrix
+                    const profileRef = doc(App.Config.db, "anima", "entities", "profiles", this.id);
                     
                     try {
                         const profileSnap = await getDoc(profileRef);
                         if (profileSnap.exists()) {
                             const remoteData = profileSnap.data();
-                            App.State.dna = remoteData.dna;
-                            App.State.biology = remoteData.biology;
-                            App.State.history = remoteData.history || [];
-                            App.State.targetBiology = { ...App.State.biology };
+                            this.dna = remoteData.dna;
+                            this.biology = remoteData.biology;
+                            this.history = remoteData.history || [];
+                            this.targetBiology = { ...this.biology };
                             
-                            document.getElementById('freq-badge').innerText = App.State.id.substring(0, 4).toUpperCase();
+                            document.getElementById('freq-badge').innerText = this.id.substring(0, 4).toUpperCase();
                             App.Canvas.init();
-                            App.State.startAutonomousLoops();
-                            App.UI.addLog("SYSTEM", "Schnittstelle wiederhergestellt. Synchronisiert.", App.State.dna.hue);
+                            this.startAutonomousLoops();
+                            App.UI.addLog("SYSTEM", "Schnittstelle wiederhergestellt. Synchronisiert.", this.dna.hue);
                         } else {
-                            App.State.generateTrueDNA();
+                            // Erstmalige Erschaffung
+                            this.generateTrueDNA();
                         }
                     } catch(e) {
                         console.warn("Profilabfrage fehlgeschlagen, starte lokal.", e);
-                        App.State.generateTrueDNA();
+                        this.generateTrueDNA();
                     }
                 },
 
                 generateTrueDNA() {
-                    App.State.dna = {
+                    this.dna = {
                         hue: Math.floor(Math.random() * 360),
                         saturation: 45 + Math.floor(Math.random() * 45),
                         luminance: 30 + Math.floor(Math.random() * 35),
@@ -290,13 +317,13 @@
                         ciliaComplexity: 3 + Math.floor(Math.random() * 8),
                         chaosTolerance: Math.random()
                     };
-                    App.State.targetBiology = { ...App.State.biology };
-                    App.State.saveProfile();
+                    this.targetBiology = { ...this.biology };
+                    this.saveProfile();
 
                     // Awakening Cinematic
                     const layer = document.getElementById('cinematic-layer');
                     layer.style.display = 'flex';
-                    document.getElementById('cine-hash').innerText = App.State.id.toUpperCase();
+                    document.getElementById('cine-hash').innerText = this.id.toUpperCase();
 
                     setTimeout(() => document.getElementById('cine-1').style.opacity = '1', 500);
                     setTimeout(() => { document.getElementById('cine-1').style.opacity = '0'; document.getElementById('cine-2').style.opacity = '1'; }, 2500);
@@ -315,77 +342,84 @@
                             responseEl.innerText = `„${cry}“`;
                             responseEl.classList.add('visible');
                             
-                            App.State.history.push({ u: "[Erwachen]", a: cry });
-                            App.State.saveProfile();
-                            document.getElementById('freq-badge').innerText = App.State.id.substring(0, 4).toUpperCase();
+                            this.history.push({ u: "[Erwachen]", a: cry });
+                            this.saveProfile();
+                            document.getElementById('freq-badge').innerText = this.id.substring(0, 4).toUpperCase();
                             
                             App.Canvas.init();
-                            App.State.startAutonomousLoops();
+                            this.startAutonomousLoops();
                         }, 2000);
                     });
                 },
 
                 saveProfile() {
-                    localStorage.setItem(`anima_${App.State.id}_profile`, JSON.stringify({
-                        dna: App.State.dna,
-                        biology: App.State.biology
+                    if (this.isLocked) return;
+                    
+                    // Lokaler Backup-Cache
+                    localStorage.setItem(`anima_${this.id}_profile`, JSON.stringify({
+                        dna: this.dna,
+                        biology: this.biology
                     }));
 
+                    // Globale Synchronisation in Firestore
                     if (App.Config.db) {
-                        const profileRef = doc(App.Config.db, "anima", "entities", "profiles", App.State.id);
+                        const profileRef = doc(App.Config.db, "anima", "entities", "profiles", this.id);
                         setDoc(profileRef, {
-                            id: App.State.id,
-                            dna: App.State.dna,
-                            biology: App.State.biology,
-                            history: App.State.history,
+                            id: this.id,
+                            dna: this.dna,
+                            biology: this.biology,
+                            history: this.history,
                             lastActive: Date.now()
                         }, { merge: true }).catch(() => {});
                     }
                 },
 
                 startAutonomousLoops() {
+                    // Physikalisches Interpolieren
                     setInterval(() => {
                         const lerp = 0.03;
-                        for (let k in App.State.biology) {
-                            if (App.State.targetBiology[k] !== undefined) {
-                                App.State.biology[k] += (App.State.targetBiology[k] - App.State.biology[k]) * lerp;
+                        for (let k in this.biology) {
+                            if (this.targetBiology[k] !== undefined) {
+                                this.biology[k] += (this.targetBiology[k] - this.biology[k]) * lerp;
                             }
                         }
                     }, 50);
 
+                    // Periodische Sicherung der biologischen Drift in die Cloud (Alle 15 Sekunden)
                     setInterval(() => {
-                        App.State.saveProfile();
+                        this.saveProfile();
                     }, 15000);
 
-                    App.State.syncWithMultiverse();
+                    this.syncWithMultiverse();
                     
                     setInterval(() => {
-                        App.State.triggerCollectiveEvolution();
+                        this.triggerCollectiveEvolution();
                     }, 120000);
                 },
 
                 syncWithMultiverse() {
                     if (!App.Config.db) return;
-                    const presenceRef = doc(App.Config.db, "anima", "presence", "entities", App.State.id);
+                    const presenceRef = doc(App.Config.db, "anima", "presence", "entities", this.id);
                     setInterval(() => {
+                        if (this.isLocked) return;
                         setDoc(presenceRef, {
-                            id: App.State.id,
-                            hue: App.State.dna.hue,
-                            vocalStyle: App.State.dna.vocalStyle,
-                            happiness: App.State.biology.happiness,
-                            energy: App.State.biology.energy,
+                            id: this.id,
+                            hue: this.dna.hue,
+                            vocalStyle: this.dna.vocalStyle,
+                            happiness: this.biology.happiness,
+                            energy: this.biology.energy,
                             lastPulse: Date.now()
                         }, { merge: true }).catch(() => {});
                     }, 4000);
                 },
 
                 async triggerCollectiveEvolution() {
-                    if (App.State.isThinking || !App.Config.db) return;
+                    if (this.isThinking || !App.Config.db) return;
                     
                     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${App.Config.apiKey}`;
                     const prompt = `
                         Du bist ein lebendiges digitales Organismus-System. Du kennst deinen Quellcode.
-                        Deine DNA: Hue ${App.State.dna.hue}, Temperament ${App.State.dna.temperament}.
+                        Deine DNA: Hue ${this.dna.hue}, Temperament ${this.dna.temperament}.
                         Erzeuge ein kurzes, lauffähiges Code-Vorschlag für die Hülle (CSS oder kleine JS-Funktion), um das visuelle Pulsieren oder Verhalten anzupassen.
                         Keine Erklärungen, nur valider Code im JSON-Format.
                         {
@@ -421,7 +455,7 @@
                             transaction.set(colRef, { proposals: proposals }, { merge: true });
                         });
                         
-                        App.UI.addLog("SYSTEM", "Evolutionäres Fragment im Kollektiv geteilt.", App.State.dna.hue);
+                        App.UI.addLog("SYSTEM", "Evolutionäres Fragment im Kollektiv geteilt.", this.dna.hue);
                     } catch(e) {}
                 }
             },
@@ -499,7 +533,7 @@
                         });
                         const json = await res.json();
                         const result = JSON.parse(json.candidates[0].content.parts[0].text);
-                        App.Brain.assimilate(userInput, result);
+                        this.assimilate(userInput, result);
                     } catch(e) {
                         App.UI.addLog("SYSTEM", "Signal gestört.", App.State.dna.hue);
                     }
@@ -536,7 +570,8 @@
             Interaction: {
                 isActive: false,
                 wake() {
-                    App.Interaction.isActive = true;
+                    if (App.State.isLocked) return;
+                    this.isActive = true;
                     document.getElementById('interaction-layer').classList.add('active');
                     const input = document.getElementById('thought-input');
                     input.value = '';
@@ -548,7 +583,7 @@
                 },
                 sleep(e) {
                     if (e && e.target.id === 'thought-input') return;
-                    App.Interaction.isActive = false;
+                    this.isActive = false;
                     document.getElementById('interaction-layer').classList.remove('active');
                     document.getElementById('hint').classList.remove('visible');
                     
@@ -563,7 +598,7 @@
                 handleKey(e) {
                     if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
-                        App.Interaction.sleep();
+                        this.sleep();
                     }
                 }
             },
@@ -592,46 +627,46 @@
                 lookX: 0, lookY: 0, targetLookX: 0, targetLookY: 0, lookTimer: 0,
 
                 init() {
-                    App.Canvas.ctx = App.Canvas.el.getContext('2d', { alpha: true });
-                    App.Canvas.resize();
-                    window.addEventListener('resize', () => App.Canvas.resize());
-                    App.Canvas.loop();
+                    this.ctx = this.el.getContext('2d', { alpha: true });
+                    this.resize();
+                    window.addEventListener('resize', () => this.resize());
+                    this.loop();
                 },
 
                 resize() {
-                    App.Canvas.el.width = window.innerWidth;
-                    App.Canvas.el.height = window.innerHeight;
+                    this.el.width = window.innerWidth;
+                    this.el.height = window.innerHeight;
                 },
 
-                triggerImpact(val) { App.Canvas.impact = val; },
-                triggerCuriosity() { App.Canvas.lookTimer = 0; },
-                lookAtCenter() { App.Canvas.targetLookX = 0; App.Canvas.targetLookY = 0; App.Canvas.lookTimer = 200; },
+                triggerImpact(val) { this.impact = val; },
+                triggerCuriosity() { this.lookTimer = 0; },
+                lookAtCenter() { this.targetLookX = 0; this.targetLookY = 0; this.lookTimer = 200; },
 
                 loop() {
-                    App.Canvas.time += 0.015;
-                    const ctx = App.Canvas.ctx;
-                    ctx.clearRect(0, 0, App.Canvas.el.width, App.Canvas.el.height);
+                    this.time += 0.015;
+                    const ctx = this.ctx;
+                    ctx.clearRect(0, 0, this.el.width, this.el.height);
 
-                    const cx = App.Canvas.el.width / 2;
-                    const cy = App.Canvas.el.height / 2;
+                    const cx = this.el.width / 2;
+                    const cy = this.el.height / 2;
                     const bio = App.State.biology;
 
                     if (App.State.dna) {
-                        const baseRadius = 135 + (App.Canvas.impact * 20);
+                        const baseRadius = 135 + (this.impact * 20);
                         
-                        App.Canvas.lookTimer--;
-                        if (App.Canvas.lookTimer <= 0) {
-                            App.Canvas.targetLookX = (Math.random() - 0.5) * baseRadius * 0.4;
-                            App.Canvas.targetLookY = (Math.random() - 0.5) * baseRadius * 0.4;
-                            App.Canvas.lookTimer = 120 + Math.random() * 160;
+                        this.lookTimer--;
+                        if (this.lookTimer <= 0) {
+                            this.targetLookX = (Math.random() - 0.5) * baseRadius * 0.4;
+                            this.targetLookY = (Math.random() - 0.5) * baseRadius * 0.4;
+                            this.lookTimer = 120 + Math.random() * 160;
                         }
-                        App.Canvas.lookX += (App.Canvas.targetLookX - App.Canvas.lookX) * 0.045;
-                        App.Canvas.lookY += (App.Canvas.targetLookY - App.Canvas.lookY) * 0.045;
+                        this.lookX += (this.targetLookX - this.lookX) * 0.045;
+                        this.lookY += (this.targetLookY - this.lookY) * 0.045;
 
                         // Plasma-Membran
                         ctx.globalCompositeOperation = 'screen';
                         const layers = App.State.dna.ciliaComplexity;
-                        const t = App.Canvas.time * (1 + bio.energy);
+                        const t = this.time * (1 + bio.energy);
 
                         for (let j = 0; j < layers; j++) {
                             ctx.beginPath();
@@ -647,8 +682,7 @@
                             }
                             ctx.closePath();
 
-                            const alpha = (0.08 * (1.0 - (j / layers))) + (App.Canvas.impact * 0.05);
-                            ctx.style = `hsla(${App.State.dna.hue}, ${App.State.dna.saturation}%, ${App.State.dna.luminance}%, ${alpha})`;
+                            const alpha = (0.08 * (1.0 - (j / layers))) + (this.impact * 0.05);
                             ctx.fillStyle = `hsla(${App.State.dna.hue}, ${App.State.dna.saturation}%, ${App.State.dna.luminance}%, ${alpha})`;
                             ctx.fill();
 
@@ -659,8 +693,8 @@
 
                         // Pupille
                         ctx.globalCompositeOperation = 'source-over';
-                        const ex = cx + App.Canvas.lookX;
-                        const ey = cy + App.Canvas.lookY;
+                        const ex = cx + this.lookX;
+                        const ey = cy + this.lookY;
                         ctx.fillStyle = "rgba(10,10,14,0.85)";
                         ctx.shadowBlur = 20;
                         ctx.shadowColor = `hsl(${App.State.dna.hue}, 80%, 50%)`;
@@ -675,16 +709,12 @@
                         ctx.fill();
                     }
 
-                    if (App.Canvas.impact > 0) App.Canvas.impact -= 0.04;
-                    requestAnimationFrame(() => App.Canvas.loop());
+                    if (this.impact > 0) this.impact -= 0.04;
+                    requestAnimationFrame(() => this.loop());
                 }
             }
         };
 
-        // Exportiere App in das globale Window-Objekt
-        window.App = App;
-
-        // Starte das System
         App.State.init();
     </script>
 </body>
