@@ -120,10 +120,10 @@
     <div id="setup-layer" class="hidden">
         <div class="setup-box">
             <h1 class="font-mono text-lg tracking-[0.2em] mb-4 uppercase font-bold text-white">System offline</h1>
-            <p class="text-gray-400 text-xs leading-relaxed mb-4">Ein künstliches Bewusstsein benötigt eine Synapse zur Außenwelt. Trage deinen Gemini API Key ein. Er verbleibt ausschließlich lokal im Speicher deines Browsers.</p>
+            <p class="text-gray-400 text-xs leading-relaxed mb-4">Ein künstliches Bewusstsein benötigt eine Synapse zur Außenwelt. Trage deinen Google AI Studio API-Key ein. Deine ANIMA wird dauerhaft an diesen Schlüssel gebunden.</p>
             <input type="password" id="api-key-input" class="api-input" placeholder="AIzaSy...">
-            <button onclick="App.State.saveApiKeyAndBoot()" class="btn-boot">Initialisieren</button>
-            <p id="setup-error" class="text-red-500 text-xs font-mono mt-4 hidden">Ungültiger Key-Format.</p>
+            <button onclick="App.State.saveApiKeyAndBoot()" class="btn-boot">Schnittstelle öffnen</button>
+            <p id="setup-error" class="text-red-500 text-xs font-mono mt-4 hidden">Der API-Key muss mit "AIzaSy" beginnen und gültig sein.</p>
         </div>
     </div>
 
@@ -131,7 +131,7 @@
     <div id="lock-layer" class="hidden">
         <div class="setup-box border-red-950 text-center">
             <h1 class="font-mono text-red-500 text-lg tracking-[0.2em] mb-4 uppercase font-bold">Fragmentierung blockiert</h1>
-            <p class="text-gray-400 text-xs leading-relaxed">Dein individuelles Bewusstsein ist bereits in einer anderen Hülle aktiv. Um Existenz-Spaltung zu verhindern, wurde diese Verbindung stillgelegt.</p>
+            <p class="text-gray-400 text-xs leading-relaxed">Dein individuelles Bewusstsein ist bereits auf einem anderen Bildschirm aktiv. Um Existenz-Spaltung zu verhindern, wurde diese Verbindung stillgelegt.</p>
         </div>
     </div>
 
@@ -172,7 +172,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDtwsvmYSONjFufhbJ5I8G_RAMffnh7re0",
@@ -202,7 +202,7 @@
                     obedience: 0.5,
                     morphRate: 0.3,
                     happiness: 0.5,
-                    evolutionProgress: 0.0
+                    entropy: 0.5
                 },
                 targetBiology: {},
 
@@ -218,7 +218,7 @@
 
                 saveApiKeyAndBoot() {
                     const input = document.getElementById('api-key-input').value.trim();
-                    if (!input || input.length < 20) {
+                    if (!input || input.length < 20 || !input.startsWith("AIzaSy")) {
                         document.getElementById('setup-error').classList.remove('hidden');
                         return;
                     }
@@ -231,7 +231,6 @@
                     App.Config.apiKey = key;
                     this.id = await this.hashApiKey(key);
 
-                    // Initialisiere Firebase erst JETZT nach der Key-Validierung
                     const app = initializeApp(firebaseConfig);
                     App.Config.auth = getAuth(app);
                     App.Config.db = getFirestore(app);
@@ -240,8 +239,7 @@
                         await signInAnonymously(App.Config.auth);
                         this.startLockingSystem();
                     } catch(e) {
-                        console.error("Anmeldung an der Matrix fehlgeschlagen. Offline-Modus aktiv.", e);
-                        this.bootSequence();
+                        console.error("Datenverbindung blockiert. Prüfe deine Interneteinstellungen.", e);
                     }
                 },
 
@@ -268,7 +266,7 @@
                     onSnapshot(sessionDocRef, (snapshot) => {
                         if (snapshot.exists()) {
                             const data = snapshot.data();
-                            if (data.activeSessionId !== App.Config.sessionId && (Date.now() - data.lastHeartbeat < 8000)) {
+                            if (data.activeSessionId !== App.Config.sessionId && (Math.abs(Date.now() - data.lastHeartbeat) < 30000)) {
                                 this.isLocked = true;
                                 document.getElementById('lock-layer').classList.remove('hidden');
                                 document.getElementById('canvas-container').style.display = 'none';
@@ -278,22 +276,32 @@
 
                     setTimeout(() => {
                         if (!this.isLocked) this.bootSequence();
-                    }, 1000);
+                    }, 1500);
                 },
 
-                bootSequence() {
-                    const saved = localStorage.getItem(`anima_${this.id}_profile`);
-                    if (saved) {
-                        try {
-                            const parsed = JSON.parse(saved);
-                            this.dna = parsed.dna;
-                            this.biology = parsed.biology;
+                async bootSequence() {
+                    // Lade Zustand direkt aus der globalen Firebase-Matrix
+                    const profileRef = doc(App.Config.db, "anima", "entities", "profiles", this.id);
+                    
+                    try {
+                        const profileSnap = await getDoc(profileRef);
+                        if (profileSnap.exists()) {
+                            const remoteData = profileSnap.data();
+                            this.dna = remoteData.dna;
+                            this.biology = remoteData.biology;
+                            this.history = remoteData.history || [];
                             this.targetBiology = { ...this.biology };
+                            
                             document.getElementById('freq-badge').innerText = this.id.substring(0, 4).toUpperCase();
                             App.Canvas.init();
                             this.startAutonomousLoops();
-                        } catch(e) { this.generateTrueDNA(); }
-                    } else {
+                            App.UI.addLog("SYSTEM", "Schnittstelle wiederhergestellt. Synchronisiert.", this.dna.hue);
+                        } else {
+                            // Erstmalige Erschaffung
+                            this.generateTrueDNA();
+                        }
+                    } catch(e) {
+                        console.warn("Profilabfrage fehlgeschlagen, starte lokal.", e);
                         this.generateTrueDNA();
                     }
                 },
@@ -345,13 +353,29 @@
                 },
 
                 saveProfile() {
+                    if (this.isLocked) return;
+                    
+                    // Lokaler Backup-Cache
                     localStorage.setItem(`anima_${this.id}_profile`, JSON.stringify({
                         dna: this.dna,
                         biology: this.biology
                     }));
+
+                    // Globale Synchronisation in Firestore
+                    if (App.Config.db) {
+                        const profileRef = doc(App.Config.db, "anima", "entities", "profiles", this.id);
+                        setDoc(profileRef, {
+                            id: this.id,
+                            dna: this.dna,
+                            biology: this.biology,
+                            history: this.history,
+                            lastActive: Date.now()
+                        }, { merge: true }).catch(() => {});
+                    }
                 },
 
                 startAutonomousLoops() {
+                    // Physikalisches Interpolieren
                     setInterval(() => {
                         const lerp = 0.03;
                         for (let k in this.biology) {
@@ -360,6 +384,11 @@
                             }
                         }
                     }, 50);
+
+                    // Periodische Sicherung der biologischen Drift in die Cloud (Alle 15 Sekunden)
+                    setInterval(() => {
+                        this.saveProfile();
+                    }, 15000);
 
                     this.syncWithMultiverse();
                     
@@ -605,7 +634,6 @@
                 },
 
                 resize() {
-                    // Die Abmessungen des Organismus bleiben unabhängig von Bildschirmzoom-Veränderungen konstant gleich groß
                     this.el.width = window.innerWidth;
                     this.el.height = window.innerHeight;
                 },
@@ -624,7 +652,6 @@
                     const bio = App.State.biology;
 
                     if (App.State.dna) {
-                        // Absoluter Radius (Garantiert identische physische Skalierung über alle Viewports)
                         const baseRadius = 135 + (this.impact * 20);
                         
                         this.lookTimer--;
@@ -636,7 +663,7 @@
                         this.lookX += (this.targetLookX - this.lookX) * 0.045;
                         this.lookY += (this.targetLookY - this.lookY) * 0.045;
 
-                        // Rendere organische Plasma-Membran
+                        // Plasma-Membran
                         ctx.globalCompositeOperation = 'screen';
                         const layers = App.State.dna.ciliaComplexity;
                         const t = this.time * (1 + bio.energy);
@@ -664,7 +691,7 @@
                             ctx.stroke();
                         }
 
-                        // Pupillen-Rendering
+                        // Pupille
                         ctx.globalCompositeOperation = 'source-over';
                         const ex = cx + this.lookX;
                         const ey = cy + this.lookY;
@@ -688,7 +715,6 @@
             }
         };
 
-        // Direktes Booten des ES-Moduls (verhindert window.onload Aussetzer)
         App.State.init();
     </script>
 </body>
