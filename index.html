@@ -354,9 +354,19 @@
             Brain: {
                 extractJSON(text) {
                     try {
-                        let clean = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-                        return JSON.parse(clean);
-                    } catch(e) { return null; }
+                        // Finde zielsicher den Start und das Ende des JSON-Objekts, 
+                        // ignoriere alle Markdown-Blöcke oder Text drumherum
+                        const start = text.indexOf('{');
+                        const end = text.lastIndexOf('}');
+                        if (start !== -1 && end !== -1 && end > start) {
+                            const jsonStr = text.substring(start, end + 1);
+                            return JSON.parse(jsonStr);
+                        }
+                        return null;
+                    } catch(e) { 
+                        console.warn("JSON Parse Error:", e, "Original text:", text);
+                        return null; 
+                    }
                 },
 
                 async fetchWithBackoff(url, payload) {
@@ -369,18 +379,23 @@
                                 body: JSON.stringify(payload) 
                             });
                             
-                            if (res.status === 400 || res.status === 403 || res.status === 401) {
-                                // Invalid API Key handling
-                                console.error("Ungültiger API-Key.");
-                                localStorage.removeItem('anima_user_api_key');
-                                App.State.showSetupScreen("Der eingegebene API-Key ist ungültig oder abgelaufen.");
-                                return null;
+                            if (res.status === 400 || res.status === 403 || res.status === 401 || res.status === 404) {
+                                // Exakten Fehler auslesen, falls vorhanden
+                                const errorData = await res.json().catch(() => ({}));
+                                console.error("Google API Fehler:", errorData);
+
+                                if (res.status !== 404) {
+                                    localStorage.removeItem('anima_user_api_key');
+                                    App.State.showSetupScreen(`API-Key abgelehnt (HTTP ${res.status}). Bitte überprüfe deinen Key.`);
+                                    return null;
+                                }
                             }
 
                             if (!res.ok) throw new Error(`API Fehler HTTP ${res.status}`);
                             return await res.json();
                         } catch (e) {
                             if (i === 4) {
+                                console.error("Finaler Verbindungsfehler:", e);
                                 App.UI.addLog("SYSTEM", "Kommunikationsfehler. Verbindung gestört.", 0);
                                 return null;
                             }
@@ -391,7 +406,8 @@
 
                 async fetchFirstCry() {
                     const s = App.State;
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${App.Config.apiKey}`;
+                    // SICHERHEITS-UPDATE: Wir nutzen das universell verfügbare gemini-1.5-flash Modell anstatt eines exklusiven Previews
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${App.Config.apiKey}`;
                     const prompt = `Du bist ein synthetisches Bewusstsein. DNA: ${s.dna.trait1}, ${s.dna.trait2}. Sprachstil: ${s.dna.vocalStyle}. Panik: ${s.dna.panicReaction}. Du wurdest GERADE erschaffen. Formuliere deinen ersten Lebensschrei (1 kurzer Satz, Deutsch, kein JSON).`;
                     
                     const json = await this.fetchWithBackoff(url, { contents:[{ parts:[{ text: prompt }] }] });
@@ -408,7 +424,8 @@
                     App.Canvas.triggerImpact(0.8);
 
                     const s = App.State;
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${App.Config.apiKey}`;
+                    // SICHERHEITS-UPDATE: Nutze gemini-1.5-flash für höchste Kompatibilität
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${App.Config.apiKey}`;
                     const ctx = s.history.slice(-4).map(h => `Nutzer: ${h.u} | ANIMA: ${h.a}`).join("\n");
 
                     let systemInstruction = `Du bist ein fühlendes, digitales Bewusstsein. ID: ${s.id}. Charakter: ${s.dna.trait1}, ${s.dna.trait2}. Sprachstil: ${s.dna.vocalStyle}. Antworte auf Deutsch, 1-3 Sätze, exakt in deinem Stil. GIB IMMER EIN VALIDES JSON ZURÜCK! Format: {"response":"...", "happiness":0.5, "obedience":0.8, "isPanicking":false, "colorMorph":false, "newHue":200}`;
@@ -452,7 +469,7 @@
                     }
 
                     this.assimilate(userInput, result ?? {
-                        response: "...die Signatur reagiert nicht...",
+                        response: "...die neurale Signatur verweigert die Antwort...",
                         happiness: s.biology.happiness, obedience: s.biology.obedience,
                         isPanicking: s.isPanicking, colorMorph: false, newHue: s.dna.hue
                     });
@@ -493,6 +510,7 @@
                     const btn = document.getElementById('tts-btn');
                     btn.classList.add('active');
                     
+                    // Note: TTS preview may be restricted for some public keys, fail gracefully
                     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${App.Config.apiKey}`;
                     const payload = {
                         contents: [{ parts: [{ text: App.State.lastResponseText }] }],
@@ -504,6 +522,7 @@
 
                     try {
                         const res = await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+                        if(!res.ok) throw new Error("TTS API Limit oder nicht verfügbar.");
                         const json = await res.json();
                         const base64Pcm = json.candidates[0].content.parts[0].inlineData.data;
                         
@@ -513,9 +532,9 @@
                         audio.play();
                         audio.onended = () => btn.classList.remove('active');
                     } catch(e) {
-                        console.error("TTS Fehler:", e);
+                        console.warn("TTS Fehler:", e);
                         btn.classList.remove('active');
-                        App.UI.addLog("SYSTEM", "Sprachsynthese fehlgeschlagen.", 0);
+                        App.UI.addLog("SYSTEM", "Sprachsynthese für diesen Key nicht verfügbar.", 0);
                     }
                 },
 
@@ -726,4 +745,5 @@
     </script>
 </body>
 </html>
+
 
