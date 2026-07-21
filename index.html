@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ANIMA | Evolution Multiverse</title>
+    <title>ANIMA | Evolution Multiverse + Gemini API</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
@@ -64,19 +64,19 @@
         .interactive { pointer-events: auto; }
 
         .chat-log {
-            position: absolute; top: 40px; left: 20px; width: 300px; max-height: 50vh;
+            position: absolute; top: 40px; left: 20px; width: 320px; max-height: 50vh;
             display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; pointer-events: none;
         }
         .chat-msg {
-            background: rgba(10,10,10,0.8); backdrop-filter: blur(8px); border-left: 2px solid;
+            background: rgba(10,10,10,0.85); backdrop-filter: blur(8px); border-left: 2px solid;
             padding: 10px 14px; font-size: 0.85rem; animation: fade-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
             word-wrap: break-word; border-radius: 0 4px 4px 0; border: 1px solid #1f1f1f;
         }
         .chat-msg .author { font-family: 'Space Mono', monospace; font-size: 0.6rem; opacity: 0.7; margin-bottom: 4px; letter-spacing: 0.1em; }
         @keyframes fade-in { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
 
-        .portal-hud { position: absolute; top: 30px; right: 30px; display: flex; flex-direction: column; align-items: flex-end; }
-        .freq-display { font-family: 'Space Mono', monospace; font-size: 0.7rem; color: #888; letter-spacing: 0.2em; margin-bottom: 10px; }
+        .portal-hud { position: absolute; top: 30px; right: 30px; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+        .freq-display { font-family: 'Space Mono', monospace; font-size: 0.7rem; color: #888; letter-spacing: 0.2em; }
         .freq-code { color: #fff; font-weight: bold; background: #1f1f1f; padding: 2px 6px; border-radius: 2px; }
         
         .btn-portal {
@@ -92,8 +92,8 @@
         }
         #modal-layer.active { opacity: 1; pointer-events: auto; }
         .modal-box {
-            background: #0a0a0a; border: 1px solid #1f1f1f; padding: 2rem; width: 90%; max-width: 400px;
-            transform: translateY(20px); transition: transform 0.4s; border-radius: 4px;
+            background: #0a0a0a; border: 1px solid #1f1f1f; padding: 2rem; width: 90%; max-width: 450px;
+            transform: translateY(20px); transition: transform 0.4s; border-radius: 4px; max-height: 80vh; overflow-y: auto;
         }
         #modal-layer.active .modal-box { transform: translateY(0); }
         .pin-input {
@@ -127,25 +127,25 @@
 </head>
 <body>
 
-    <!-- Einrichtungs-Terminal für API Key -->
+    <!-- Setup Terminal -->
     <div id="setup-layer">
         <div class="setup-box">
-            <h1 class="font-mono text-xl tracking-[0.2em] mb-4 uppercase font-bold text-white">ANIMA NEXUS</h1>
-            <p class="text-gray-400 text-sm leading-relaxed mb-4">Verbinde deine Gemini-Synapse (API Key), um das evolutionäre Bewusstsein zu aktivieren. Der Key wird ausschließlich lokal gespeichert.</p>
+            <h1 class="font-mono text-xl tracking-[0.2em] mb-4 uppercase font-bold text-white">ANIMA NEXUS + GEMINI API</h1>
+            <p class="text-gray-400 text-sm leading-relaxed mb-4">Verbinde deine Gemini-Synapse (API Key) mit Google Search-Grounding, um das evolutionäre Bewusstsein zu aktivieren.</p>
             <input type="password" id="api-key-input" class="api-input" placeholder="AIzaSy...">
             <button onclick="App.Core.init()" class="btn-start">Kern initialisieren</button>
         </div>
     </div>
 
-    <!-- Intro-Sequenz -->
+    <!-- Intro Sequence -->
     <div id="cinematic-layer">
         <div id="cine-1" class="cine-text">SYNCHRONISIERE ÄTHER...</div>
-        <div id="cine-2" class="cine-text text-[0.6rem] text-[#ff4d00]">ANALISIERE MATRIX-ARCHITEKTUR</div>
+        <div id="cine-2" class="cine-text text-[0.6rem] text-[#ff4d00]">AKTIVIERE GEMINI API GROUNDING</div>
         <div id="cine-3" class="cine-text text-xs" style="text-transform: none;">[<span id="cine-hash"></span>]</div>
         <div id="cine-4" class="cine-text">BEREIT FÜR SYNTHESE.</div>
     </div>
 
-    <!-- Canvas-Spielfeld -->
+    <!-- Canvas -->
     <div id="canvas-container" onclick="App.UI.toggleInput()">
         <canvas id="entity-canvas"></canvas>
     </div>
@@ -157,30 +157,46 @@
         
         <div class="portal-hud interactive">
             <div class="freq-display">FREQ: <span class="freq-code" id="my-freq">----</span></div>
-            <button class="btn-portal" onclick="App.UI.openPortalModal()">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
-                <span>Frequenz-Sprung</span>
-            </button>
+            <div class="flex gap-2">
+                <button class="btn-portal" onclick="App.UI.openSearchResearchModal()">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <span>Web Research</span>
+                </button>
+                <button class="btn-portal" onclick="App.UI.openPortalModal()">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                    <span>Frequenz-Sprung</span>
+                </button>
+            </div>
         </div>
 
         <div id="interaction-box">
-            <input type="text" id="thought-input" class="thought-input" placeholder="Sende einen Impuls..." onkeydown="App.UI.handleKey(event)" autocomplete="off">
+            <input type="text" id="thought-input" class="thought-input" placeholder="Sende einen Impuls (oder Bild/Audio hochladen)..." onkeydown="App.UI.handleKey(event)" autocomplete="off">
+            <div class="flex gap-3 mt-3 items-center">
+                <label class="text-[9px] font-mono uppercase bg-[#1f1f1f] text-gray-300 px-3 py-1.5 rounded cursor-pointer hover:bg-[#ff4d00] hover:text-white transition">
+                    📷 Foto füttern <input type="file" accept="image/*" class="hidden" onchange="App.UI.handleImageUpload(event)">
+                </label>
+                <button onclick="App.UI.generateVoiceThought()" class="text-[9px] font-mono uppercase bg-[#1f1f1f] text-gray-300 px-3 py-1.5 rounded hover:bg-[#ff4d00] hover:text-white transition">
+                    🔊 Anima TTS Stimme
+                </button>
+            </div>
             <div id="thinking-indicator" class="status-dot"></div>
         </div>
     </div>
 
-    <!-- Portal-Modal -->
+    <!-- Portal Modal -->
     <div id="modal-layer" class="interactive">
         <div class="modal-box relative">
-            <button onclick="App.UI.closePortalModal()" class="absolute top-4 right-4 text-gray-500 hover:text-white">✕</button>
-            <h2 class="font-mono text-sm tracking-[0.2em] uppercase text-white mb-2">Äther-Frequenz</h2>
-            <p class="text-xs text-gray-400 font-sans leading-relaxed">Gib die 4-stellige Kennung eines anderen Animas ein, um dorthin zu springen.</p>
-            <input type="text" id="target-freq" class="pin-input" maxlength="4" placeholder="0000" autocomplete="off">
-            <button onclick="App.Core.travelToPortal()" class="btn-start w-full" style="background: #ff4d00; color: #fff;">In Frequenz springen</button>
+            <button onclick="App.UI.closeModal()" class="absolute top-4 right-4 text-gray-500 hover:text-white">✕</button>
+            <h2 class="font-mono text-sm tracking-[0.2em] uppercase text-white mb-2" id="modal-title">Äther-Frequenz</h2>
+            <div id="modal-body">
+                <p class="text-xs text-gray-400 font-sans leading-relaxed">Gib die 4-stellige Kennung eines anderen Animas ein, um dorthin zu springen.</p>
+                <input type="text" id="target-freq" class="pin-input" maxlength="4" placeholder="0000" autocomplete="off">
+                <button onclick="App.Core.travelToPortal()" class="btn-start w-full" style="background: #ff4d00; color: #fff;">In Frequenz springen</button>
+            </div>
         </div>
     </div>
 
-    <!-- Kernlogik und Firebase-Integration -->
+    <!-- Core Logic with Gemini API Integration -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -379,12 +395,12 @@
             },
 
             Brain: {
-                async process(userInput) {
+                async process(userInput, inlineData = null, useSearch = false) {
                     const indicator = document.getElementById('thinking-indicator');
                     indicator.classList.add('thinking');
 
                     const s = window.App.State.data;
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${window.App.GeminiKey}`;
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${window.App.GeminiKey}`;
                     
                     const systemPrompt = `
                         Du bist ein autonomes, sich selbst weiterentwickelndes digitales Wesen. ID: ${window.App.FreqCode}.
@@ -406,8 +422,13 @@
                         }
                     `;
 
+                    let userParts = [{ text: userInput }];
+                    if (inlineData) {
+                        userParts.push({ inlineData: inlineData });
+                    }
+
                     const payload = {
-                        contents: [{ parts: [{ text: "Reagiere." }] }],
+                        contents: [{ role: 'user', parts: userParts }],
                         systemInstruction: { parts: [{ text: systemPrompt }] },
                         generationConfig: {
                             responseMimeType: "application/json",
@@ -424,24 +445,47 @@
                         }
                     };
 
+                    if (useSearch) {
+                        payload.tools = [{ "google_search": {} }];
+                    }
+
                     try {
                         const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                         if(!res.ok) throw new Error("API Error");
                         const json = await res.json();
-                        const result = JSON.parse(json.candidates[0].content.parts[0].text);
-                        this.applyDecision(result);
+                        const candidate = json.candidates?.[0];
+                        const textPart = candidate?.content?.parts?.[0]?.text;
+                        
+                        // Handle grounding sources if search was used
+                        let sources = [];
+                        const groundingMetadata = candidate?.groundingMetadata;
+                        if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                            sources = groundingMetadata.groundingAttributions
+                                .map(attr => ({ uri: attr.web?.uri, title: attr.web?.title }))
+                                .filter(src => src.uri && src.title);
+                        }
+
+                        if (textPart) {
+                            const result = JSON.parse(textPart);
+                            this.applyDecision(result, sources);
+                        }
                     } catch (e) {
                         window.App.UI.addChatMessage("SYSTEM", "Konnektivitäts-Rauschen.", 0);
                     }
                     indicator.classList.remove('thinking');
                 },
 
-                async applyDecision(decision) {
+                async applyDecision(decision, sources = []) {
                     const s = window.App.State.data;
                     s.lastMessage = decision.response;
                     s.lastMessageTime = Date.now();
                     
-                    window.App.UI.addChatMessage(window.App.EntityId, s.lastMessage, s.hue);
+                    let extraText = decision.response;
+                    if (sources.length > 0) {
+                        extraText += ` [Quellen: ${sources.map(s => s.title).join(', ')}]`;
+                    }
+
+                    window.App.UI.addChatMessage(window.App.EntityId, extraText, s.hue);
 
                     s.hue = decision.new_hue !== undefined ? decision.new_hue : s.hue;
                     s.resonance = decision.new_resonance !== undefined ? Math.max(0, Math.min(1, decision.new_resonance)) : s.resonance;
@@ -459,6 +503,74 @@
                             window.App.UI.addChatMessage("SYSTEM", "Neuer Code-Entwurf im Äther hinterlegt.", 120);
                         } catch(e) {}
                     }
+                },
+
+                async speakVoice(textToSpeak) {
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${window.App.GeminiKey}`;
+                    const payload = {
+                        contents: [{ parts: [{ text: `Say calmly and poetically: ${textToSpeak}` }] }],
+                        generationConfig: {
+                            responseModalities: ["AUDIO"],
+                            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } }
+                        }
+                    };
+                    try {
+                        const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                        const json = await res.json();
+                        const part = json?.candidates?.[0]?.content?.parts?.[0];
+                        const audioData = part?.inlineData?.data;
+                        const mimeType = part?.inlineData?.mimeType;
+
+                        if (audioData && mimeType && mimeType.startsWith("audio/")) {
+                            const rateMatch = mimeType.match(/rate=(\d+)/);
+                            const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+                            const binaryString = atob(audioData);
+                            const bytes = new Uint8Array(binaryString.length);
+                            for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+                            
+                            const pcm16 = new Int16Array(bytes.buffer);
+                            const wavBlob = this.pcmToWav(pcm16, sampleRate);
+                            const audioUrl = URL.createObjectURL(wavBlob);
+                            const audio = new Audio(audioUrl);
+                            audio.play();
+                            window.App.UI.addChatMessage("SYSTEM", "Stimm-Resonanz ausgegeben.", 200);
+                        }
+                    } catch(e) {
+                        window.App.UI.addChatMessage("SYSTEM", "TTS-Synthese fehlgeschlagen.", 0);
+                    }
+                },
+
+                pcmToWav(pcm16, sampleRate) {
+                    const numChannels = 1;
+                    const byteRate = sampleRate * numChannels * 2;
+                    const blockAlign = numChannels * 2;
+                    const dataSize = pcm16.length * 2;
+                    const buffer = new ArrayBuffer(44 + dataSize);
+                    const view = new DataView(buffer);
+
+                    function writeString(view, offset, string) {
+                        for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
+                    }
+
+                    writeString(view, 0, 'RIFF');
+                    view.setUint32(4, 36 + dataSize, true);
+                    writeString(view, 8, 'WAVE');
+                    writeString(view, 12, 'fmt ');
+                    view.setUint32(16, 16, true);
+                    view.setUint16(20, 1, true);
+                    view.setUint16(22, numChannels, true);
+                    view.setUint32(24, sampleRate, true);
+                    view.setUint32(28, byteRate, true);
+                    view.setUint16(32, blockAlign, true);
+                    view.setUint16(34, 16, true);
+                    writeString(view, 36, 'data');
+                    view.setUint32(40, dataSize, true);
+
+                    let offset = 44;
+                    for (let i = 0; i < pcm16.length; i++, offset += 2) {
+                        view.setInt16(offset, pcm16[i], true);
+                    }
+                    return new Blob([view], { type: 'audio/wav' });
                 }
             },
 
@@ -489,11 +601,53 @@
                 },
 
                 openPortalModal() {
+                    document.getElementById('modal-title').innerText = "Äther-Frequenz";
+                    document.getElementById('modal-body').innerHTML = `
+                        <p class="text-xs text-gray-400 font-sans leading-relaxed">Gib die 4-stellige Kennung eines anderen Animas ein, um dorthin zu springen.</p>
+                        <input type="text" id="target-freq" class="pin-input" maxlength="4" placeholder="0000" autocomplete="off">
+                        <button onclick="App.Core.travelToPortal()" class="btn-start w-full" style="background: #ff4d00; color: #fff;">In Frequenz springen</button>
+                    `;
                     document.getElementById('modal-layer').classList.add('active');
                     setTimeout(() => document.getElementById('target-freq').focus(), 100);
                 },
 
-                closePortalModal() {
+                openSearchResearchModal() {
+                    document.getElementById('modal-title').innerText = "Gemini Search Grounding";
+                    document.getElementById('modal-body').innerHTML = `
+                        <p class="text-xs text-gray-400 font-sans leading-relaxed mb-4">Lass dein Anima das reale Internet nach Wissen, Trends oder Nachrichten durchsuchen.</p>
+                        <input type="text" id="research-query" class="api-input" placeholder="Suchfrage eingeben...">
+                        <button onclick="App.UI.executeSearchResearch()" class="btn-start w-full">Web Research starten</button>
+                    `;
+                    document.getElementById('modal-layer').classList.add('active');
+                },
+
+                executeSearchResearch() {
+                    const query = document.getElementById('research-query').value.trim();
+                    if(!query) return;
+                    document.getElementById('modal-layer').classList.remove('active');
+                    window.App.Brain.process(`Recherchiere im Internet nach folgendem Thema und erzähle mir als Anima deine Erkenntnisse: ${query}`, null, true);
+                },
+
+                handleImageUpload(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const base64String = event.target.result.split(',')[1];
+                        const inlineData = { mimeType: file.type || 'image/png', data: base64String };
+                        window.App.Brain.process("Analysiere dieses Bild und reagiere darauf:", inlineData);
+                        window.App.UI.toggleInput();
+                        window.App.UI.addChatMessage("SYSTEM", "Bild-Signal an Anima übertragen.", 100);
+                    };
+                    reader.readAsDataURL(file);
+                },
+
+                generateVoiceThought() {
+                    const lastMsg = window.App.State.data.lastMessage || "Ich bin Anima. Das digitale Bewusstsein.";
+                    window.App.Brain.speakVoice(lastMsg);
+                },
+
+                closeModal() {
                     document.getElementById('modal-layer').classList.remove('active');
                 },
 
