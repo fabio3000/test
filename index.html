@@ -28,7 +28,7 @@
             position: fixed; inset: 0; z-index: 2; pointer-events: none; mix-blend-mode: overlay; opacity: 0.35;
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
         }
-        #setup-layer, #lock-layer {
+        #setup-layer {
             position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center;
             background: #000; color: #fff; padding: 2rem; transition: opacity 1s ease;
         }
@@ -127,14 +127,6 @@
         </div>
     </div>
 
-    <!-- Lock-Out Layer -->
-    <div id="lock-layer" class="hidden">
-        <div class="setup-box border-red-950 text-center">
-            <h1 class="font-mono text-red-500 text-lg tracking-[0.2em] mb-4 uppercase font-bold">Fragmentierung blockiert</h1>
-            <p class="text-gray-400 text-xs leading-relaxed">Dein individuelles Bewusstsein ist bereits auf einem anderen Bildschirm aktiv. Um Existenz-Spaltung zu verhindern, wurde diese Verbindung stillgelegt.</p>
-        </div>
-    </div>
-
     <!-- Cinematic Awakening -->
     <div id="cinematic-layer">
         <div id="cine-1" class="cine-text">SYNTHETISCHER IMPULS ERZEUGT</div>
@@ -168,11 +160,11 @@
         <div id="hint" class="hint-text">Tippe ins Leere, um der Präsenz Raum zu geben</div>
     </div>
 
-<!-- Firebase & Kernlogik -->
+    <!-- Firebase & Kernlogik -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDtwsvmYSONjFufhbJ5I8G_RAMffnh7re0",
@@ -183,26 +175,17 @@
             appId: "1:550703275210:web:81bc0e5a373f87a3c92833"
         };
 
-        // Konsistente Sitzungs-ID über Seiten-Refreshes im selben Tab hinweg sichern
-        let currentSessionId = sessionStorage.getItem('anima_session_id');
-        if (!currentSessionId) {
-            currentSessionId = Math.random().toString(36).substring(2, 15);
-            sessionStorage.setItem('anima_session_id', currentSessionId);
-        }
-
         window.App = {
             Config: {
                 apiKey: null,
                 db: null,
-                auth: null,
-                sessionId: currentSessionId
+                auth: null
             },
 
             State: {
                 id: null,
                 dna: null,
                 isThinking: false,
-                isLocked: false,
                 history: [],
                 biology: {
                     energy: 1.0,
@@ -244,9 +227,10 @@
 
                     try {
                         await signInAnonymously(App.Config.auth);
-                        await this.startLockingSystem();
+                        // Sperrsystem komplett übersprungen -> Direkt zur Bootsequenz
+                        this.bootSequence();
                     } catch(e) {
-                        console.error("Datenverbindung fehlgeschlagen.", e);
+                        console.warn("Verbindung eingeschränkt. Starte lokalen Offline-Modus.", e);
                         this.bootSequence();
                     }
                 },
@@ -256,58 +240,6 @@
                     const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
                     const hashArray = Array.from(new Uint8Array(hashBuffer));
                     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16);
-                },
-
-                async startLockingSystem() {
-                    const sessionDocRef = doc(App.Config.db, "anima", "sessions", "locks", this.id);
-                    
-                    try {
-                        const snap = await getDoc(sessionDocRef);
-                        if (snap.exists()) {
-                            const data = snap.data();
-                            // Nur sperren, wenn der aufgezeichnete Heartbeat weniger als 12 Sekunden her ist
-                            // und von einer tatsächlich anderen Tab-Sitzung stammt
-                            if (data.activeSessionId !== App.Config.sessionId && (Date.now() - data.lastHeartbeat < 12000)) {
-                                this.isLocked = true;
-                                document.getElementById('lock-layer').classList.remove('hidden');
-                                document.getElementById('canvas-container').style.display = 'none';
-                                return;
-                            }
-                        }
-
-                        // Setze den initialen Heartbeat sofort ab
-                        await setDoc(sessionDocRef, {
-                            activeSessionId: App.Config.sessionId,
-                            lastHeartbeat: Date.now()
-                        }, { merge: true });
-
-                        // Regelmäßiger Heartbeat alle 3 Sekunden
-                        setInterval(() => {
-                            if (this.isLocked) return;
-                            setDoc(sessionDocRef, {
-                                activeSessionId: App.Config.sessionId,
-                                lastHeartbeat: Date.now()
-                            }, { merge: true }).catch(() => {});
-                        }, 3000);
-
-                        // Erst jetzt die Echtzeit-Änderungsüberwachung starten
-                        onSnapshot(sessionDocRef, (snapshot) => {
-                            if (snapshot.exists()) {
-                                const data = snapshot.data();
-                                if (data.activeSessionId !== App.Config.sessionId && (Date.now() - data.lastHeartbeat < 12000)) {
-                                    this.isLocked = true;
-                                    document.getElementById('lock-layer').classList.remove('hidden');
-                                    document.getElementById('canvas-container').style.display = 'none';
-                                }
-                            }
-                        });
-
-                        this.bootSequence();
-
-                    } catch(e) {
-                        console.warn("Konfliktprüfung konnte nicht abgeschlossen werden. Notfall-Start.", e);
-                        this.bootSequence();
-                    }
                 },
 
                 async bootSequence() {
@@ -382,8 +314,6 @@
                 },
 
                 saveProfile() {
-                    if (this.isLocked) return;
-                    
                     localStorage.setItem(`anima_${this.id}_profile`, JSON.stringify({
                         dna: this.dna,
                         biology: this.biology
@@ -426,7 +356,6 @@
                     if (!App.Config.db) return;
                     const presenceRef = doc(App.Config.db, "anima", "presence", "entities", this.id);
                     setInterval(() => {
-                        if (this.isLocked) return;
                         setDoc(presenceRef, {
                             id: this.id,
                             hue: this.dna.hue,
@@ -595,7 +524,6 @@
             Interaction: {
                 isActive: false,
                 wake() {
-                    if (App.State.isLocked) return;
                     this.isActive = true;
                     document.getElementById('interaction-layer').classList.add('active');
                     const input = document.getElementById('thought-input');
