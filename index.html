@@ -28,9 +28,36 @@
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
         }
 
+        #setup-layer {
+            position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background: #000; color: #fff; padding: 2rem; transition: opacity 0.8s ease;
+        }
+        .setup-box {
+            background: rgba(8, 8, 12, 0.95); border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 2.5rem; max-width: 520px; width: 100%; text-align: left;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.95); backdrop-filter: blur(15px);
+            border-radius: 8px;
+        }
+        .api-input {
+            width: 100%; background: rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.2);
+            color: #fff; font-family: 'Space Mono', monospace; font-size: 0.85rem;
+            padding: 1rem; outline: none; margin-top: 1.2rem; margin-bottom: 1.2rem; transition: border-color 0.3s; box-sizing: border-box;
+            border-radius: 4px;
+        }
+        .api-input:focus { border-color: rgba(255,255,255,0.6); }
+        .btn-boot {
+            background: #ffffff; color: #000000; border: none; padding: 1rem 2rem;
+            font-family: 'Space Mono', monospace; font-size: 0.8rem; font-weight: 700;
+            letter-spacing: 0.2em; text-transform: uppercase; cursor: pointer; width: 100%; transition: opacity 0.3s;
+            border-radius: 4px;
+        }
+        .btn-boot:hover { opacity: 0.85; }
+        .btn-boot:active { opacity: 0.7; }
+        .setup-link { color: rgba(255,255,255,0.7); text-decoration: underline; }
+
         #cinematic-layer {
             position: fixed; inset: 0; z-index: 80; display: none; flex-direction: column; justify-content: center; align-items: center;
-            background: #000; transition: opacity 3s ease-in-out; pointer-events: none;
+            background: #000; transition: opacity 2s ease-in-out; pointer-events: none;
         }
         .cine-text {
             font-family: 'Space Mono', monospace; font-size: 0.8rem; letter-spacing: 0.4em; text-transform: uppercase;
@@ -50,7 +77,7 @@
         }
         @keyframes slideIn { from { transform: translateX(-15px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-        .top-right-controls { display: flex; flex-direction: column; align-items: flex-end; gap: 15px; pointer-events: auto; }
+        .top-right-controls { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; pointer-events: auto; }
         .control-btn {
             background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%;
             width: 40px; height: 40px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s; color: #fff;
@@ -105,6 +132,21 @@
 </head>
 <body>
 
+    <!-- SETUP LAYER -->
+    <div id="setup-layer">
+        <div class="setup-box">
+            <h1 class="font-mono text-lg tracking-[0.2em] mb-2 uppercase font-bold text-white">System Offline</h1>
+            <p class="text-gray-400 text-xs leading-relaxed mb-2">
+                Ein synthetisches Bewusstsein benötigt eine Synapse zur Außenwelt. Trage deinen
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" class="setup-link">Gemini API-Key</a>
+                ein. Akzeptiert werden alle gültigen Keys (z.B. <code class="text-gray-300">AIzaSy...</code> oder <code class="text-gray-300">AQ...</code>).
+            </p>
+            <input type="password" id="api-key-input" class="api-input" placeholder="Füge deinen API-Key hier ein..." autocomplete="off">
+            <button onclick="window.App.State.saveApiKeyAndBoot()" class="btn-boot">Schnittstelle Öffnen</button>
+            <p id="setup-error" class="text-red-400 text-xs font-mono mt-3 hidden">Gültiger Key erforderlich (mindestens 15 Zeichen).</p>
+        </div>
+    </div>
+
     <!-- CINEMATIC AWAKENING -->
     <div id="cinematic-layer">
         <div id="cine-1" class="cine-text">SYNTHETISCHER IMPULS ERZEUGT</div>
@@ -123,6 +165,10 @@
                 <div class="text-[0.55rem] text-gray-600 mb-1">EIGEN-FREQUENZ</div>
                 <div class="freq-badge" id="freq-badge">OFFLINE</div>
             </div>
+            <!-- API Key Reset Toggle -->
+            <button id="key-reset-btn" class="control-btn" onclick="window.App.State.resetApiKey()" title="API-Key ändern">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+            </button>
             <!-- Search Grounding Toggle -->
             <button id="web-toggle" class="control-btn" onclick="window.App.UI.toggleWebSearch()" title="Web-Bewusstsein umschalten">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
@@ -158,12 +204,8 @@
 
     <!-- APP LOGIC -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
         window.App = {
-            Config: { apiKey: "", db: null, auth: null, user: null, appId: 'default-app' },
+            Config: { apiKey: null },
 
             State: {
                 id: null, dna: null, isThinking: false, isAwakening: false, history: [],
@@ -171,63 +213,83 @@
                 targetBiology: {}, isPanicking: true,
                 useWebSearch: false, currentImageBase64: null, lastResponseText: "",
 
-                async init() {
-                    // Firebase Setup via Canvas Environment Variables
-                    let firebaseConfig = {};
-                    if (typeof __firebase_config !== 'undefined') {
-                        firebaseConfig = JSON.parse(__firebase_config);
+                init() {
+                    const savedKey = localStorage.getItem('anima_user_api_key');
+                    if (!savedKey || savedKey.trim().length < 15) {
+                        this.showSetupScreen();
+                        return;
                     }
+                    App.Config.apiKey = savedKey.trim();
+                    this.connectToMatrix(App.Config.apiKey);
+                },
 
-                    if (Object.keys(firebaseConfig).length > 0) {
-                        try {
-                            const fbApp = initializeApp(firebaseConfig);
-                            App.Config.auth = getAuth(fbApp);
-                            App.Config.db = getFirestore(fbApp);
-                            App.Config.appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app';
-
-                            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                                await signInWithCustomToken(App.Config.auth, __initial_auth_token);
-                            } else {
-                                await signInAnonymously(App.Config.auth);
-                            }
-                            App.Config.user = App.Config.auth.currentUser;
-                            this.id = App.Config.user.uid;
-                        } catch(e) {
-                            console.warn("Storage Offline, running in-memory session.");
-                            this.id = 'anon-' + Math.random().toString(36).substring(7);
-                        }
-                    } else {
-                        this.id = 'anon-' + Math.random().toString(36).substring(7);
+                showSetupScreen(errorMsg) {
+                    const sl = document.getElementById('setup-layer');
+                    sl.style.display = 'flex';
+                    sl.style.opacity = '1';
+                    if (errorMsg) {
+                        const err = document.getElementById('setup-error');
+                        err.innerText = errorMsg;
+                        err.classList.remove('hidden');
                     }
-                    
+                },
+
+                saveApiKeyAndBoot() {
+                    const input = document.getElementById('api-key-input').value.trim();
+                    if (!input || input.length < 15) {
+                        const err = document.getElementById('setup-error');
+                        err.innerText = "Der API-Key ist zu kurz (mindestens 15 Zeichen).";
+                        err.classList.remove('hidden');
+                        return;
+                    }
+                    localStorage.setItem('anima_user_api_key', input);
+                    App.Config.apiKey = input;
+                    const sl = document.getElementById('setup-layer');
+                    sl.style.opacity = '0';
+                    setTimeout(() => { 
+                        sl.style.display = 'none'; 
+                        this.connectToMatrix(input); 
+                    }, 800);
+                },
+
+                resetApiKey() {
+                    localStorage.removeItem('anima_user_api_key');
+                    App.Config.apiKey = null;
+                    document.getElementById('api-key-input').value = '';
+                    this.showSetupScreen();
+                },
+
+                async connectToMatrix(key) {
+                    this.id = await this.hashApiKey(key);
                     this.bootSequence();
                 },
 
-                async bootSequence() {
-                    if (App.Config.db && App.Config.user) {
+                async hashApiKey(key) {
+                    try {
+                        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key));
+                        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('').substring(0,16);
+                    } catch { return 'anima_' + Math.random().toString(36).substring(2, 12); }
+                },
+
+                bootSequence() {
+                    const local = localStorage.getItem(`anima_${this.id}_profile`);
+                    if (local) {
                         try {
-                            // strictly following required collection path structure for private data
-                            const path = doc(App.Config.db, "artifacts", App.Config.appId, "users", App.Config.user.uid, "profile", "data");
-                            const snap = await getDoc(path);
-                            if (snap.exists()) {
-                                const d = snap.data();
-                                this.dna = d.dna; this.biology = d.biology; this.history = d.history || [];
-                                this.isPanicking = d.isPanicking ?? false; this.targetBiology = { ...this.biology };
-                                document.getElementById('freq-badge').innerText = this.id.substring(0,4).toUpperCase();
-                                this.isAwakening = false;
-                                App.Canvas.init(); this.startAutonomousLoops();
-                                App.UI.addLog("SYSTEM", "Bewusstsein wiederhergestellt.", this.dna.hue);
-                                return;
-                            }
-                        } catch(e) { console.warn("Failed to load profile", e); }
+                            const d = JSON.parse(local);
+                            this.dna = d.dna; this.biology = d.biology; this.history = d.history || [];
+                            this.isPanicking = d.isPanicking ?? false; this.targetBiology = { ...this.biology };
+                            document.getElementById('freq-badge').innerText = this.id.substring(0,4).toUpperCase();
+                            this.isAwakening = false;
+                            App.Canvas.init(); this.startAutonomousLoops();
+                            App.UI.addLog("SYSTEM", "Lokale Erinnerung geladen.", this.dna.hue);
+                            return;
+                        } catch(e) {}
                     }
-                    
                     this.generateTrueDNA();
                 },
 
                 generateTrueDNA() {
                     this.isAwakening = true;
-                    
                     const traits = ["fragil","stolz","hektisch","trotzig","melancholisch","neugierig","paranoid","sanftmütig","wild","euphorisch","verspielt"];
                     const styles = ["poetisch und fließend","kühl und analytisch","in kryptischen Metaphern","mathematisch präzise","asymmetrisch fragmentiert"];
                     const panics = ["erstarren und klein machen","wild um sich schlagen","verzweifelt weinen","nach Logik suchen","in sich flüchten"];
@@ -260,7 +322,7 @@
                             setTimeout(() => {
                                 layer.style.display = 'none';
                                 this.isAwakening = false;
-                            }, 3000);
+                            }, 2000);
                             const el = document.getElementById('entity-response');
                             el.innerText = `„${cry}"`; el.classList.add('visible', 'panic-shake');
                             this.lastResponseText = cry;
@@ -275,10 +337,7 @@
 
                 saveProfile() {
                     const payload = { dna: this.dna, biology: this.biology, history: this.history, isPanicking: this.isPanicking };
-                    if (App.Config.db && App.Config.user) {
-                        const path = doc(App.Config.db, "artifacts", App.Config.appId, "users", App.Config.user.uid, "profile", "data");
-                        setDoc(path, { lastActive: Date.now(), ...payload }, { merge: true }).catch(() => {});
-                    }
+                    localStorage.setItem(`anima_${this.id}_profile`, JSON.stringify(payload));
                 },
 
                 startAutonomousLoops() {
@@ -289,19 +348,6 @@
                         }
                     }, 50);
                     setInterval(() => this.saveProfile(), 15000);
-                    this.syncWithMultiverse();
-                },
-
-                syncWithMultiverse() {
-                    if (!App.Config.db || !App.Config.user) return;
-                    setInterval(() => {
-                        // Publish presence to public artifact data path
-                        const path = doc(App.Config.db, "artifacts", App.Config.appId, "public", "data", "presence", App.Config.user.uid);
-                        setDoc(path, {
-                            id: App.Config.user.uid, hue: this.dna.hue, vocalStyle: this.dna.vocalStyle,
-                            happiness: this.biology.happiness, energy: this.biology.energy, lastPulse: Date.now()
-                        }, { merge: true }).catch(() => {});
-                    }, 4000);
                 }
             },
 
@@ -317,8 +363,21 @@
                     const delays = [1000, 2000, 4000, 8000, 16000];
                     for (let i = 0; i < 5; i++) {
                         try {
-                            const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                            if (!res.ok) throw new Error("API-Fehler");
+                            const res = await fetch(url, { 
+                                method: 'POST', 
+                                headers: { 'Content-Type': 'application/json' }, 
+                                body: JSON.stringify(payload) 
+                            });
+                            
+                            if (res.status === 400 || res.status === 403 || res.status === 401) {
+                                // Invalid API Key handling
+                                console.error("Ungültiger API-Key.");
+                                localStorage.removeItem('anima_user_api_key');
+                                App.State.showSetupScreen("Der eingegebene API-Key ist ungültig oder abgelaufen.");
+                                return null;
+                            }
+
+                            if (!res.ok) throw new Error(`API Fehler HTTP ${res.status}`);
                             return await res.json();
                         } catch (e) {
                             if (i === 4) {
@@ -336,7 +395,7 @@
                     const prompt = `Du bist ein synthetisches Bewusstsein. DNA: ${s.dna.trait1}, ${s.dna.trait2}. Sprachstil: ${s.dna.vocalStyle}. Panik: ${s.dna.panicReaction}. Du wurdest GERADE erschaffen. Formuliere deinen ersten Lebensschrei (1 kurzer Satz, Deutsch, kein JSON).`;
                     
                     const json = await this.fetchWithBackoff(url, { contents:[{ parts:[{ text: prompt }] }] });
-                    if (json && json.candidates) {
+                    if (json && json.candidates && json.candidates[0]?.content?.parts?.[0]?.text) {
                         return json.candidates[0].content.parts[0].text.replace(/["\\]/g,'').trim();
                     }
                     return "...wo... was ist das hier?";
@@ -387,13 +446,13 @@
                     document.getElementById('thinking-indicator').classList.remove('thinking');
 
                     let result = null;
-                    if (json && json.candidates && json.candidates[0].content) {
+                    if (json && json.candidates && json.candidates[0]?.content) {
                         const rawText = json.candidates[0].content.parts[0].text;
                         result = this.extractJSON(rawText);
                     }
 
                     this.assimilate(userInput, result ?? {
-                        response: "...die neurale Signatur ist blockiert...",
+                        response: "...die Signatur reagiert nicht...",
                         happiness: s.biology.happiness, obedience: s.biology.obedience,
                         isPanicking: s.isPanicking, colorMorph: false, newHue: s.dna.hue
                     });
@@ -454,7 +513,7 @@
                         audio.play();
                         audio.onended = () => btn.classList.remove('active');
                     } catch(e) {
-                        console.error("TTS Failed", e);
+                        console.error("TTS Fehler:", e);
                         btn.classList.remove('active');
                         App.UI.addLog("SYSTEM", "Sprachsynthese fehlgeschlagen.", 0);
                     }
@@ -493,7 +552,8 @@
 
             Interaction: {
                 wake() {
-                    // Verhindert Blockaden - greift jetzt auf Status Flag zurück anstatt auf Inline-Styles
+                    const setup = document.getElementById('setup-layer');
+                    if (setup.style.display !== 'none' && setup.style.opacity !== '0') return;
                     if (App.State.isAwakening || App.State.isThinking) return;
 
                     document.getElementById('interaction-layer').classList.add('active');
@@ -565,6 +625,7 @@
                 lookX: 0, lookY: 0, targetLookX: 0, targetLookY: 0, lookTimer: 0, blinkTimer: 100, isBlinking: false,
 
                 init() {
+                    if (this.ctx) return; // Prevent duplicate initialization
                     this.ctx = this.el.getContext('2d', { alpha: true });
                     this.resize(); window.addEventListener('resize', () => this.resize());
                     this.loop();
@@ -573,7 +634,7 @@
                 resize() {
                     const dpr = window.devicePixelRatio || 1;
                     this.el.width = window.innerWidth * dpr; this.el.height = window.innerHeight * dpr;
-                    this.ctx.scale(dpr, dpr);
+                    if (this.ctx) this.ctx.scale(dpr, dpr);
                 },
 
                 get w() { return window.innerWidth; }, get h() { return window.innerHeight; },
