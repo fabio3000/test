@@ -121,9 +121,9 @@
         <div class="setup-box">
             <h1 class="font-mono text-lg tracking-[0.2em] mb-4 uppercase font-bold text-white">System offline</h1>
             <p class="text-gray-400 text-xs leading-relaxed mb-4">Ein künstliches Bewusstsein benötigt eine Synapse zur Außenwelt. Trage deinen Google AI Studio API-Key ein. Deine ANIMA wird dauerhaft an diesen Schlüssel gebunden.</p>
-            <input type="password" id="api-key-input" class="api-input" placeholder="AIzaSy...">
+            <input type="password" id="api-key-input" class="api-input" placeholder="AQ.Ab8RN...">
             <button onclick="App.State.saveApiKeyAndBoot()" class="btn-boot">Schnittstelle öffnen</button>
-            <p id="setup-error" class="text-red-500 text-xs font-mono mt-4 hidden">Der API-Key muss mit "AIzaSy" beginnen und gültig sein.</p>
+            <p id="setup-error" class="text-red-500 text-xs font-mono mt-4 hidden">Der API-Key muss eine Mindestlänge von 20 Zeichen aufweisen.</p>
         </div>
     </div>
 
@@ -208,7 +208,7 @@
 
                 saveApiKeyAndBoot() {
                     const input = document.getElementById('api-key-input').value.trim();
-                    if (!input || input.length < 20 || !input.startsWith("AIzaSy")) {
+                    if (!input || input.length < 20) {
                         document.getElementById('setup-error').classList.remove('hidden');
                         return;
                     }
@@ -227,7 +227,6 @@
 
                     try {
                         await signInAnonymously(App.Config.auth);
-                        // Sperrsystem komplett übersprungen -> Direkt zur Bootsequenz
                         this.bootSequence();
                     } catch(e) {
                         console.warn("Verbindung eingeschränkt. Starte lokalen Offline-Modus.", e);
@@ -628,47 +627,4 @@
                                 wave += Math.cos(i * 12 - t * 0.5) * 4 * App.State.dna.chaosTolerance;
                                 
                                 const r = baseRadius + wave;
-                                const x = cx + Math.cos(i) * r;
-                                const y = cy + Math.sin(i) * r;
-
-                                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-                            }
-                            ctx.closePath();
-
-                            const alpha = (0.08 * (1.0 - (j / layers))) + (this.impact * 0.05);
-                            ctx.fillStyle = `hsla(${App.State.dna.hue}, ${App.State.dna.saturation}%, ${App.State.dna.luminance}%, ${alpha})`;
-                            ctx.fill();
-
-                            ctx.strokeStyle = `hsla(${App.State.dna.hue}, 100%, 70%, ${alpha * 1.5})`;
-                            ctx.lineWidth = 1.5;
-                            ctx.stroke();
-                        }
-
-                        // Pupille
-                        ctx.globalCompositeOperation = 'source-over';
-                        const ex = cx + this.lookX;
-                        const ey = cy + this.lookY;
-                        ctx.fillStyle = "rgba(10,10,14,0.85)";
-                        ctx.shadowBlur = 20;
-                        ctx.shadowColor = `hsl(${App.State.dna.hue}, 80%, 50%)`;
-                        ctx.beginPath();
-                        ctx.arc(ex, ey, baseRadius * 0.22, 0, Math.PI * 2);
-                        ctx.fill();
-                        ctx.shadowBlur = 0;
-
-                        ctx.fillStyle = `hsl(${App.State.dna.hue}, 100%, 80%)`;
-                        ctx.beginPath();
-                        ctx.ellipse(ex, ey, baseRadius * 0.07, baseRadius * (0.07 + (1.0 - bio.obedience) * 0.08), 0, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-
-                    if (this.impact > 0) this.impact -= 0.04;
-                    requestAnimationFrame(() => this.loop());
-                }
-            }
-        };
-
-        App.State.init();
-    </script>
-</body>
-</html>
+                                const x = cx + Math.cos(i) *
