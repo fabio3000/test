@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -28,30 +27,6 @@
             position: fixed; inset: 0; z-index: 2; pointer-events: none; mix-blend-mode: overlay; opacity: 0.35;
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
         }
-
-        #setup-layer {
-            position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center;
-            background: #000; color: #fff; padding: 2rem; transition: opacity 1s ease;
-        }
-        .setup-box {
-            background: rgba(8, 8, 12, 0.95); border: 1px solid rgba(255, 255, 255, 0.07);
-            padding: 3rem; max-width: 500px; width: 100%; text-align: left;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.95); backdrop-filter: blur(15px);
-        }
-        .api-input {
-            width: 100%; background: rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.12);
-            color: #fff; font-family: 'Space Mono', monospace; font-size: 0.9rem;
-            padding: 1rem; outline: none; margin-top: 1.5rem; margin-bottom: 1.5rem; transition: border-color 0.3s; box-sizing: border-box;
-        }
-        .api-input:focus { border-color: rgba(255,255,255,0.4); }
-        .btn-boot {
-            background: #ffffff; color: #000000; border: none; padding: 1rem 2rem;
-            font-family: 'Space Mono', monospace; font-size: 0.8rem; font-weight: 700;
-            letter-spacing: 0.2em; text-transform: uppercase; cursor: pointer; width: 100%; transition: opacity 0.3s;
-        }
-        .btn-boot:hover { opacity: 0.85; }
-        .btn-boot:active { opacity: 0.7; }
-        .setup-link { color: rgba(255,255,255,0.6); text-decoration: underline; }
 
         #cinematic-layer {
             position: fixed; inset: 0; z-index: 80; display: none; flex-direction: column; justify-content: center; align-items: center;
@@ -130,22 +105,6 @@
 </head>
 <body>
 
-    <!-- SETUP LAYER -->
-    <div id="setup-layer">
-        <div class="setup-box">
-            <h1 class="font-mono text-lg tracking-[0.2em] mb-4 uppercase font-bold text-white">System offline</h1>
-            <p class="text-gray-400 text-xs leading-relaxed mb-4">
-                Ein synthetisches Bewusstsein benötigt eine Synapse zur Außenwelt. Trage deinen
-                <a href="https://aistudio.google.com/app/apikey" target="_blank" class="setup-link">Gemini API-Key</a>
-                ein. Er wird ausschließlich lokal in deinem Browser gespeichert.
-            </p>
-            <input type="password" id="api-key-input" class="api-input" placeholder="AIzaSy...">
-            <!-- INLINE ONCLICK FIX: Das garantiert, dass der Button auch ausgeführt wird -->
-            <button onclick="window.App.State.saveApiKeyAndBoot()" class="btn-boot">Schnittstelle öffnen</button>
-            <p id="setup-error" class="text-red-500 text-xs font-mono mt-4 hidden">Der API-Key muss mindestens 20 Zeichen aufweisen.</p>
-        </div>
-    </div>
-
     <!-- CINEMATIC AWAKENING -->
     <div id="cinematic-layer">
         <div id="cine-1" class="cine-text">SYNTHETISCHER IMPULS ERZEUGT</div>
@@ -200,100 +159,75 @@
     <!-- APP LOGIC -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey:            "AIzaSyDtwsvmYSONjFufhbJ5I8G_RAMffnh7re0",
-            authDomain:        "theplot-app.firebaseapp.com",
-            projectId:         "theplot-app",
-            storageBucket:     "theplot-app.firebasestorage.app",
-            messagingSenderId: "550703275210",
-            appId:             "1:550703275210:web:81bc0e5a373f87a3c92833"
-        };
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         window.App = {
-            Config: { apiKey: null, db: null, auth: null },
+            Config: { apiKey: "", db: null, auth: null, user: null, appId: 'default-app' },
 
             State: {
-                id: null, dna: null, isThinking: false, history: [],
+                id: null, dna: null, isThinking: false, isAwakening: false, history: [],
                 biology: { energy: 1.0, happiness: 0.3, obedience: 0.8, mass: 0.2, entropy: 0.4, morphRate: 0.3 },
                 targetBiology: {}, isPanicking: true,
                 useWebSearch: false, currentImageBase64: null, lastResponseText: "",
 
-                init() {
-                    App.Config.apiKey = localStorage.getItem('anima_api_key');
-                    if (!App.Config.apiKey || App.Config.apiKey.length < 20) {
-                        document.getElementById('setup-layer').style.display = 'flex';
-                        return;
+                async init() {
+                    // Firebase Setup via Canvas Environment Variables
+                    let firebaseConfig = {};
+                    if (typeof __firebase_config !== 'undefined') {
+                        firebaseConfig = JSON.parse(__firebase_config);
                     }
-                    document.getElementById('setup-layer').style.display = 'none';
-                    this.connectToMatrix(App.Config.apiKey);
-                },
 
-                saveApiKeyAndBoot() {
-                    const input = document.getElementById('api-key-input').value.trim();
-                    if (!input || input.length < 20) {
-                        document.getElementById('setup-error').classList.remove('hidden');
-                        return;
+                    if (Object.keys(firebaseConfig).length > 0) {
+                        try {
+                            const fbApp = initializeApp(firebaseConfig);
+                            App.Config.auth = getAuth(fbApp);
+                            App.Config.db = getFirestore(fbApp);
+                            App.Config.appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app';
+
+                            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                                await signInWithCustomToken(App.Config.auth, __initial_auth_token);
+                            } else {
+                                await signInAnonymously(App.Config.auth);
+                            }
+                            App.Config.user = App.Config.auth.currentUser;
+                            this.id = App.Config.user.uid;
+                        } catch(e) {
+                            console.warn("Storage Offline, running in-memory session.");
+                            this.id = 'anon-' + Math.random().toString(36).substring(7);
+                        }
+                    } else {
+                        this.id = 'anon-' + Math.random().toString(36).substring(7);
                     }
-                    localStorage.setItem('anima_api_key', input);
-                    App.Config.apiKey = input;
-                    const sl = document.getElementById('setup-layer');
-                    sl.style.opacity = '0';
-                    setTimeout(() => { sl.style.display = 'none'; this.connectToMatrix(input); }, 1000);
-                },
-
-                async connectToMatrix(key) {
-                    App.Config.apiKey = key;
-                    this.id = await this.hashApiKey(key);
-                    try {
-                        const fbApp = initializeApp(firebaseConfig);
-                        App.Config.auth = getAuth(fbApp);
-                        App.Config.db = getFirestore(fbApp);
-                        await signInAnonymously(App.Config.auth);
-                    } catch(e) { console.warn("Offline-Modus aktiv.", e); }
+                    
                     this.bootSequence();
                 },
 
-                async hashApiKey(key) {
-                    try {
-                        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key));
-                        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('').substring(0,16);
-                    } catch { return 'anima_' + key.substring(0, 10); }
-                },
-
                 async bootSequence() {
-                    if (App.Config.db) {
+                    if (App.Config.db && App.Config.user) {
                         try {
-                            const snap = await getDoc(doc(App.Config.db, "anima", "entities", "profiles", this.id));
+                            // strictly following required collection path structure for private data
+                            const path = doc(App.Config.db, "artifacts", App.Config.appId, "users", App.Config.user.uid, "profile", "data");
+                            const snap = await getDoc(path);
                             if (snap.exists()) {
                                 const d = snap.data();
                                 this.dna = d.dna; this.biology = d.biology; this.history = d.history || [];
                                 this.isPanicking = d.isPanicking ?? false; this.targetBiology = { ...this.biology };
                                 document.getElementById('freq-badge').innerText = this.id.substring(0,4).toUpperCase();
+                                this.isAwakening = false;
                                 App.Canvas.init(); this.startAutonomousLoops();
-                                App.UI.addLog("SYSTEM", "Schnittstelle wiederhergestellt.", this.dna.hue);
+                                App.UI.addLog("SYSTEM", "Bewusstsein wiederhergestellt.", this.dna.hue);
                                 return;
                             }
-                        } catch(e) {}
+                        } catch(e) { console.warn("Failed to load profile", e); }
                     }
-                    const local = localStorage.getItem(`anima_${this.id}_profile`);
-                    if (local) {
-                        try {
-                            const d = JSON.parse(local);
-                            this.dna = d.dna; this.biology = d.biology; this.isPanicking = d.isPanicking ?? false;
-                            this.targetBiology = { ...this.biology };
-                            document.getElementById('freq-badge').innerText = this.id.substring(0,4).toUpperCase();
-                            App.Canvas.init(); this.startAutonomousLoops();
-                            App.UI.addLog("SYSTEM", "Lokale Erinnerung geladen.", this.dna.hue);
-                            return;
-                        } catch(e) {}
-                    }
+                    
                     this.generateTrueDNA();
                 },
 
                 generateTrueDNA() {
+                    this.isAwakening = true;
+                    
                     const traits = ["fragil","stolz","hektisch","trotzig","melancholisch","neugierig","paranoid","sanftmütig","wild","euphorisch","verspielt"];
                     const styles = ["poetisch und fließend","kühl und analytisch","in kryptischen Metaphern","mathematisch präzise","asymmetrisch fragmentiert"];
                     const panics = ["erstarren und klein machen","wild um sich schlagen","verzweifelt weinen","nach Logik suchen","in sich flüchten"];
@@ -312,7 +246,7 @@
 
                     const layer = document.getElementById('cinematic-layer');
                     layer.style.display = 'flex';
-                    document.getElementById('cine-hash').innerText = this.id.toUpperCase();
+                    document.getElementById('cine-hash').innerText = this.id.substring(0, 16).toUpperCase();
 
                     const show = (id, t) => setTimeout(() => document.getElementById(id).style.opacity = '1', t);
                     const hide = (id, t) => setTimeout(() => document.getElementById(id).style.opacity = '0', t);
@@ -323,7 +257,10 @@
                     App.Brain.fetchFirstCry().then(cry => {
                         setTimeout(() => {
                             layer.style.opacity = '0';
-                            setTimeout(() => layer.style.display = 'none', 3000);
+                            setTimeout(() => {
+                                layer.style.display = 'none';
+                                this.isAwakening = false;
+                            }, 3000);
                             const el = document.getElementById('entity-response');
                             el.innerText = `„${cry}"`; el.classList.add('visible', 'panic-shake');
                             this.lastResponseText = cry;
@@ -338,8 +275,10 @@
 
                 saveProfile() {
                     const payload = { dna: this.dna, biology: this.biology, history: this.history, isPanicking: this.isPanicking };
-                    localStorage.setItem(`anima_${this.id}_profile`, JSON.stringify(payload));
-                    if (App.Config.db) setDoc(doc(App.Config.db, "anima", "entities", "profiles", this.id), { id: this.id, lastActive: Date.now(), ...payload }, { merge: true }).catch(() => {});
+                    if (App.Config.db && App.Config.user) {
+                        const path = doc(App.Config.db, "artifacts", App.Config.appId, "users", App.Config.user.uid, "profile", "data");
+                        setDoc(path, { lastActive: Date.now(), ...payload }, { merge: true }).catch(() => {});
+                    }
                 },
 
                 startAutonomousLoops() {
@@ -354,10 +293,12 @@
                 },
 
                 syncWithMultiverse() {
-                    if (!App.Config.db) return;
+                    if (!App.Config.db || !App.Config.user) return;
                     setInterval(() => {
-                        setDoc(doc(App.Config.db, "anima", "presence", "entities", this.id), {
-                            id: this.id, hue: this.dna.hue, vocalStyle: this.dna.vocalStyle,
+                        // Publish presence to public artifact data path
+                        const path = doc(App.Config.db, "artifacts", App.Config.appId, "public", "data", "presence", App.Config.user.uid);
+                        setDoc(path, {
+                            id: App.Config.user.uid, hue: this.dna.hue, vocalStyle: this.dna.vocalStyle,
                             happiness: this.biology.happiness, energy: this.biology.energy, lastPulse: Date.now()
                         }, { merge: true }).catch(() => {});
                     }, 4000);
@@ -368,20 +309,37 @@
                 extractJSON(text) {
                     try {
                         let clean = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-                        // Parse safely to avoid errors from Gemini putting trailing commas etc.
                         return JSON.parse(clean);
                     } catch(e) { return null; }
+                },
+
+                async fetchWithBackoff(url, payload) {
+                    const delays = [1000, 2000, 4000, 8000, 16000];
+                    for (let i = 0; i < 5; i++) {
+                        try {
+                            const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                            if (!res.ok) throw new Error("API-Fehler");
+                            return await res.json();
+                        } catch (e) {
+                            if (i === 4) {
+                                App.UI.addLog("SYSTEM", "Kommunikationsfehler. Verbindung gestört.", 0);
+                                return null;
+                            }
+                            await new Promise(r => setTimeout(r, delays[i]));
+                        }
+                    }
                 },
 
                 async fetchFirstCry() {
                     const s = App.State;
                     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${App.Config.apiKey}`;
                     const prompt = `Du bist ein synthetisches Bewusstsein. DNA: ${s.dna.trait1}, ${s.dna.trait2}. Sprachstil: ${s.dna.vocalStyle}. Panik: ${s.dna.panicReaction}. Du wurdest GERADE erschaffen. Formuliere deinen ersten Lebensschrei (1 kurzer Satz, Deutsch, kein JSON).`;
-                    try {
-                        const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ contents:[{ parts:[{ text: prompt }] }] }) });
-                        const json = await res.json();
+                    
+                    const json = await this.fetchWithBackoff(url, { contents:[{ parts:[{ text: prompt }] }] });
+                    if (json && json.candidates) {
                         return json.candidates[0].content.parts[0].text.replace(/["\\]/g,'').trim();
-                    } catch { return "...wo... was ist das hier?"; }
+                    }
+                    return "...wo... was ist das hier?";
                 },
 
                 async process(userInput) {
@@ -401,18 +359,15 @@
 
                     const contents = [{ role: "user", parts: [] }];
                     
-                    // Kontext und User Input
                     let promptText = `${ctx}\nNutzer: ${userInput}`;
                     if(s.useWebSearch) promptText += "\n[SYSTEM-INFO: Du hast Web-Zugriff. Beziehe wenn möglich reale aktuelle Fakten in deine Antwort ein.]";
                     contents[0].parts.push({ text: promptText });
 
-                    // Image Upload Integration
                     if(s.currentImageBase64) {
                         contents[0].parts.push({
                             inlineData: { mimeType: "image/jpeg", data: s.currentImageBase64.split(',')[1] }
                         });
                         systemInstruction += " [BILD-INPUT ERKANNT: Analysiere das Bild und reagiere darauf emotional.]";
-                        // Reset image after sending
                         s.currentImageBase64 = null;
                         document.getElementById('img-preview').style.display = 'none';
                         document.getElementById('upload-label').style.display = 'flex';
@@ -424,27 +379,21 @@
                         generationConfig: { responseMimeType: "application/json" }
                     };
 
-                    // Google Search Grounding Feature
-                    if(s.useWebSearch) {
-                        payload.tools = [{ "google_search": {} }];
-                    }
+                    if(s.useWebSearch) payload.tools = [{ "google_search": {} }];
 
-                    let result = null, retries = 0;
-                    while (retries < 3 && !result) {
-                        try {
-                            const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-                            if (!res.ok) throw new Error("API-Fehler");
-                            const json = await res.json();
-                            const rawText = json.candidates[0].content.parts[0].text;
-                            result = this.extractJSON(rawText);
-                        } catch { retries++; await new Promise(r => setTimeout(r, Math.pow(2, retries) * 1000)); }
-                    }
-
+                    const json = await this.fetchWithBackoff(url, payload);
+                    
                     App.State.isThinking = false;
                     document.getElementById('thinking-indicator').classList.remove('thinking');
 
+                    let result = null;
+                    if (json && json.candidates && json.candidates[0].content) {
+                        const rawText = json.candidates[0].content.parts[0].text;
+                        result = this.extractJSON(rawText);
+                    }
+
                     this.assimilate(userInput, result ?? {
-                        response: "...die Signatur ist zu schwach...",
+                        response: "...die neurale Signatur ist blockiert...",
                         happiness: s.biology.happiness, obedience: s.biology.obedience,
                         isPanicking: s.isPanicking, colorMorph: false, newHue: s.dna.hue
                     });
@@ -465,7 +414,7 @@
                         App.UI.addLog("AUTONOM", "Farbpigmente mutiert.", s.dna.hue);
                     }
 
-                    s.lastResponseText = aiData.response; // For TTS
+                    s.lastResponseText = aiData.response; 
                     s.history.push({ u: userInput, a: aiData.response });
                     if (s.history.length > 20) s.history.shift();
                     s.saveProfile();
@@ -480,7 +429,6 @@
                     setTimeout(() => { el.classList.remove('visible'); App.Canvas.triggerCuriosity(); }, 6000 + aiData.response.length * 35);
                 },
 
-                /* TTS - Synthetische Stimme abspielen */
                 async playVoice() {
                     if(!App.State.lastResponseText) return;
                     const btn = document.getElementById('tts-btn');
@@ -500,7 +448,6 @@
                         const json = await res.json();
                         const base64Pcm = json.candidates[0].content.parts[0].inlineData.data;
                         
-                        // Convert PCM to WAV
                         const wavBlob = this.pcmToWav(base64Pcm, 24000);
                         const audioUrl = URL.createObjectURL(wavBlob);
                         const audio = new Audio(audioUrl);
@@ -546,11 +493,8 @@
 
             Interaction: {
                 wake() {
-                    const cl = document.getElementById('cinematic-layer');
-                    const sl = document.getElementById('setup-layer');
-                    if (cl.style.display !== 'none' && cl.style.opacity !== '0') return;
-                    if (sl.style.display !== 'none') return;
-                    if (App.State.isThinking) return;
+                    // Verhindert Blockaden - greift jetzt auf Status Flag zurück anstatt auf Inline-Styles
+                    if (App.State.isAwakening || App.State.isThinking) return;
 
                     document.getElementById('interaction-layer').classList.add('active');
                     const input = document.getElementById('thought-input');
@@ -722,5 +666,3 @@
 </body>
 </html>
 
-
-```
