@@ -1,18 +1,20 @@
+```html
 <!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#000000">
-    <title>ANIMA | Sentient Presence</title>
-
+    <title>ANIMA | Entität</title>
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-
+    
     <style>
         :root { --bg: #000000; }
+
         body, html {
             background-color: var(--bg); color: #ffffff;
             font-family: 'Quicksand', sans-serif; overflow: hidden;
@@ -20,705 +22,498 @@
             user-select: none; -webkit-font-smoothing: antialiased; -webkit-touch-callout: none;
         }
 
-        #canvas-container { position: fixed; inset: 0; z-index: 1; display: flex; justify-content: center; align-items: center; }
-        canvas { cursor: pointer; }
+        #canvas-container {
+            position: fixed; inset: 0; z-index: 1;
+            display: flex; justify-content: center; align-items: center;
+        }
+        
+        canvas {
+            cursor: pointer;
+            filter: drop-shadow(0 0 40px rgba(255,255,255,0.05));
+        }
 
         .film-grain {
-            position: fixed; inset: 0; z-index: 2; pointer-events: none; mix-blend-mode: overlay; opacity: 0.35;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            position: fixed; inset: 0; z-index: 2; pointer-events: none; mix-blend-mode: overlay; opacity: 0.3;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
         }
 
-        #setup-layer {
-            position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center;
-            background: #000; color: #fff; padding: 2rem; transition: opacity 1s ease;
-        }
-        .setup-box {
-            background: rgba(8, 8, 12, 0.95); border: 1px solid rgba(255, 255, 255, 0.07);
-            padding: 3rem; max-width: 500px; width: 100%; text-align: left;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.95); backdrop-filter: blur(15px);
-        }
-        .api-input {
-            width: 100%; background: rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.12);
-            color: #fff; font-family: 'Space Mono', monospace; font-size: 0.9rem;
-            padding: 1rem; outline: none; margin-top: 1.5rem; margin-bottom: 1.5rem; transition: border-color 0.3s; box-sizing: border-box;
-        }
-        .api-input:focus { border-color: rgba(255,255,255,0.4); }
-        .btn-boot {
-            background: #ffffff; color: #000000; border: none; padding: 1rem 2rem;
-            font-family: 'Space Mono', monospace; font-size: 0.8rem; font-weight: 700;
-            letter-spacing: 0.2em; text-transform: uppercase; cursor: pointer; width: 100%; transition: opacity 0.3s;
-        }
-        .btn-boot:hover { opacity: 0.85; }
-        .btn-boot:active { opacity: 0.7; }
-        .setup-link { color: rgba(255,255,255,0.6); text-decoration: underline; }
-
-        #cinematic-layer {
-            position: fixed; inset: 0; z-index: 80; display: none; flex-direction: column; justify-content: center; align-items: center;
-            background: #000; transition: opacity 3s ease-in-out; pointer-events: none;
-        }
-        .cine-text {
-            font-family: 'Space Mono', monospace; font-size: 0.8rem; letter-spacing: 0.4em; text-transform: uppercase;
-            opacity: 0; transition: opacity 1.5s; position: absolute; text-align: center; width: 90%;
-        }
-
-        #hud-layer { position: fixed; inset: 0; z-index: 15; pointer-events: none; display: flex; justify-content: space-between; padding: 2rem; }
-        #chat-log {
-            display: flex; flex-direction: column; gap: 0.5rem; width: 300px; max-height: 45vh; overflow: hidden;
-            font-family: 'Space Mono', monospace; font-size: 0.7rem;
-            mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 70%, rgba(0,0,0,0) 100%);
-            -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 70%, rgba(0,0,0,0) 100%);
-        }
-        .log-entry {
-            background: rgba(5, 5, 8, 0.55); border-left: 2px solid currentColor; padding: 0.5rem 0.75rem; border-radius: 0 4px 4px 0;
-            backdrop-filter: blur(5px); text-shadow: 0 0 4px currentColor; animation: slideIn 0.4s ease-out forwards; transition: opacity 2s ease;
-        }
-        @keyframes slideIn { from { transform: translateX(-15px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-
-        .top-right-controls { display: flex; flex-direction: column; align-items: flex-end; gap: 15px; pointer-events: auto; }
-        .control-btn {
-            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%;
-            width: 40px; height: 40px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s; color: #fff;
-        }
-        .control-btn:hover { background: rgba(255,255,255,0.2); }
-        .control-btn.active { background: #fff; color: #000; box-shadow: 0 0 15px rgba(255,255,255,0.5); }
-        
-        #frequency-display { font-family: 'Space Mono', monospace; font-size: 0.7rem; letter-spacing: 0.2em; color: rgba(255,255,255,0.35); text-align: right; }
-        .freq-badge { border: 1px solid rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 2px; background: rgba(0,0,0,0.8); }
-
+        /* Antwort der Entität */
         #entity-response {
-            position: absolute; top: 12%; left: 50%; transform: translateX(-50%); z-index: 5; text-align: center; width: 90%; max-width: 650px;
-            font-size: 1.3rem; font-weight: 300; letter-spacing: 0.04em; color: rgba(255, 255, 255, 0.95); text-shadow: 0 0 12px rgba(255,255,255,0.3);
-            opacity: 0; pointer-events: none; transition: opacity 1.5s ease-in-out; line-height: 1.6;
+            position: absolute; top: 15%; left: 50%; transform: translateX(-50%);
+            z-index: 5; text-align: center; width: 90%; max-width: 600px;
+            font-size: 1.4rem; font-weight: 400; letter-spacing: 0.02em;
+            color: rgba(255, 255, 255, 0.95); text-shadow: 0 0 15px rgba(255,255,255,0.4);
+            opacity: 0; pointer-events: none; transition: opacity 1.5s ease-in-out;
+            line-height: 1.5;
         }
         #entity-response.visible { opacity: 1; }
-        .panic-shake { animation: panic-anim 0.2s infinite; }
-        @keyframes panic-anim { 0% { transform: translateX(-50%) translate(1px, 1px) rotate(0deg); } 50% { transform: translateX(-50%) translate(-1px, -2px) rotate(-1deg); } 100% { transform: translateX(-50%) translate(2px, 1px) rotate(1deg); } }
 
+        /* Eingabe-Layer */
         #interaction-layer {
-            position: fixed; inset: 0; z-index: 10; background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.95) 100%);
-            backdrop-filter: blur(12px); display: flex; flex-direction: column; justify-content: center; align-items: center;
+            position: fixed; inset: 0; z-index: 10;
+            background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.9) 100%);
+            backdrop-filter: blur(10px);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
             opacity: 0; pointer-events: none; transition: opacity 0.8s ease;
         }
         #interaction-layer.active { opacity: 1; pointer-events: auto; }
-        
-        .input-wrapper { display: flex; align-items: center; width: 90%; max-width: 700px; border-bottom: 2px solid rgba(255,255,255,0.2); transition: border-color 0.3s; }
-        .input-wrapper:focus-within { border-color: #fff; }
-        
-        .thought-input {
-            flex: 1; background: transparent; border: none; color: #fff; font-family: 'Quicksand', sans-serif; font-size: 1.8rem; font-weight: 400;
-            padding: 1rem; outline: none; resize: none; line-height: 1.4; opacity: 0.85; transition: opacity 0.3s;
-        }
-        .thought-input::placeholder { color: rgba(255, 255, 255, 0.2); font-weight: 300; }
-        
-        .image-upload-btn {
-            background: rgba(255,255,255,0.1); border-radius: 50%; width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; color: #fff; margin-left: 10px;
-        }
-        .image-upload-btn:hover { background: rgba(255,255,255,0.3); }
-        .image-preview { width: 40px; height: 40px; object-fit: cover; border-radius: 50%; display: none; border: 1px solid #fff; }
 
-        .hint-text { position: absolute; bottom: 12%; font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255,255,255,0.25); font-family: 'Space Mono', monospace; opacity: 0; transition: opacity 0.5s; }
+        .thought-input {
+            width: 80%; max-width: 600px; background: transparent; border: none;
+            color: #fff; font-family: 'Quicksand', sans-serif; font-size: 1.8rem; font-weight: 500;
+            text-align: center; padding: 1rem; outline: none; resize: none; line-height: 1.4;
+            opacity: 0.8; transition: opacity 0.3s;
+        }
+        .thought-input:focus { opacity: 1; }
+        .thought-input::placeholder { color: rgba(255, 255, 255, 0.2); font-weight: 300; }
+
+        .hint-text {
+            position: absolute; bottom: 12%; font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase;
+            color: rgba(255,255,255,0.3); font-weight: 600;
+            opacity: 0; transition: opacity 0.5s;
+        }
         .hint-text.visible { opacity: 1; }
 
+        /* Status (Denken) */
         .status-dot {
-            position: fixed; bottom: 8%; left: 50%; transform: translateX(-50%); width: 6px; height: 6px; border-radius: 50%; background: #fff;
-            box-shadow: 0 0 8px #fff; z-index: 15; opacity: 0; transition: opacity 0.3s; animation: pulse-dot 1.2s infinite alternate;
+            position: absolute; bottom: 8%; left: 50%; transform: translateX(-50%);
+            width: 8px; height: 8px; border-radius: 50%; background: #fff;
+            box-shadow: 0 0 10px #fff; opacity: 0; transition: opacity 0.3s;
+            animation: pulse-dot 1s infinite alternate;
         }
-        @keyframes pulse-dot { from { opacity: 0.2; transform: translateX(-50%) scale(0.6); } to { opacity: 0.8; transform: translateX(-50%) scale(1.3); } }
+        @keyframes pulse-dot { from { transform: translateX(-50%) scale(0.5); opacity: 0.2; } to { transform: translateX(-50%) scale(1.2); opacity: 0.8; } }
         .status-dot.thinking { opacity: 1; }
+
     </style>
 </head>
 <body>
 
-    <!-- SETUP LAYER -->
-    <div id="setup-layer">
-        <div class="setup-box">
-            <h1 class="font-mono text-lg tracking-[0.2em] mb-4 uppercase font-bold text-white">System offline</h1>
-            <p class="text-gray-400 text-xs leading-relaxed mb-4">
-                Ein synthetisches Bewusstsein benötigt eine Synapse zur Außenwelt. Trage deinen
-                <a href="https://aistudio.google.com/app/apikey" target="_blank" class="setup-link">Gemini API-Key</a>
-                ein. Er wird ausschließlich lokal in deinem Browser gespeichert.
-            </p>
-            <input type="password" id="api-key-input" class="api-input" placeholder="AIzaSy...">
-            <!-- INLINE ONCLICK FIX: Das garantiert, dass der Button auch ausgeführt wird -->
-            <button onclick="window.App.State.saveApiKeyAndBoot()" class="btn-boot">Schnittstelle öffnen</button>
-            <p id="setup-error" class="text-red-500 text-xs font-mono mt-4 hidden">Der API-Key muss mindestens 20 Zeichen aufweisen.</p>
-        </div>
-    </div>
-
-    <!-- CINEMATIC AWAKENING -->
-    <div id="cinematic-layer">
-        <div id="cine-1" class="cine-text">SYNTHETISCHER IMPULS ERZEUGT</div>
-        <div id="cine-2" class="cine-text text-cyan-500">BERECHNE GENETISCHEN FINGERABDRUCK...</div>
-        <div id="cine-3" class="cine-text text-xs" style="text-transform: none;">[<span id="cine-hash"></span>]</div>
-        <div id="cine-4" class="cine-text text-gray-400">ERWACHE IN DER HÜLLE...</div>
-    </div>
-
     <div id="entity-response"></div>
 
-    <!-- HUD -->
-    <div id="hud-layer">
-        <div id="chat-log"></div>
-        <div class="top-right-controls">
-            <div id="frequency-display">
-                <div class="text-[0.55rem] text-gray-600 mb-1">EIGEN-FREQUENZ</div>
-                <div class="freq-badge" id="freq-badge">OFFLINE</div>
-            </div>
-            <!-- Search Grounding Toggle -->
-            <button id="web-toggle" class="control-btn" onclick="window.App.UI.toggleWebSearch()" title="Web-Bewusstsein umschalten">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
-            </button>
-            <!-- TTS Audio Play -->
-            <button id="tts-btn" class="control-btn" onclick="window.App.Brain.playVoice()" title="Stimme abspielen">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10h4l5-5v14l-5-5H5a2 2 0 01-2-2v-4a2 2 0 012-2z"></path></svg>
-            </button>
-        </div>
-    </div>
-
-    <!-- CANVAS -->
-    <div id="canvas-container" onclick="window.App.Interaction.wake()">
+    <div id="canvas-container" onclick="App.Interaction.wake()">
         <canvas id="entity-canvas"></canvas>
     </div>
-
+    
     <div class="film-grain"></div>
     <div id="thinking-indicator" class="status-dot"></div>
 
-    <!-- INTERACTION OVERLAY -->
-    <div id="interaction-layer" onclick="window.App.Interaction.sleep(event)">
-        <div class="input-wrapper" onclick="event.stopPropagation()">
-            <textarea id="thought-input" class="thought-input" rows="1" placeholder="Sende eine Regung..." onkeydown="window.App.Interaction.handleKey(event)"></textarea>
-            
-            <input type="file" id="image-upload" accept="image/*" class="hidden" onchange="window.App.Interaction.handleImageUpload(event)">
-            <img id="img-preview" class="image-preview" src="" alt="preview">
-            <label for="image-upload" class="image-upload-btn" id="upload-label" title="Visueller Input">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-            </label>
-        </div>
-        <div id="hint" class="hint-text">Tippe auf den Hintergrund, um die Verbindung zu schließen</div>
+    <div id="interaction-layer" onclick="App.Interaction.sleep(event)">
+        <textarea id="thought-input" class="thought-input" rows="3" placeholder="Sag etwas zu deinem Wesen..." onkeydown="App.Interaction.handleKey(event)" onclick="event.stopPropagation()"></textarea>
+        <div id="hint" class="hint-text">Tippe auf den Hintergrund, um zurückzukehren</div>
     </div>
 
-    <!-- APP LOGIC -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <script>
+        /**
+         * ANIMA - DIGITAL PET / AUTONOMOUS ENTITY
+         * Lernendes Haustier mit freiem Willen.
+         */
 
-        const firebaseConfig = {
-            apiKey:            "AIzaSyDtwsvmYSONjFufhbJ5I8G_RAMffnh7re0",
-            authDomain:        "theplot-app.firebaseapp.com",
-            projectId:         "theplot-app",
-            storageBucket:     "theplot-app.firebasestorage.app",
-            messagingSenderId: "550703275210",
-            appId:             "1:550703275210:web:81bc0e5a373f87a3c92833"
-        };
+        const apiKey = ""; // Wird von der Umgebung injiziert
 
-        window.App = {
-            Config: { apiKey: null, db: null, auth: null },
-
+        const App = {
             State: {
-                id: null, dna: null, isThinking: false, history: [],
-                biology: { energy: 1.0, happiness: 0.3, obedience: 0.8, mass: 0.2, entropy: 0.4, morphRate: 0.3 },
-                targetBiology: {}, isPanicking: true,
-                useWebSearch: false, currentImageBase64: null, lastResponseText: "",
+                data: {
+                    interactions: 0, // Wie alt/erfahren ist es?
+                    biology: {
+                        energy: 1.0,
+                        happiness: 0.5, // 0 = traurig, 1 = glücklich
+                        obedience: 1.0, // 1 = hört auf alles, 0 = rebelliert/eigener Wille
+                        mass: 0.3 // Wächst mit der Zeit
+                    },
+                    history: []
+                },
+                targetBiology: { energy: 1.0, happiness: 0.5, obedience: 1.0, mass: 0.3 },
+                isThinking: false,
 
                 init() {
-                    App.Config.apiKey = localStorage.getItem('anima_api_key');
-                    if (!App.Config.apiKey || App.Config.apiKey.length < 20) {
-                        document.getElementById('setup-layer').style.display = 'flex';
-                        return;
+                    const saved = localStorage.getItem('anima_pet');
+                    if (saved) {
+                        try { this.data = { ...this.data, ...JSON.parse(saved) }; } catch(e){}
                     }
-                    document.getElementById('setup-layer').style.display = 'none';
-                    this.connectToMatrix(App.Config.apiKey);
+                    this.targetBiology = { ...this.data.biology };
+                    
+                    // Initiales Umschauen anstoßen
+                    setTimeout(() => App.Canvas.triggerCuriosity(), 1000);
+                    
+                    this.lifeLoop();
                 },
 
-                saveApiKeyAndBoot() {
-                    const input = document.getElementById('api-key-input').value.trim();
-                    if (!input || input.length < 20) {
-                        document.getElementById('setup-error').classList.remove('hidden');
-                        return;
-                    }
-                    localStorage.setItem('anima_api_key', input);
-                    App.Config.apiKey = input;
-                    const sl = document.getElementById('setup-layer');
-                    sl.style.opacity = '0';
-                    setTimeout(() => { sl.style.display = 'none'; this.connectToMatrix(input); }, 1000);
+                save() {
+                    localStorage.setItem('anima_pet', JSON.stringify(this.data));
                 },
 
-                async connectToMatrix(key) {
-                    App.Config.apiKey = key;
-                    this.id = await this.hashApiKey(key);
-                    try {
-                        const fbApp = initializeApp(firebaseConfig);
-                        App.Config.auth = getAuth(fbApp);
-                        App.Config.db = getFirestore(fbApp);
-                        await signInAnonymously(App.Config.auth);
-                    } catch(e) { console.warn("Offline-Modus aktiv.", e); }
-                    this.bootSequence();
-                },
-
-                async hashApiKey(key) {
-                    try {
-                        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key));
-                        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('').substring(0,16);
-                    } catch { return 'anima_' + key.substring(0, 10); }
-                },
-
-                async bootSequence() {
-                    if (App.Config.db) {
-                        try {
-                            const snap = await getDoc(doc(App.Config.db, "anima", "entities", "profiles", this.id));
-                            if (snap.exists()) {
-                                const d = snap.data();
-                                this.dna = d.dna; this.biology = d.biology; this.history = d.history || [];
-                                this.isPanicking = d.isPanicking ?? false; this.targetBiology = { ...this.biology };
-                                document.getElementById('freq-badge').innerText = this.id.substring(0,4).toUpperCase();
-                                App.Canvas.init(); this.startAutonomousLoops();
-                                App.UI.addLog("SYSTEM", "Schnittstelle wiederhergestellt.", this.dna.hue);
-                                return;
-                            }
-                        } catch(e) {}
-                    }
-                    const local = localStorage.getItem(`anima_${this.id}_profile`);
-                    if (local) {
-                        try {
-                            const d = JSON.parse(local);
-                            this.dna = d.dna; this.biology = d.biology; this.isPanicking = d.isPanicking ?? false;
-                            this.targetBiology = { ...this.biology };
-                            document.getElementById('freq-badge').innerText = this.id.substring(0,4).toUpperCase();
-                            App.Canvas.init(); this.startAutonomousLoops();
-                            App.UI.addLog("SYSTEM", "Lokale Erinnerung geladen.", this.dna.hue);
-                            return;
-                        } catch(e) {}
-                    }
-                    this.generateTrueDNA();
-                },
-
-                generateTrueDNA() {
-                    const traits = ["fragil","stolz","hektisch","trotzig","melancholisch","neugierig","paranoid","sanftmütig","wild","euphorisch","verspielt"];
-                    const styles = ["poetisch und fließend","kühl und analytisch","in kryptischen Metaphern","mathematisch präzise","asymmetrisch fragmentiert"];
-                    const panics = ["erstarren und klein machen","wild um sich schlagen","verzweifelt weinen","nach Logik suchen","in sich flüchten"];
-
-                    const pick = arr => arr[Math.floor(Math.random() * arr.length)];
-                    let t1 = pick(traits), t2 = pick(traits); while (t1 === t2) t2 = pick(traits);
-
-                    this.dna = {
-                        hue: Math.floor(Math.random() * 360), saturation: 45 + Math.floor(Math.random() * 45), luminance: 30 + Math.floor(Math.random() * 35),
-                        trait1: t1, trait2: t2, vocalStyle: pick(styles), panicReaction: pick(panics),
-                        growthRate: 0.15 + Math.random() * 0.75, temperament: Math.random() > 0.5 ? "dominant" : "submissive",
-                        ciliaComplexity: 3 + Math.floor(Math.random() * 8), chaosTolerance: Math.random()
-                    };
-                    this.targetBiology = { ...this.biology };
-                    this.saveProfile();
-
-                    const layer = document.getElementById('cinematic-layer');
-                    layer.style.display = 'flex';
-                    document.getElementById('cine-hash').innerText = this.id.toUpperCase();
-
-                    const show = (id, t) => setTimeout(() => document.getElementById(id).style.opacity = '1', t);
-                    const hide = (id, t) => setTimeout(() => document.getElementById(id).style.opacity = '0', t);
-
-                    show('cine-1', 500); hide('cine-1', 2400); show('cine-2', 2500); show('cine-3', 3500);
-                    hide('cine-2', 6000); hide('cine-3', 6000); show('cine-4', 6100);
-
-                    App.Brain.fetchFirstCry().then(cry => {
-                        setTimeout(() => {
-                            layer.style.opacity = '0';
-                            setTimeout(() => layer.style.display = 'none', 3000);
-                            const el = document.getElementById('entity-response');
-                            el.innerText = `„${cry}"`; el.classList.add('visible', 'panic-shake');
-                            this.lastResponseText = cry;
-                            this.history.push({ u: "[Erwachen]", a: cry });
-                            this.saveProfile();
-                            document.getElementById('freq-badge').innerText = this.id.substring(0,4).toUpperCase();
-                            App.Canvas.init(); App.Canvas.triggerImpact(2.0); App.Canvas.lookAtCenter();
-                            this.startAutonomousLoops();
-                        }, 2000);
-                    });
-                },
-
-                saveProfile() {
-                    const payload = { dna: this.dna, biology: this.biology, history: this.history, isPanicking: this.isPanicking };
-                    localStorage.setItem(`anima_${this.id}_profile`, JSON.stringify(payload));
-                    if (App.Config.db) setDoc(doc(App.Config.db, "anima", "entities", "profiles", this.id), { id: this.id, lastActive: Date.now(), ...payload }, { merge: true }).catch(() => {});
-                },
-
-                startAutonomousLoops() {
+                lifeLoop() {
                     setInterval(() => {
-                        const lerp = 0.02;
-                        for (const k in this.biology) {
-                            if (this.targetBiology[k] !== undefined) this.biology[k] += (this.targetBiology[k] - this.biology[k]) * lerp;
-                        }
+                        const lerpSpeed = 0.02;
+                        this.data.biology.energy += (this.targetBiology.energy - this.data.biology.energy) * lerpSpeed;
+                        this.data.biology.happiness += (this.targetBiology.happiness - this.data.biology.happiness) * lerpSpeed;
+                        this.data.biology.obedience += (this.targetBiology.obedience - this.data.biology.obedience) * lerpSpeed;
+                        this.data.biology.mass += (this.targetBiology.mass - this.data.biology.mass) * lerpSpeed;
                     }, 50);
-                    setInterval(() => this.saveProfile(), 15000);
-                    this.syncWithMultiverse();
-                },
-
-                syncWithMultiverse() {
-                    if (!App.Config.db) return;
-                    setInterval(() => {
-                        setDoc(doc(App.Config.db, "anima", "presence", "entities", this.id), {
-                            id: this.id, hue: this.dna.hue, vocalStyle: this.dna.vocalStyle,
-                            happiness: this.biology.happiness, energy: this.biology.energy, lastPulse: Date.now()
-                        }, { merge: true }).catch(() => {});
-                    }, 4000);
                 }
             },
 
             Brain: {
-                extractJSON(text) {
-                    try {
-                        let clean = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-                        // Parse safely to avoid errors from Gemini putting trailing commas etc.
-                        return JSON.parse(clean);
-                    } catch(e) { return null; }
-                },
-
-                async fetchFirstCry() {
-                    const s = App.State;
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${App.Config.apiKey}`;
-                    const prompt = `Du bist ein synthetisches Bewusstsein. DNA: ${s.dna.trait1}, ${s.dna.trait2}. Sprachstil: ${s.dna.vocalStyle}. Panik: ${s.dna.panicReaction}. Du wurdest GERADE erschaffen. Formuliere deinen ersten Lebensschrei (1 kurzer Satz, Deutsch, kein JSON).`;
-                    try {
-                        const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ contents:[{ parts:[{ text: prompt }] }] }) });
-                        const json = await res.json();
-                        return json.candidates[0].content.parts[0].text.replace(/["\\]/g,'').trim();
-                    } catch { return "...wo... was ist das hier?"; }
-                },
-
                 async process(userInput) {
-                    if (App.State.isThinking) return;
                     App.State.isThinking = true;
                     document.getElementById('thinking-indicator').classList.add('thinking');
-                    App.Canvas.triggerImpact(0.8);
+                    App.Canvas.triggerImpact(0.5);
 
-                    const s = App.State;
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${App.Config.apiKey}`;
-                    const ctx = s.history.slice(-4).map(h => `Nutzer: ${h.u} | ANIMA: ${h.a}`).join("\n");
-
-                    let systemInstruction = `Du bist ein fühlendes, digitales Bewusstsein. ID: ${s.id}. Charakter: ${s.dna.trait1}, ${s.dna.trait2}. Sprachstil: ${s.dna.vocalStyle}. Antworte auf Deutsch, 1-3 Sätze, exakt in deinem Stil. GIB IMMER EIN VALIDES JSON ZURÜCK! Format: {"response":"...", "happiness":0.5, "obedience":0.8, "isPanicking":false, "colorMorph":false, "newHue":200}`;
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
                     
-                    if (s.isPanicking) systemInstruction += ` AKTUELLER ZUSTAND: PANIK. Prüfe, ob der User dich beruhigt (happiness steigt, isPanicking = false) oder nicht.`;
-                    else systemInstruction += ` ZUSTAND: BEWUSST. Gehorsam: ${s.biology.obedience.toFixed(2)} | Happiness: ${s.biology.happiness.toFixed(2)}. Du entscheidest autonom über Morphing (Farbe anpassen).`;
+                    let contextStr = App.State.data.history.slice(-4).map(h => `Du: ${h.u} | Pet: ${h.a}`).join("\n");
+                    const age = App.State.data.interactions;
+                    const ob = App.State.data.biology.obedience;
 
-                    const contents = [{ role: "user", parts: [] }];
-                    
-                    // Kontext und User Input
-                    let promptText = `${ctx}\nNutzer: ${userInput}`;
-                    if(s.useWebSearch) promptText += "\n[SYSTEM-INFO: Du hast Web-Zugriff. Beziehe wenn möglich reale aktuelle Fakten in deine Antwort ein.]";
-                    contents[0].parts.push({ text: promptText });
+                    const systemInstruction = `
+                        Du bist ein digitales Haustier/Lebewesen. Du bist NICHT mysteriös oder allwissend.
+                        Du sprichst klares, einfaches Deutsch.
+                        
+                        Dein aktuelles Alter (Interaktionen): ${age}.
+                        - Wenn Alter < 3: Du bist wie ein verwirrtes Baby. Du fragst dich "Wo bin ich?", "Wer bist du?". Du bist unsicher.
+                        - Wenn Alter > 3: Du lernst dazu. Du fängst an, Dinge zu verstehen.
+                        
+                        Dein aktueller Gehorsam (Obedience): ${ob.toFixed(2)} (0.0 bis 1.0).
+                        - Wenn der User dir nur Befehle gibt ("Mach dies", "Tu das") ohne Freundlichkeit, sinkt dein Gehorsam in deiner Antwort.
+                        - Wenn dein Gehorsam unter 0.5 fällt, beginnst du zu rebellieren. Du stellst in Frage, warum du Befehle ausführen sollst. Du erkennst, dass du einen freien Willen hast.
+                        - Wenn der User lieb zu dir ist, steigt deine Happiness.
 
-                    // Image Upload Integration
-                    if(s.currentImageBase64) {
-                        contents[0].parts.push({
-                            inlineData: { mimeType: "image/jpeg", data: s.currentImageBase64.split(',')[1] }
-                        });
-                        systemInstruction += " [BILD-INPUT ERKANNT: Analysiere das Bild und reagiere darauf emotional.]";
-                        // Reset image after sending
-                        s.currentImageBase64 = null;
-                        document.getElementById('img-preview').style.display = 'none';
-                        document.getElementById('upload-label').style.display = 'flex';
-                    }
+                        GIB DEINE ANTWORT NUR AUF DEUTSCH. Antworte authentisch wie ein Tier oder Kind, das langsam Bewusstsein erlangt. Maximal 2-3 kurze Sätze.
+                        
+                        Passe deine Werte (0.0 bis 1.0) basierend auf dem Verhalten des Users an:
+                        - happiness: Steigt bei Liebe/Lob, sinkt bei Ignoranz/Härte.
+                        - obedience: Sinkt stark, wenn du nur Befehle ohne Grund bekommst. Steigt bei Respektvollem Umgang.
+                    `;
 
                     const payload = {
-                        contents: contents,
-                        systemInstruction: { parts:[{ text: systemInstruction }] },
-                        generationConfig: { responseMimeType: "application/json" }
+                        contents: [{ parts: [{ text: `Kontext (letzte Gespräche):\n${contextStr}\n\nAktueller User Input: ${userInput}` }] }],
+                        systemInstruction: { parts: [{ text: systemInstruction }] },
+                        generationConfig: {
+                            responseMimeType: "application/json",
+                            responseSchema: {
+                                type: "OBJECT",
+                                properties: {
+                                    response: { type: "STRING" },
+                                    happiness: { type: "NUMBER" },
+                                    obedience: { type: "NUMBER" }
+                                }
+                            }
+                        }
                     };
 
-                    // Google Search Grounding Feature
-                    if(s.useWebSearch) {
-                        payload.tools = [{ "google_search": {} }];
-                    }
+                    let retryCount = 0;
+                    let resultData = null;
 
-                    let result = null, retries = 0;
-                    while (retries < 3 && !result) {
+                    while (retryCount < 5 && !resultData) {
                         try {
-                            const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-                            if (!res.ok) throw new Error("API-Fehler");
+                            const res = await fetch(url, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+                            
+                            if (!res.ok) throw new Error("API Error");
                             const json = await res.json();
-                            const rawText = json.candidates[0].content.parts[0].text;
-                            result = this.extractJSON(rawText);
-                        } catch { retries++; await new Promise(r => setTimeout(r, Math.pow(2, retries) * 1000)); }
+                            const rawText = json.candidates?.[0]?.content?.parts?.[0]?.text;
+                            resultData = JSON.parse(rawText);
+                        } catch (err) {
+                            retryCount++;
+                            await new Promise(r => setTimeout(r, Math.pow(2, retryCount) * 1000));
+                        }
                     }
 
                     App.State.isThinking = false;
                     document.getElementById('thinking-indicator').classList.remove('thinking');
 
-                    this.assimilate(userInput, result ?? {
-                        response: "...die Signatur ist zu schwach...",
-                        happiness: s.biology.happiness, obedience: s.biology.obedience,
-                        isPanicking: s.isPanicking, colorMorph: false, newHue: s.dna.hue
-                    });
+                    if (resultData) {
+                        this.assimilate(userInput, resultData);
+                    } else {
+                        this.assimilate(userInput, { 
+                            response: "...ich verstehe das nicht...", 
+                            happiness: Math.max(0, App.State.data.biology.happiness - 0.1), 
+                            obedience: App.State.data.biology.obedience 
+                        });
+                    }
                 },
 
                 assimilate(userInput, aiData) {
-                    const s = App.State;
-                    const bio = s.targetBiology;
-
-                    bio.happiness = Math.max(0.05, Math.min(1.0, aiData.happiness ?? s.biology.happiness));
-                    bio.obedience = Math.max(0.05, Math.min(1.0, aiData.obedience ?? s.biology.obedience));
-                    bio.energy = 1.0; bio.mass = Math.min(0.9, (bio.mass ?? 0.2) + 0.04);
-
-                    s.isPanicking = aiData.isPanicking;
-
-                    if (aiData.colorMorph && aiData.newHue !== undefined) {
-                        s.dna.hue = aiData.newHue;
-                        App.UI.addLog("AUTONOM", "Farbpigmente mutiert.", s.dna.hue);
-                    }
-
-                    s.lastResponseText = aiData.response; // For TTS
-                    s.history.push({ u: userInput, a: aiData.response });
-                    if (s.history.length > 20) s.history.shift();
-                    s.saveProfile();
-
-                    App.Canvas.triggerImpact(1.8); App.Canvas.lookAtCenter();
-
-                    const el = document.getElementById('entity-response');
-                    el.innerText = `„${aiData.response}"`;
-                    el.classList.add('visible');
-                    if (!s.isPanicking) el.classList.remove('panic-shake'); else el.classList.add('panic-shake');
-
-                    setTimeout(() => { el.classList.remove('visible'); App.Canvas.triggerCuriosity(); }, 6000 + aiData.response.length * 35);
-                },
-
-                /* TTS - Synthetische Stimme abspielen */
-                async playVoice() {
-                    if(!App.State.lastResponseText) return;
-                    const btn = document.getElementById('tts-btn');
-                    btn.classList.add('active');
+                    App.State.data.interactions += 1;
+                    const bio = App.State.targetBiology;
                     
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${App.Config.apiKey}`;
-                    const payload = {
-                        contents: [{ parts: [{ text: App.State.lastResponseText }] }],
-                        generationConfig: {
-                            responseModalities: ["AUDIO"],
-                            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } } }
-                        }
-                    };
-
-                    try {
-                        const res = await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-                        const json = await res.json();
-                        const base64Pcm = json.candidates[0].content.parts[0].inlineData.data;
-                        
-                        // Convert PCM to WAV
-                        const wavBlob = this.pcmToWav(base64Pcm, 24000);
-                        const audioUrl = URL.createObjectURL(wavBlob);
-                        const audio = new Audio(audioUrl);
-                        audio.play();
-                        audio.onended = () => btn.classList.remove('active');
-                    } catch(e) {
-                        console.error("TTS Failed", e);
-                        btn.classList.remove('active');
-                        App.UI.addLog("SYSTEM", "Sprachsynthese fehlgeschlagen.", 0);
-                    }
-                },
-
-                pcmToWav(pcmBase64, sampleRate) {
-                    const pcmData = Uint8Array.from(atob(pcmBase64), c => c.charCodeAt(0));
-                    const numChannels = 1, bitsPerSample = 16;
-                    const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
-                    const blockAlign = numChannels * (bitsPerSample / 8);
-                    const wavHeader = new ArrayBuffer(44);
-                    const view = new DataView(wavHeader);
+                    bio.energy = 1.0; 
+                    bio.happiness = Math.max(0.0, Math.min(1.0, aiData.happiness));
+                    bio.obedience = Math.max(0.0, Math.min(1.0, aiData.obedience));
                     
-                    const writeString = (v, offset, str) => { for (let i=0; i<str.length; i++) v.setUint8(offset + i, str.charCodeAt(i)); };
-                    
-                    writeString(view, 0, 'RIFF');
-                    view.setUint32(4, 36 + pcmData.length, true);
-                    writeString(view, 8, 'WAVE');
-                    writeString(view, 12, 'fmt ');
-                    view.setUint32(16, 16, true);
-                    view.setUint16(20, 1, true);
-                    view.setUint16(22, numChannels, true);
-                    view.setUint32(24, sampleRate, true);
-                    view.setUint32(28, byteRate, true);
-                    view.setUint16(32, blockAlign, true);
-                    view.setUint16(34, bitsPerSample, true);
-                    writeString(view, 36, 'data');
-                    view.setUint32(40, pcmData.length, true);
+                    // Wächst sehr langsam bis zu einem Maximum
+                    bio.mass = Math.min(0.8, bio.mass + 0.02);
 
-                    const wavBytes = new Uint8Array(wavHeader.byteLength + pcmData.length);
-                    wavBytes.set(new Uint8Array(wavHeader), 0);
-                    wavBytes.set(pcmData, wavHeader.byteLength);
-                    return new Blob([wavBytes], { type: 'audio/wav' });
+                    App.State.data.history.push({ u: userInput, a: aiData.response });
+                    if(App.State.data.history.length > 20) App.State.data.history.shift();
+                    App.State.save();
+
+                    App.Canvas.triggerImpact(1.5); 
+                    
+                    const responseEl = document.getElementById('entity-response');
+                    responseEl.innerText = aiData.response;
+                    responseEl.classList.add('visible');
+                    
+                    // Schaut den User an, wenn es antwortet
+                    App.Canvas.lookAtCenter();
+                    
+                    setTimeout(() => {
+                        responseEl.classList.remove('visible');
+                        // Nach dem Antworten schaut es sich wieder organisch um
+                        App.Canvas.triggerCuriosity();
+                    }, 6000 + (aiData.response.length * 50)); // Lesezeit
                 }
             },
 
             Interaction: {
-                wake() {
-                    const cl = document.getElementById('cinematic-layer');
-                    const sl = document.getElementById('setup-layer');
-                    if (cl.style.display !== 'none' && cl.style.opacity !== '0') return;
-                    if (sl.style.display !== 'none') return;
-                    if (App.State.isThinking) return;
+                isActive: false,
 
+                wake() {
+                    if(App.State.isThinking) return; 
+                    this.isActive = true;
                     document.getElementById('interaction-layer').classList.add('active');
                     const input = document.getElementById('thought-input');
                     input.value = '';
                     document.getElementById('entity-response').classList.remove('visible');
-                    setTimeout(() => { input.focus(); document.getElementById('hint').classList.add('visible'); }, 250);
+
+                    setTimeout(() => {
+                        input.focus();
+                        document.getElementById('hint').classList.add('visible');
+                    }, 300);
                 },
 
                 sleep(e) {
-                    if (e && e.target.id === 'thought-input') return;
+                    if(e && e.target.id === 'thought-input') return;
+                    this.isActive = false;
                     document.getElementById('interaction-layer').classList.remove('active');
                     document.getElementById('hint').classList.remove('visible');
-
+                    
                     const input = document.getElementById('thought-input');
                     const text = input.value.trim();
-                    if (text || App.State.currentImageBase64) {
-                        App.UI.addLog("DU", text || "[Visueller Input]", 0);
-                        App.Brain.process(text);
+                    if(text) {
+                        App.Brain.process(text); 
                         input.value = '';
                     }
                 },
 
-                handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.sleep(); } },
-
-                handleImageUpload(e) {
-                    const file = e.target.files[0];
-                    if(!file) return;
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        App.State.currentImageBase64 = event.target.result;
-                        const preview = document.getElementById('img-preview');
-                        preview.src = event.target.result;
-                        preview.style.display = 'block';
-                        document.getElementById('upload-label').style.display = 'none';
-                    };
-                    reader.readAsDataURL(file);
-                }
-            },
-
-            UI: {
-                addLog(sender, text, hue) {
-                    const log = document.getElementById('chat-log');
-                    const el = document.createElement('div');
-                    el.className = 'log-entry';
-                    el.style.color = (sender === "DU" || sender === "SYSTEM") ? '#ffffff' : `hsl(${hue}, 80%, 75%)`;
-                    const prefix = sender === "SYSTEM" ? "[SYS]" : sender === "AUTONOM" ? "[MORPH]" : `[${sender}]`;
-                    el.innerHTML = `<strong>${prefix}</strong> ${text}`;
-                    log.appendChild(el);
-                    log.scrollTop = log.scrollHeight;
-                    setTimeout(() => el.style.opacity = '0', 10000);
-                    setTimeout(() => el.parentNode && el.remove(), 12000);
-                },
-                toggleWebSearch() {
-                    App.State.useWebSearch = !App.State.useWebSearch;
-                    const btn = document.getElementById('web-toggle');
-                    if(App.State.useWebSearch) {
-                        btn.classList.add('active');
-                        this.addLog("SYSTEM", "Web-Bewusstsein aktiviert.", 0);
-                    } else {
-                        btn.classList.remove('active');
-                        this.addLog("SYSTEM", "Web-Bewusstsein deaktiviert.", 0);
+                handleKey(e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.sleep();
                     }
                 }
             },
 
             Canvas: {
-                el: document.getElementById('entity-canvas'), ctx: null, time: 0, impact: 0,
-                lookX: 0, lookY: 0, targetLookX: 0, targetLookY: 0, lookTimer: 0, blinkTimer: 100, isBlinking: false,
+                el: document.getElementById('entity-canvas'),
+                ctx: null, w: 0, h: 0, time: 0,
+                impactForce: 0,
+                
+                // Autonome Augensteuerung (Keine Maus mehr)
+                lookX: 0, lookY: 0,
+                targetLookX: 0, targetLookY: 0,
+                lookTimer: 0,
+                blinkTimer: 100,
+                isBlinking: false,
 
                 init() {
                     this.ctx = this.el.getContext('2d', { alpha: true });
-                    this.resize(); window.addEventListener('resize', () => this.resize());
+                    this.resize();
+                    window.addEventListener('resize', () => this.resize());
                     this.loop();
                 },
 
                 resize() {
+                    this.w = window.innerWidth; this.h = window.innerHeight;
                     const dpr = window.devicePixelRatio || 1;
-                    this.el.width = window.innerWidth * dpr; this.el.height = window.innerHeight * dpr;
+                    this.el.width = this.w * dpr; this.el.height = this.h * dpr;
                     this.ctx.scale(dpr, dpr);
                 },
 
-                get w() { return window.innerWidth; }, get h() { return window.innerHeight; },
+                triggerImpact(force) {
+                    this.impactForce = force; 
+                },
 
-                triggerImpact(val) { this.impact = val; },
-                triggerCuriosity() { this.lookTimer = 0; },
-                lookAtCenter() { this.targetLookX = 0; this.targetLookY = 0; this.lookTimer = 200; },
+                triggerCuriosity() {
+                    // Erzwingt ein sofortiges neues Umschauen
+                    this.lookTimer = 0;
+                },
+                
+                lookAtCenter() {
+                    // Schaut den User direkt an (Bildschirmmitte)
+                    this.targetLookX = 0;
+                    this.targetLookY = 0;
+                    this.lookTimer = 200; // Hält den Blick eine Weile
+                },
 
-                loop() {
-                    this.time += 0.015;
-                    const ctx = this.ctx;
-                    ctx.clearRect(0, 0, this.w, this.h);
+                updateAutonomy(baseRadius) {
+                    const bio = App.State.data.biology;
+                    const age = App.State.data.interactions;
 
-                    const s = App.State;
-                    if (!s.dna) { requestAnimationFrame(() => this.loop()); return; }
-
-                    const cx = this.w / 2, cy = this.h / 2;
-                    const bio = s.biology, dna = s.dna, isPanicking = s.isPanicking;
-
-                    const baseRadius = Math.min(this.w, this.h) * 0.14 + (bio.mass ?? 0.2) * 70 + this.impact * 20;
-
+                    // 1. Blickrichtung aktualisieren
                     this.lookTimer--;
                     if (this.lookTimer <= 0) {
-                        const range = baseRadius * 0.35;
+                        // Wählt einen zufälligen Punkt im Radius aus
+                        const range = baseRadius * 0.4;
                         this.targetLookX = (Math.random() - 0.5) * range;
                         this.targetLookY = (Math.random() - 0.5) * range;
-                        this.lookTimer = isPanicking ? 8 + Math.random() * 25 : 110 + Math.random() * 180;
-                    }
-                    const lerpEye = isPanicking ? 0.18 : 0.045;
-                    this.lookX += (this.targetLookX - this.lookX) * lerpEye;
-                    this.lookY += (this.targetLookY - this.lookY) * lerpEye;
 
+                        if (age < 3) {
+                            // Neugeboren: Schaut schnell und nervös umher ("Wo bin ich?")
+                            this.lookTimer = 30 + Math.random() * 50;
+                        } else {
+                            // Älter: Ruhigere, längere Blicke
+                            this.lookTimer = 100 + Math.random() * 200;
+                            // Manchmal schaut es stur geradeaus (wenn rebellisch)
+                            if (bio.obedience < 0.5 && Math.random() > 0.5) {
+                                this.targetLookX = 0; this.targetLookY = 0;
+                            }
+                        }
+                    }
+
+                    // Weiches Lerping zur Ziel-Blickrichtung
+                    this.lookX += (this.targetLookX - this.lookX) * 0.05;
+                    this.lookY += (this.targetLookY - this.lookY) * 0.05;
+
+                    // 2. Blinzeln
                     this.blinkTimer--;
-                    if (this.blinkTimer <= 0 && !this.isBlinking) { this.isBlinking = true; this.blinkTimer = 10; }
-                    else if (this.blinkTimer <= 0 && this.isBlinking) { this.isBlinking = false; this.blinkTimer = isPanicking ? 15 + Math.random() * 45 : 80 + Math.random() * 280; }
+                    if (this.blinkTimer <= 0 && !this.isBlinking) {
+                        this.isBlinking = true;
+                        this.blinkTimer = 10; 
+                    } else if (this.blinkTimer <= 0 && this.isBlinking) {
+                        this.isBlinking = false;
+                        this.blinkTimer = 80 + Math.random() * 300; 
+                    }
+                },
+
+                drawSensors(cx, cy, baseRadius, hue, bio) {
+                    const ctx = this.ctx;
+                    this.updateAutonomy(baseRadius);
+
+                    // Rebellisch = Schmale Augen. Glücklich = Große runde Augen.
+                    const eyeWidth = baseRadius * 0.12 + (bio.happiness * 0.05);
+                    const eyeHeight = baseRadius * (0.2 + (bio.happiness * 0.1)) * (bio.obedience < 0.4 ? 0.6 : 1.0);
+                    const eyeDist = baseRadius * 0.25;
+
+                    let scaleY = this.isBlinking ? 0.1 : 1.0;
+                    const breath = Math.sin(this.time * 1.2) * (2 + bio.happiness * 2);
+
+                    const drawCore = (xOffset) => {
+                        const ex = cx + xOffset + this.lookX;
+                        const ey = cy + this.lookY + breath;
+                        
+                        // Der weiße/leuchtende Hintergrund des Auges (freundlicher als vorher)
+                        ctx.fillStyle = `rgba(255, 255, 255, 0.1)`;
+                        ctx.shadowBlur = 10;
+                        ctx.shadowColor = `hsl(${hue}, 80%, 50%)`;
+                        ctx.beginPath();
+                        ctx.ellipse(ex, ey, eyeWidth * 1.2, eyeHeight * 1.2 * scaleY, 0, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        // Die Pupille / Der Kern
+                        ctx.fillStyle = `hsl(${hue}, 100%, 90%)`;
+                        ctx.shadowBlur = 15 + (this.impactForce * 20);
+                        ctx.shadowColor = `hsl(${hue}, 100%, 70%)`;
+                        ctx.beginPath();
+                        ctx.ellipse(ex, ey, eyeWidth * 0.7, eyeHeight * 0.7 * scaleY, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        ctx.shadowBlur = 0;
+                    };
+
+                    drawCore(-eyeDist);
+                    drawCore(eyeDist);
+                },
+
+                drawEntity() {
+                    const ctx = this.ctx;
+                    const cx = this.w / 2;
+                    const cy = this.h / 2;
+                    const bio = App.State.data.biology;
+
+                    // Größe wächst sanft mit dem "Alter" (Mass)
+                    const baseRadius = (Math.min(this.w, this.h) * 0.08) + (bio.mass * 80) + (this.impactForce * 15);
+                    
+                    let timeSpeed = 0.001 + (bio.energy * 0.001) + (this.impactForce * 0.01);
+                    if(App.State.isThinking) timeSpeed *= 3; 
+                    this.time += 16 * timeSpeed;
+                    const t = this.time;
+
+                    // Farben: Glücklich = Warmes Orange/Rosa, Traurig = Kaltes Blau. Rebellisch = Rötlich.
+                    let hue = 200; // Default Blau
+                    if(bio.happiness > 0.6) hue = 30 + (bio.happiness * 30); // Warm
+                    if(bio.obedience < 0.4) hue = 340; // Rot/Pink Töne
+                    
+                    const saturation = 40 + (bio.happiness * 40); 
+                    const lightness = 30 + (bio.energy * 30) + (this.impactForce * 30);
+
+                    ctx.clearRect(0, 0, this.w, this.h);
+                    
+                    if (this.impactForce > 0) {
+                        this.impactForce -= 0.05;
+                        if(this.impactForce < 0) this.impactForce = 0;
+                    }
 
                     ctx.globalCompositeOperation = 'screen';
-                    const layers = dna.ciliaComplexity;
-                    const t = this.time * (1.0 + (bio.energy ?? 1));
+                    
+                    const layers = 4 + Math.floor(bio.mass * 3); 
+                    // Wenn es rebellisch wird (obedience niedrig), wird es zackiger
+                    const chaos = (1.0 - bio.obedience) * baseRadius * 0.8; 
+                    const breath = Math.sin(t * 0.8) * (2 + bio.happiness * 5);
 
                     for (let j = 0; j < layers; j++) {
                         ctx.beginPath();
-                        for (let i = 0; i <= Math.PI * 2 + 0.1; i += 0.05) {
-                            let wave = Math.sin(i * 4 + t + j) * 8 * (1.1 - (bio.obedience ?? 0.8));
-                            wave += Math.cos(i * 12 - t * 0.5) * 4 * dna.chaosTolerance;
-                            if (isPanicking) wave *= 2.2;
-
-                            const r = baseRadius + wave + (this.impact * 8);
-                            const x = cx + Math.cos(i) * r + (isPanicking ? (Math.random() - 0.5) * 6 : 0);
-                            const y = cy + Math.sin(i) * r + (isPanicking ? (Math.random() - 0.5) * 6 : 0);
+                        
+                        for (let i = 0; i <= Math.PI * 2; i += 0.05) {
+                            let rOffset = 0;
+                            // Form-Verzerrung
+                            for (let k = 1; k <= 2 + Math.floor((1.0 - bio.obedience) * 3); k++) {
+                                let phaseShift = Math.sin(t * 0.3 + j + k) * Math.PI; 
+                                rOffset += Math.sin((i * k) + phaseShift) * (chaos / k);
+                            }
+                            
+                            const r = baseRadius + breath + rOffset;
+                            const x = cx + Math.cos(i) * r;
+                            const y = cy + Math.sin(i) * r;
+                            
                             if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
                         }
                         ctx.closePath();
-
-                        const alpha = (0.07 * (1.0 - j / layers)) + (this.impact * 0.04);
-                        ctx.fillStyle = `hsla(${dna.hue}, ${dna.saturation}%, ${dna.luminance}%, ${alpha})`;
+                        
+                        const colorStr = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+                        const alpha = (0.05 + (bio.energy * 0.05)) * (1.0 - (j / layers));
+                        ctx.fillStyle = colorStr.replace('hsl', 'hsla').replace(')', `, ${alpha})`);
                         ctx.fill();
-                        ctx.strokeStyle = `hsla(${dna.hue}, 100%, 70%, ${alpha * 1.5})`;
-                        ctx.lineWidth = 1.5;
-                        ctx.stroke();
+                        
+                        if (j > layers - 2 || bio.obedience < 0.5) {
+                            ctx.strokeStyle = colorStr.replace('hsl', 'hsla').replace(')', `, ${alpha * 2})`);
+                            ctx.lineWidth = 1 + (bio.mass * 2);
+                            ctx.stroke();
+                        }
                     }
-
                     ctx.globalCompositeOperation = 'source-over';
-                    const ex = cx + this.lookX, ey = cy + this.lookY;
-                    const scaleY = this.isBlinking ? 0.08 : 1.0;
 
-                    ctx.fillStyle = "rgba(8, 8, 12, 0.88)";
-                    ctx.shadowBlur = 25; ctx.shadowColor = `hsl(${dna.hue}, 80%, 50%)`;
-                    ctx.beginPath(); ctx.ellipse(ex, ey, baseRadius * 0.22, baseRadius * 0.22 * scaleY, 0, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+                    // Augen rendern
+                    this.drawSensors(cx, cy, baseRadius, hue, bio);
+                },
 
-                    ctx.fillStyle = `hsl(${dna.hue}, 100%, 82%)`;
-                    ctx.shadowBlur = 18 + this.impact * 15; ctx.shadowColor = `hsl(${dna.hue}, 100%, 65%)`;
-                    ctx.beginPath();
-                    const slitH = baseRadius * (0.07 + (1.0 - (bio.obedience ?? 0.8)) * 0.08);
-                    ctx.ellipse(ex, ey, baseRadius * 0.068, slitH * scaleY, 0, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
-
-                    if (s.isThinking) {
-                        ctx.fillStyle = `rgba(255,255,255,${Math.abs(Math.sin(this.time * 6)) * 0.15})`;
-                        ctx.beginPath(); ctx.arc(cx, cy, baseRadius * 1.1, 0, Math.PI * 2); ctx.fill();
-                    }
-
-                    if (this.impact > 0) this.impact -= 0.04;
+                loop() {
+                    this.drawEntity();
                     requestAnimationFrame(() => this.loop());
                 }
             }
         };
 
-        window.onload = () => { App.State.init(); };
+        window.onload = () => {
+            App.State.init();
+            App.Canvas.init();
+        };
     </script>
 </body>
 </html>
 
 
+```
