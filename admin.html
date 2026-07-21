@@ -48,7 +48,7 @@
                     <h2 class="text-sm tracking-wider font-bold uppercase text-white font-mono">Synthetisierter Master-HTML-Code</h2>
                     <button onclick="copyMutatedCode()" class="bg-cyan-950 hover:bg-cyan-900 text-cyan-400 text-xs py-1 px-4 border border-cyan-800 transition">Code kopieren</button>
                 </div>
-                <textarea id="master-code-area" class="w-full h-[65vh] p-4 code-view outline-none rounded-sm resize-none" readonly>Lade evolutionären Code aus der Matrix...</textarea>
+                <textarea id="master-code-area" class="w-full h-[65vh] p-4 code-view outline-none rounded-sm resize-none" readonly>Warte auf den ersten Evolutions-Schritt eines biologischen Organismus...</textarea>
             </div>
 
         </div>
@@ -82,7 +82,7 @@
                 renderFeed(proposals);
                 renderCompiledHTML(proposals);
             } else {
-                document.getElementById('master-code-area').value = "Kein Code im Evolutions-Kollektiv gespeichert.";
+                document.getElementById('master-code-area').value = "Kein Code im Evolutions-Kollektiv gespeichert. Sobald deine ANIMA läuft und ihr erstes Fragment einspeist, taucht der Ordner hier auf.";
             }
         });
 
@@ -94,7 +94,6 @@
                 return;
             }
 
-            // Sortiere nach Zeitstempel absteigend
             const sorted = [...proposals].sort((a,b) => b.timestamp - a.timestamp);
             
             sorted.forEach(prop => {
@@ -114,7 +113,6 @@
         }
 
         function renderCompiledHTML(proposals) {
-            // Generiere dynamisch das Code-File aus allen kollektiv zusammengestellten Code-Fragmenten
             let baseStyles = "";
             let baseScripts = "";
 
