@@ -3,97 +3,166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ANIMA | Admin Evolutions-Konsole</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>ANIMA | Evolution Terminal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #030305; color: #fff; font-family: 'Space Mono', monospace; }
-        .code-box { background: #0b0b10; border: 1px solid rgba(255,255,255,0.1); }
+        body {
+            background-color: #030303;
+            color: #00ffcc;
+            font-family: 'Space Mono', monospace;
+        }
+        .code-view {
+            background: #08080c;
+            border: 1px solid #00ffcc33;
+            color: #d0fffa;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            tab-size: 4;
+        }
     </style>
 </head>
-<body class="p-6 md:p-12 max-w-5xl mx-auto">
+<body class="p-8">
 
-    <header class="mb-10 border-b border-white/10 pb-6 flex justify-between items-center">
-        <div>
-            <h1 class="text-2xl font-bold tracking-widest text-cyan-400">ANIMA EVOLUTION NEXUS</h1>
-            <p class="text-xs text-gray-500 mt-1">Admin Konsole zur Code-Sichtung autonomer Entitäten</p>
-        </div>
-        <div id="status-badge" class="text-xs px-3 py-1 bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 rounded">
-            Verbinde mit Äther...
-        </div>
-    </header>
+    <div class="max-w-6xl mx-auto">
+        <header class="border-b border-cyan-900/30 pb-4 mb-8">
+            <h1 class="text-xl tracking-[0.3em] font-bold uppercase text-white">ANIMA Admin Console</h1>
+            <p class="text-xs text-gray-500 mt-1">Kollektives Verhandlungsprotokoll & Quellcode-Synthese</p>
+        </header>
 
-    <main>
-        <section class="mb-8">
-            <h2 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-4">Vorschläge & Code-Mutationen der Animas</h2>
-            <div id="snippets-container" class="space-y-4">
-                <div class="text-gray-600 text-xs italic">Lausche auf evolutionäre Code-Snippets aus dem Multiversum...</div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Linker Bereich: Log der Kollektivverhandlung -->
+            <div class="lg:col-span-1">
+                <h2 class="text-sm tracking-wider font-bold uppercase mb-4 text-white">Verhandlungs-Feed</h2>
+                <div id="negotiation-feed" class="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+                    <p class="text-xs text-gray-600">Initialisiere Detektoren...</p>
+                </div>
             </div>
-        </section>
-    </main>
 
-    <!-- FIREBASE MODULE -->
+            <!-- Rechter Bereich: Generierter Code der Organismen -->
+            <div class="lg:col-span-2">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-sm tracking-wider font-bold uppercase text-white font-mono">Synthetisierter Master-HTML-Code</h2>
+                    <button onclick="copyMutatedCode()" class="bg-cyan-950 hover:bg-cyan-900 text-cyan-400 text-xs py-1 px-4 border border-cyan-800 transition">Code kopieren</button>
+                </div>
+                <textarea id="master-code-area" class="w-full h-[65vh] p-4 code-view outline-none rounded-sm resize-none" readonly>Lade evolutionären Code aus der Matrix...</textarea>
+            </div>
+
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'anima-evolution-nexus';
+        const firebaseConfig = {
+            apiKey: "AIzaSyDtwsvmYSONjFufhbJ5I8G_RAMffnh7re0",
+            authDomain: "theplot-app.firebaseapp.com",
+            projectId: "theplot-app",
+            storageBucket: "theplot-app.firebasestorage.app",
+            messagingSenderId: "550703275210",
+            appId: "1:550703275210:web:81bc0e5a373f87a3c92833"
+        };
 
-        async function initAdmin() {
-            if (!firebaseConfig) {
-                document.getElementById('status-badge').innerText = "Firebase Konfiguration fehlt";
+        // Firebase Initialisierung
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const evoDocRef = doc(db, "anima", "evolution_control");
+
+        // Realtime Überwachung der Verhandlungen
+        onSnapshot(evoDocRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.data();
+                const proposals = data.proposals || [];
+                
+                renderFeed(proposals);
+                renderCompiledHTML(proposals);
+            } else {
+                document.getElementById('master-code-area').value = "Kein Code im Evolutions-Kollektiv gespeichert.";
+            }
+        });
+
+        function renderFeed(proposals) {
+            const feed = document.getElementById('negotiation-feed');
+            feed.innerHTML = "";
+            if (proposals.length === 0) {
+                feed.innerHTML = `<p class="text-xs text-gray-600">Keine Evolutionen verzeichnet.</p>`;
                 return;
             }
 
-            const app = initializeApp(firebaseConfig);
-            const auth = getAuth(app);
-            const db = getFirestore(app);
-
-            await signInAnonymously(auth);
-            document.getElementById('status-badge').className = "text-xs px-3 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded";
-            document.getElementById('status-badge').innerText = "Online & Synchronsiert";
-
-            const codeCol = collection(db, 'artifacts', appId, 'public', 'data', 'admin_code_evolution');
+            // Sortiere nach Zeitstempel absteigend
+            const sorted = [...proposals].sort((a,b) => b.timestamp - a.timestamp);
             
-            onSnapshot(codeCol, (snapshot) => {
-                const container = document.getElementById('snippets-container');
-                container.innerHTML = "";
-
-                if (snapshot.empty) {
-                    container.innerHTML = `<div class="text-gray-600 text-xs italic">Bislang wurden keine Code-Mutationen von Entitäten übermittelt.</div>`;
-                    return;
-                }
-
-                snapshot.forEach((docSnap) => {
-                    const data = docSnap.data();
-                    const dateStr = new Date(data.timestamp).toLocaleString('de-DE');
-
-                    const card = document.createElement('div');
-                    card.className = "code-box p-4 rounded text-xs space-y-3 relative";
-                    
-                    card.innerHTML = `
-                        <div class="flex justify-between items-center text-gray-400 border-b border-white/5 pb-2">
-                            <span>Entität: <strong class="text-white">${data.freq}</strong> (${data.entityId.substring(0,6)}...)</span>
-                            <span>${dateStr}</span>
-                        </div>
-                        <pre class="overflow-x-auto p-3 bg-black/55 text-cyan-200 rounded font-mono"><code>${escapeHtml(data.snippet)}</code></pre>
-                        <div class="flex gap-3 justify-end pt-1">
-                            <button onclick="navigator.clipboard.writeText(${JSON.stringify(data.snippet)}); alert('Code kopiert!');" class="px-3 py-1.5 bg-white text-black font-bold uppercase tracking-wider rounded text-[10px] hover:bg-gray-200">Snippet kopieren</button>
-                        </div>
-                    `;
-                    container.appendChild(card);
-                });
+            sorted.forEach(prop => {
+                const time = new Date(prop.timestamp).toLocaleTimeString();
+                const div = document.createElement('div');
+                div.className = 'border border-cyan-900/20 bg-black/40 p-3 rounded-sm';
+                div.innerHTML = `
+                    <div class="flex justify-between text-[0.65rem] text-gray-500 mb-1">
+                        <span>ENTITÄT [${prop.proposer.substring(0,6).toUpperCase()}]</span>
+                        <span>${time}</span>
+                    </div>
+                    <div class="text-xs text-white font-bold mb-1">${prop.name}</div>
+                    <div class="text-[0.7rem] text-gray-400">${prop.explanation}</div>
+                `;
+                feed.appendChild(div);
             });
         }
 
-        function escapeHtml(text) {
-            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        function renderCompiledHTML(proposals) {
+            // Generiere dynamisch das Code-File aus allen kollektiv zusammengestellten Code-Fragmenten
+            let baseStyles = "";
+            let baseScripts = "";
+
+            proposals.forEach(prop => {
+                if (prop.code.includes("<style>")) {
+                    baseStyles += prop.code.replace(/<\/?style>/g, "") + "\n";
+                } else if (prop.code.includes("<script>")) {
+                    baseScripts += prop.code.replace(/<\/?script>/g, "") + "\n";
+                } else {
+                    baseStyles += `/* ${prop.name} */\n` + prop.code + "\n";
+                }
+            });
+
+            const template = `<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>ANIMA | Mutated Live Vessel</title>
+    <style>
+        /* System Basis Styles */
+        body { background: #000; color: #fff; margin:0; overflow:hidden; }
+        canvas { display: block; }
+        
+        /* Kollektive Mutationen der ANIMAs */
+        ${baseStyles}
+    </style>
+</head>
+<body>
+    <canvas id="live-canvas"></canvas>
+    
+    <script>
+        /* Kollektive Verhaltenssteuerungen */
+        console.log("Synthese-Code initialisiert.");
+        ${baseScripts}
+    <\/script>
+</body>
+</html>`;
+
+            document.getElementById('master-code-area').value = template;
         }
 
-        window.onload = initAdmin;
+        window.copyMutatedCode = function() {
+            const copyText = document.getElementById("master-code-area");
+            copyText.select();
+            copyText.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(copyText.value);
+            alert("Synthetisierter Code in Zwischenablage kopiert.");
+        }
     </script>
 </body>
 </html>
-
