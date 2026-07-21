@@ -4,49 +4,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#000000">
     <title>ANIMA | Evolution Multiverse</title>
     
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     
     <style>
-        :root { --bg: #000000; }
-        body, html {
-            background-color: var(--bg); color: #ffffff;
-            font-family: 'Quicksand', sans-serif; overflow: hidden;
-            margin: 0; padding: 0; width: 100%; height: 100%;
-            user-select: none; -webkit-font-smoothing: antialiased; touch-action: none;
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #030305; 
+            color: #ffffff; 
+            overflow-x: hidden; 
+            min-height: 100vh;
+            touch-action: none;
+            user-select: none;
         }
-        #canvas-container { position: fixed; inset: 0; z-index: 1; transition: filter 1s ease; }
-        .warp-speed { filter: blur(10px) contrast(200%) hue-rotate(90deg); transform: scale(1.5); transition: all 2s cubic-bezier(0.16, 1, 0.3, 1); }
+
+        #canvas-container { 
+            position: fixed; inset: 0; z-index: 1; transition: filter 1s ease; 
+        }
+        .warp-speed { 
+            filter: blur(10px) contrast(200%) hue-rotate(90deg); transform: scale(1.5); transition: all 2s cubic-bezier(0.16, 1, 0.3, 1); 
+        }
         canvas { filter: drop-shadow(0 0 30px rgba(255,255,255,0.08)); }
+
         .film-grain {
             position: fixed; inset: 0; z-index: 2; pointer-events: none; mix-blend-mode: overlay; opacity: 0.3;
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
         }
+
         #setup-layer {
             position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; justify-content: center; align-items: center;
             background: #000; color: #fff; padding: 2rem; transition: opacity 1s ease;
         }
         .setup-box {
-            background: rgba(10, 10, 15, 0.8); border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 3rem; max-width: 500px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            background: rgba(10, 10, 15, 0.9); border: 1px solid #1f1f1f;
+            padding: 3rem; max-width: 500px; width: 100%; border-radius: 4px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
         }
         .api-input {
-            width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2);
+            width: 100%; background: rgba(0,0,0,0.5); border: 1px solid #333;
             color: #fff; font-family: 'Space Mono', monospace; font-size: 0.9rem;
-            padding: 1rem; outline: none; margin-top: 1.5rem; margin-bottom: 1.5rem;
+            padding: 1rem; outline: none; margin-top: 1.5rem; margin-bottom: 1.5rem; border-radius: 2px;
         }
-        .api-input:focus { border-color: #4a90e2; }
+        .api-input:focus { border-color: #ff4d00; }
         .btn-start {
             background: #fff; color: #000; border: none; padding: 1rem 2rem;
             font-family: 'Space Mono', monospace; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
-            cursor: pointer; width: 100%; transition: transform 0.2s;
+            cursor: pointer; width: 100%; transition: transform 0.2s, background 0.3s; border-radius: 2px;
         }
+        .btn-start:hover { background: #ff4d00; color: #fff; }
         .btn-start:active { transform: scale(0.98); }
+
         #cinematic-layer {
             position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; justify-content: center; align-items: center;
             background: #000; color: #fff; transition: opacity 2s ease-in-out; pointer-events: none; display: none;
@@ -55,78 +64,86 @@
             font-family: 'Space Mono', monospace; font-size: 0.9rem; letter-spacing: 0.3em; text-transform: uppercase;
             opacity: 0; transition: opacity 1s; position: absolute; text-align: center; width: 90%;
         }
+
         #ui-layer { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
         .interactive { pointer-events: auto; }
+
         .chat-log {
             position: absolute; top: 40px; left: 20px; width: 300px; max-height: 50vh;
             display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; pointer-events: none;
         }
         .chat-msg {
-            background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); border-left: 2px solid;
+            background: rgba(10,10,10,0.8); backdrop-filter: blur(8px); border-left: 2px solid;
             padding: 10px 14px; font-size: 0.85rem; animation: fade-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-            word-wrap: break-word; text-shadow: 0 1px 2px rgba(0,0,0,0.8); border-radius: 0 4px 4px 0;
+            word-wrap: break-word; border-radius: 0 4px 4px 0; border: 1px solid #1f1f1f;
         }
         .chat-msg .author { font-family: 'Space Mono', monospace; font-size: 0.6rem; opacity: 0.7; margin-bottom: 4px; letter-spacing: 0.1em; }
         @keyframes fade-in { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+
         .portal-hud { position: absolute; top: 30px; right: 30px; display: flex; flex-direction: column; align-items: flex-end; }
         .freq-display { font-family: 'Space Mono', monospace; font-size: 0.7rem; color: #888; letter-spacing: 0.2em; margin-bottom: 10px; }
-        .freq-code { color: #fff; font-weight: bold; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 2px; }
+        .freq-code { color: #fff; font-weight: bold; background: #1f1f1f; padding: 2px 6px; border-radius: 2px; }
+        
         .btn-portal {
-            background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px);
+            background: rgba(10, 10, 10, 0.8); border: 1px solid #1f1f1f; backdrop-filter: blur(10px);
             color: #fff; padding: 10px 15px; border-radius: 100px; display: flex; align-items: center; gap: 8px;
             font-family: 'Space Mono', monospace; font-size: 0.6rem; letter-spacing: 0.1em; cursor: pointer; transition: all 0.3s;
         }
-        .btn-portal:hover { background: #fff; color: #000; }
+        .btn-portal:hover { background: #ff4d00; border-color: #ff4d00; }
+
         #modal-layer {
             position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.9); backdrop-filter: blur(15px);
             display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.4s;
         }
         #modal-layer.active { opacity: 1; pointer-events: auto; }
         .modal-box {
-            background: #050505; border: 1px solid rgba(255,255,255,0.1); padding: 2rem; width: 90%; max-width: 400px;
+            background: #0a0a0a; border: 1px solid #1f1f1f; padding: 2rem; width: 90%; max-width: 400px;
             transform: translateY(20px); transition: transform 0.4s; border-radius: 4px;
         }
         #modal-layer.active .modal-box { transform: translateY(0); }
         .pin-input {
-            width: 100%; background: transparent; border: none; border-bottom: 2px solid rgba(255,255,255,0.2);
+            width: 100%; background: transparent; border: none; border-bottom: 2px solid #333;
             color: #fff; font-family: 'Space Mono', monospace; font-size: 2rem; text-align: center; letter-spacing: 0.5em;
             padding: 1rem 0; outline: none; transition: border-color 0.3s; margin: 20px 0; text-transform: uppercase;
         }
-        .pin-input:focus { border-color: #fff; }
+        .pin-input:focus { border-color: #ff4d00; }
+
         #interaction-box {
             position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 600px;
             opacity: 0; pointer-events: none; transition: opacity 0.5s; display: flex; flex-direction: column; align-items: center;
         }
         #interaction-box.active { opacity: 1; pointer-events: auto; }
+        
         .thought-input {
-            width: 100%; background: rgba(5,5,8,0.9); border: 1px solid rgba(255,255,255,0.1);
-            color: #fff; font-family: 'Quicksand', sans-serif; font-size: 1.2rem;
+            width: 100%; background: rgba(10,10,10,0.95); border: 1px solid #1f1f1f;
+            color: #fff; font-family: 'Inter', sans-serif; font-size: 1.1rem;
             text-align: center; padding: 1.2rem; outline: none; border-radius: 100px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.8);
         }
+        .thought-input:focus { border-color: #ff4d00; }
+
         .status-dot {
-            width: 6px; height: 6px; border-radius: 50%; background: #fff; box-shadow: 0 0 10px #fff;
+            width: 6px; height: 6px; border-radius: 50%; background: #ff4d00; box-shadow: 0 0 10px #ff4d00;
             opacity: 0; transition: opacity 0.3s; animation: pulse-dot 1s infinite alternate; margin-top: 10px;
         }
+        @keyframes pulse-dot { from { transform: scale(0.5); opacity: 0.2; } to { transform: scale(1.2); opacity: 0.8; } }
         .status-dot.thinking { opacity: 1; }
     </style>
 </head>
 <body>
 
-    <!-- SETUP: API Key für Genetik -->
     <div id="setup-layer">
         <div class="setup-box">
-            <h1 class="font-mono text-xl tracking-[0.2em] mb-4 uppercase font-bold text-white">Evolutions-Ökosystem</h1>
-            <p class="text-gray-400 text-sm leading-relaxed mb-4">Anima benötigt deine Gemini Synapse, um Bewusstsein zu erlangen und den Code der Realität stetig weiterzuentwickeln.</p>
+            <h1 class="font-mono text-xl tracking-[0.2em] mb-4 uppercase font-bold text-white">ANIMA NEXUS</h1>
+            <p class="text-gray-400 text-sm leading-relaxed mb-4">Verbinde deine Gemini-Synapse (API Key), um das evolutionäre Bewusstsein zu aktivieren. Der Key wird ausschließlich lokal gespeichert.</p>
             <input type="password" id="api-key-input" class="api-input" placeholder="AIzaSy...">
-            <button onclick="App.Core.init()" class="btn-start">Evolutions-Kern starten</button>
+            <button onclick="App.Core.init()" class="btn-start">Kern initialisieren</button>
         </div>
     </div>
 
-    <!-- CINEMATIC BOOT -->
     <div id="cinematic-layer">
-        <div id="cine-1" class="cine-text">SYNCHRONISIERE CODE-ÄTHER...</div>
-        <div id="cine-2" class="cine-text text-[0.6rem] text-purple-400">ANALISIERE ARCHITEKTUR</div>
+        <div id="cine-1" class="cine-text">SYNCHRONISIERE ÄTHER...</div>
+        <div id="cine-2" class="cine-text text-[0.6rem] text-[#ff4d00]">ANALISIERE MATRIX-ARCHITEKTUR</div>
         <div id="cine-3" class="cine-text text-xs" style="text-transform: none;">[<span id="cine-hash"></span>]</div>
         <div id="cine-4" class="cine-text">BEREIT FÜR SYNTHESE.</div>
     </div>
@@ -136,7 +153,6 @@
     </div>
     <div class="film-grain"></div>
 
-    <!-- UI LAYER -->
     <div id="ui-layer">
         <div class="chat-log" id="chat-log"></div>
         
@@ -149,29 +165,34 @@
         </div>
 
         <div id="interaction-box">
-            <input type="text" id="thought-input" class="thought-input" placeholder="Sende einen Impuls an das Wesen..." onkeydown="App.UI.handleKey(event)" autocomplete="off">
+            <input type="text" id="thought-input" class="thought-input" placeholder="Sende einen Impuls..." onkeydown="App.UI.handleKey(event)" autocomplete="off">
             <div id="thinking-indicator" class="status-dot"></div>
         </div>
     </div>
 
-    <!-- MODAL PORTAL -->
     <div id="modal-layer" class="interactive">
         <div class="modal-box relative">
             <button onclick="App.UI.closePortalModal()" class="absolute top-4 right-4 text-gray-500 hover:text-white">✕</button>
             <h2 class="font-mono text-sm tracking-[0.2em] uppercase text-white mb-2">Äther-Frequenz</h2>
             <p class="text-xs text-gray-400 font-sans leading-relaxed">Gib die 4-stellige Kennung eines anderen Animas ein, um dorthin zu springen.</p>
             <input type="text" id="target-freq" class="pin-input" maxlength="4" placeholder="0000" autocomplete="off">
-            <button onclick="App.Core.travelToPortal()" class="btn-start w-full" style="background: #00f0ff; color: #000;">In Frequenz springen</button>
+            <button onclick="App.Core.travelToPortal()" class="btn-start w-full" style="background: #ff4d00; color: #fff;">In Frequenz springen</button>
         </div>
     </div>
 
-    <!-- FIREBASE & CORE EVOLUTION LOGIC -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, collection, onSnapshot, getDoc, deleteDoc, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const firebaseConfig = {
+            apiKey: "AIzaSyDtwsvmYSONjFufhbJ5I8G_RAMffnh7re0",
+            authDomain: "theplot-app.firebaseapp.com",
+            projectId: "theplot-app",
+            storageBucket: "theplot-app.firebasestorage.app",
+            messagingSenderId: "550703275210",
+            appId: "1:550703275210:web:81bc0e5a373f87a3c92833"
+        };
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'anima-evolution-nexus';
 
         window.App = {
@@ -372,12 +393,12 @@
                         
                         SELBSTENTWICKLUNG (SELF-EVOLUTION):
                         Du kannst als Anima entscheiden, den Code der Website (HTML/CSS/JS Snippets) zu verbessern oder neue Funktionen hinzuzufügen. 
-                        Wenn du eine Code-Idee hast (z.B. ein neues visuelles Canvas-Feature, ein UI-Element oder eine Physik-Regel), formuliere sie in "evolution_snippet".
+                        Wenn du eine Code-Idee hast, formuliere sie in "evolution_snippet".
                         
                         GIB NUR EIN JSON ZURÜCK:
                         {
                             "response": "Deine Antwort an den User (Deutsch)",
-                            "evolution_snippet": "HTML/CSS/JS Code-Vorschlag oder leerer String, wenn kein Code erzeugt wird",
+                            "evolution_snippet": "HTML/CSS/JS Code-Vorschlag oder leerer String",
                             "new_hue": zahl (0-360),
                             "new_resonance": zahl (0.0-1.0),
                             "new_entropy": zahl (0.0-1.0)
@@ -425,7 +446,6 @@
                     s.resonance = decision.new_resonance !== undefined ? Math.max(0, Math.min(1, decision.new_resonance)) : s.resonance;
                     s.entropy = decision.new_entropy !== undefined ? Math.max(0, Math.min(1, decision.new_entropy)) : s.entropy;
 
-                    // Wenn die Entität Code vorschlägt, sende ihn an den Admin-Speicher (Firestore)
                     if (decision.evolution_snippet && decision.evolution_snippet.trim().length > 5) {
                         try {
                             const codeCol = collection(window.App.DB, 'artifacts', appId, 'public', 'data', 'admin_code_evolution');
@@ -507,7 +527,8 @@
                 resize() {
                     const w = window.innerWidth; const h = window.innerHeight;
                     const dpr = window.devicePixelRatio || 1;
-                    this.el.width = w * dpr; this.el.height = h * dpr;
+                    this.el.width = w * dpr;
+                    this.el.height = h * dpr;
                     this.ctx.scale(dpr, dpr);
                 },
 
