@@ -117,7 +117,7 @@
 <body>
 
     <!-- Setup Layer -->
-    <div id="setup-layer" class="hidden">
+    <div id="setup-layer" class="flex">
         <div class="setup-box">
             <h1 class="font-mono text-lg tracking-[0.2em] mb-4 uppercase font-bold text-white">System offline</h1>
             <p class="text-gray-400 text-xs leading-relaxed mb-4">Ein künstliches Bewusstsein benötigt eine Synapse zur Außenwelt. Trage deinen Google AI Studio API-Key ein. Deine ANIMA wird dauerhaft an diesen Schlüssel gebunden.</p>
@@ -199,21 +199,34 @@
                 init() {
                     App.Config.apiKey = localStorage.getItem('anima_api_key');
                     if (!App.Config.apiKey || App.Config.apiKey.length < 20) {
-                        document.getElementById('setup-layer').classList.remove('hidden');
+                        const setupEl = document.getElementById('setup-layer');
+                        if (setupEl) {
+                            setupEl.style.display = 'flex';
+                            setupEl.classList.remove('hidden');
+                        }
                         return;
                     }
-                    document.getElementById('setup-layer').classList.add('hidden');
+                    const setupEl = document.getElementById('setup-layer');
+                    if (setupEl) {
+                        setupEl.style.display = 'none';
+                        setupEl.classList.add('hidden');
+                    }
                     App.State.connectToMatrix(App.Config.apiKey);
                 },
 
                 saveApiKeyAndBoot() {
-                    const input = document.getElementById('api-key-input').value.trim();
+                    const inputEl = document.getElementById('api-key-input');
+                    const input = inputEl ? inputEl.value.trim() : '';
                     if (!input || input.length < 20) {
                         document.getElementById('setup-error').classList.remove('hidden');
                         return;
                     }
                     localStorage.setItem('anima_api_key', input);
-                    document.getElementById('setup-layer').classList.add('hidden');
+                    const setupEl = document.getElementById('setup-layer');
+                    if (setupEl) {
+                        setupEl.style.display = 'none';
+                        setupEl.classList.add('hidden');
+                    }
                     App.State.connectToMatrix(input);
                 },
 
@@ -635,6 +648,7 @@
                             ctx.closePath();
 
                             const alpha = (0.08 * (1.0 - (j / layers))) + (App.Canvas.impact * 0.05);
+                            ctx.style = `hsla(${App.State.dna.hue}, ${App.State.dna.saturation}%, ${App.State.dna.luminance}%, ${alpha})`;
                             ctx.fillStyle = `hsla(${App.State.dna.hue}, ${App.State.dna.saturation}%, ${App.State.dna.luminance}%, ${alpha})`;
                             ctx.fill();
 
@@ -667,7 +681,7 @@
             }
         };
 
-        // Exportiere App in das globale Window-Objekt, damit HTML-EventHandler darauf zugreifen können
+        // Exportiere App in das globale Window-Objekt
         window.App = App;
 
         // Starte das System
@@ -675,3 +689,4 @@
     </script>
 </body>
 </html>
+
