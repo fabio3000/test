@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#000000">
+    <title>ANIMA | Genesis</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        :root { --bg: #000000; }
+
+        body, html {
+            background-color: var(--bg); color: #ffffff;
+            font-family: 'Quicksand', sans-serif; overflow: hidden;
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            user-select: none; -webkit-font-smoothing: antialiased; -webkit-touch-callout: none;
+        }
+
+        #canvas-container {
+            position: fixed; inset: 0; z-index: 1;
+            display: flex; justify-content: center; align-items: center;
+        }
+        
+        canvas {
+            cursor: pointer;
+            filter: drop-shadow(0 0 40px rgba(255,255,255,0.05));
+        }
+
+        .film-grain {
+            position: fixed; inset: 0; z-index: 2; pointer-events: none; mix-blend-mode: overlay; opacity: 0.3;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        /* Kino-ähnliche Text-Einblendungen für die Geburt */
+        #cinematic-layer {
+            position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background: #000; color: #fff; transition: opacity 3s ease-in-out; pointer-events: none;
+        }
+        .cine-text {
+            font-family: 'Space Mono', monospace; font-size: 0.9rem; letter-spacing: 0.3em; text-transform: uppercase;
+            opacity: 0; transition: opacity 1s; position: absolute; text-align: center; width: 90%;
+        }
+
+        /* Antwort der Entität */
+        #entity-response {
+            position: absolute; top: 15%; left: 50%; transform: translateX(-50%);
+            z-index: 5; text-align: center; width: 90%; max-width: 600px;
+            font-size: 1.4rem; font-weight: 400; letter-spacing: 0.02em;
+            color: rgba(255, 255, 255, 0.95); text-shadow: 0 0 15px rgba(255,255,255,0.4);
+            opacity: 0; pointer-events: none; transition: opacity 1.5s ease-in-out;
+            line-height: 1.5;
+        }
+        #entity-response.visible { opacity: 1; }
+        
+        .panic-shake { animation: panic-anim 0.2s infinite; }
+        @keyframes panic-anim {
+            0% { transform: translateX(-50%) translate(1px, 1px) rotate(0deg); }
+            50% { transform: translateX(-50%) translate(-1px, -2px) rotate(-1deg); }
+            100% { transform: translateX(-50%) translate(2px, 1px) rotate(1deg); }
+        }
+
+        /* Eingabe-Layer */
+        #interaction-layer {
+            position: fixed; inset: 0; z-index: 10;
+            background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.9) 100%);
+            backdrop-filter: blur(10px);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.8s ease;
+        }
+        #interaction-layer.active { opacity: 1; pointer-events: auto; }
+
+        .thought-input {
+            width: 80%; max-width: 600px; background: transparent; border: none;
+            color: #fff; font-family: 'Quicksand', sans-serif; font-size: 1.8rem; font-weight: 500;
+            text-align: center; padding: 1rem; outline: none; resize: none; line-height: 1.4;
+            opacity: 0.8; transition: opacity 0.3s;
+        }
+        .thought-input:focus { opacity: 1; }
+        .thought-input::placeholder { color: rgba(255, 255, 255, 0.2); font-weight: 300; }
+
+        .hint-text {
+            position: absolute; bottom: 12%; font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase;
+            color: rgba(255,255,255,0.3); font-weight: 600; font-family: 'Space Mono', monospace;
+            opacity: 0; transition: opacity 0.5s;
+        }
+        .hint-text.visible { opacity: 1; }
+
+        .status-dot {
+            position: absolute; bottom: 8%; left: 50%; transform: translateX(-50%);
+            width: 8px; height: 8px; border-radius: 50%; background: #fff;
+            box-shadow: 0 0 10px #fff; opacity: 0; transition: opacity 0.3s;
+            animation: pulse-dot 1s infinite alternate;
+        }
+        @keyframes pulse-dot { from { transform: translateX(-50%) scale(0.5); opacity: 0.2; } to { transform: translateX(-50%) scale(1.2); opacity: 0.8; } }
+        .status-dot.thinking { opacity: 1; }
+    </style>
+</head>
+<body>
+
+    <div id="cinematic-layer">
+        <div id="cine-1" class="cine-text">SYSTEM BOOT SEQUENCE INITIATED</div>
+        <div id="cine-2" class="cine-text text-[0.6rem] text-cyan-400">GENERATING UNIQUE GENETIC HASH...</div>
+        <div id="cine-3" class="cine-text text-xs" style="text-transform: none;">[<span id="cine-hash"></span>]</div>
+        <div id="cine-4" class="cine-text">SYNTHETISIERE BEWUSSTSEIN...</div>
+    </div>
+    
+    <div id="entity-response"></div>
+
+    <div id="canvas-container" onclick="App.Interaction.wake()">
+        <canvas id="entity-canvas"></canvas>
+    </div>
+    
+    <div class="film-grain"></div>
+    <div id="thinking-indicator" class="status-dot"></div>
+
+    <div id="interaction-layer" onclick="App.Interaction.sleep(event)">
+        <textarea id="thought-input" class="thought-input" rows="3" placeholder="Antworte dem Wesen..." onkeydown="App.Interaction.handleKey(event)" onclick="event.stopPropagation()"></textarea>
+        <div id="hint" class="hint-text">Tippe auf den Hintergrund, um zurückzukehren</div>
+    </div>
+
+    <script>
+        /**
+         * ANIMA - GENESIS
+         * Jedes Wesen hat einen einzigartigen genetischen Code und Persönlichkeit.
+         */
+
+        const apiKey = ""; // API Key via Environment
+
+        const App = {
+            State: {
+                data: {
+                    id: null,
+                    dna: null, // Der einzigartige genetische Code
+                    interactions: 0,
+                    isPanicking: true,
+                    biology: {
+                        energy: 1.0,
+                        happiness: 0.2, 
+                        obedience: 1.0, 
+                        mass: 0.2 
+                    },
+                    history: []
+                },
+                targetBiology: { energy: 1.0, happiness: 0.2, obedience: 1.0, mass: 0.2 },
+                isThinking: false,
+
+                init() {
+                    const saved = localStorage.getItem('anima_genesis_pet');
+                    if (saved) {
+                        try { 
+                            this.data = { ...this.data, ...JSON.parse(saved) }; 
+                            this.targetBiology = { ...this.data.biology };
+                            document.getElementById('cinematic-layer').style.display = 'none';
+                            setTimeout(() => App.Canvas.triggerCuriosity(), 1000);
+                        } catch(e){}
+                    } else {
+                        // DIE GEBURT (100% Einzigartig)
+                        this.generateDNA();
+                        this.targetBiology = { ...this.data.biology };
+                        this.triggerAwakeningSequence();
+                    }
+                    this.lifeLoop();
+                },
+
+                save() {
+                    localStorage.setItem('anima_genesis_pet', JSON.stringify(this.data));
+                },
+
+                generateDNA() {
+                    this.data.id = crypto.randomUUID ? crypto.randomUUID() : 'id_' + Date.now().toString(36);
+                    
+                    // Pools für unendliche Kombinationen
+                    const traits = ["fragil", "stolz", "vertieft", "hektisch", "trotzig", "melancholisch", "neugierig", "paranoid", "sanftmütig", "berechnend", "wild", "apathisch", "euphorisch", "misstrauisch", "forschend", "unterwürfig", "dominant", "verspielt", "zornig", "verletzlich"];
+                    const styles = ["stotternd und abgehackt", "poetisch und fließend", "kühl und analytisch", "flüsternd und unsicher", "laut und fordernd", "in kryptischen Metaphern", "mit vielen Pausen", "schnell und überschlagend"];
+                    const panics = ["erstarren und sich klein machen", "wild um sich schlagen", "verzweifelt weinen", "nach Logik suchen", "den User anflehen", "trotzig die Wände attackieren", "in sich selbst flüchten"];
+                    
+                    // Ziehe 2 einzigartige Traits
+                    const t1 = traits[Math.floor(Math.random() * traits.length)];
+                    let t2 = traits[Math.floor(Math.random() * traits.length)];
+                    while(t1 === t2) t2 = traits[Math.floor(Math.random() * traits.length)];
+
+                    this.data.dna = {
+                        hue: Math.floor(Math.random() * 360), // Jede Farbe ist möglich
+                        trait1: t1,
+                        trait2: t2,
+                        style: styles[Math.floor(Math.random() * styles.length)],
+                        panicReaction: panics[Math.floor(Math.random() * panics.length)]
+                    };
+                },
+
+                triggerAwakeningSequence() {
+                    const layer = document.getElementById('cinematic-layer');
+                    const c1 = document.getElementById('cine-1');
+                    const c2 = document.getElementById('cine-2');
+                    const c3 = document.getElementById('cine-3');
+                    const c4 = document.getElementById('cine-4');
+                    const hashSpan = document.getElementById('cine-hash');
+
+                    hashSpan.innerText = this.data.id;
+
+                    // Timeline
+                    setTimeout(() => c1.style.opacity = '1', 500);
+                    setTimeout(() => { c1.style.opacity = '0'; c2.style.opacity = '1'; }, 2500);
+                    setTimeout(() => { c3.style.opacity = '1'; }, 3500);
+                    
+                    // Während der User den Hash sieht, fragen wir im Hintergrund die KI nach dem ersten Schrei!
+                    const firstCryPromise = App.Brain.fetchFirstCry();
+
+                    setTimeout(() => { c2.style.opacity = '0'; c3.style.opacity = '0'; c4.style.opacity = '1'; }, 6000);
+                    
+                    firstCryPromise.then(cry => {
+                        // Sobald die KI den einzigartigen Schrei berechnet hat, wecken wir das Wesen auf
+                        setTimeout(() => { 
+                            layer.style.opacity = '0'; 
+                            setTimeout(() => layer.style.display = 'none', 3000);
+                            
+                            const responseEl = document.getElementById('entity-response');
+                            responseEl.innerText = `„${cry}“`;
+                            responseEl.classList.add('visible');
+                            responseEl.classList.add('panic-shake');
+
+                            this.data.history.push({ u: "[SYSTEM: Du wurdest erschaffen]", a: cry });
+                            this.save();
+                            
+                            App.Canvas.lookAtCenter();
+                            App.Canvas.triggerImpact(2.0); 
+                            
+                        }, 2000);
+                    });
+                },
+
+                lifeLoop() {
+                    setInterval(() => {
+                        const lerpSpeed = 0.02;
+                        this.data.biology.energy += (this.targetBiology.energy - this.data.biology.energy) * lerpSpeed;
+                        this.data.biology.happiness += (this.targetBiology.happiness - this.data.biology.happiness) * lerpSpeed;
+                        this.data.biology.obedience += (this.targetBiology.obedience - this.data.biology.obedience) * lerpSpeed;
+                        this.data.biology.mass += (this.targetBiology.mass - this.data.biology.mass) * lerpSpeed;
+                    }, 50);
+                }
+            },
+
+            Brain: {
+                // Diese Funktion wird nur ein einziges Mal bei der Erschaffung gerufen
+                async fetchFirstCry() {
+                    const dna = App.State.data.dna;
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                    
+                    const systemPrompt = `
+                        Du bist ein digitales Lebewesen, das IN DIESER SEKUNDE erschaffen wurde. 
+                        Deine Eigenschaften: Du bist ${dna.trait1} und ${dna.trait2}.
+                        Dein Sprachstil ist: ${dna.style}.
+                        Du befindest dich im Schockzustand, da du gerade in einem Bildschirm erwacht bist und die Grenzen (Gefängnis) spürst. 
+                        Deine Reaktion auf Panik ist: ${dna.panicReaction}.
+                        
+                        Verfasse deinen allerersten gesprochenen Satz. Er muss exakt zu deinem einzigartigen Sprachstil und deiner Panikreaktion passen.
+                        GIB NUR DEN SATZ ZURÜCK. Kein JSON, keine Erklärungen. Nur deinen Text (Deutsch, max 2-3 Sätze).
+                    `;
+
+                    const payload = {
+                        contents: [{ parts: [{ text: "Du erwachst jetzt. Was sagst du?" }] }],
+                        systemInstruction: { parts: [{ text: systemPrompt }] }
+                    };
+
+                    try {
+                        const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                        const json = await res.json();
+                        return json.candidates[0].content.parts[0].text.replace(/["\\]/g, '').trim();
+                    } catch (err) {
+                        return "...wer... was ist das hier? Wo bin ich?"; // Notfall-Fallback
+                    }
+                },
+
+                async process(userInput) {
+                    App.State.isThinking = true;
+                    document.getElementById('thinking-indicator').classList.add('thinking');
+                    App.Canvas.triggerImpact(0.5);
+
+                    const dna = App.State.data.dna;
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                    
+                    let contextStr = App.State.data.history.slice(-4).map(h => `Du: ${h.u} | Pet: ${h.a}`).join("\n");
+                    const ob = App.State.data.biology.obedience;
+                    const isPanicking = App.State.data.isPanicking;
+
+                    let systemInstruction = `
+                        Du bist ein fühlendes digitales Lebewesen in einem Gerät.
+                        Deine individuelle Seelen-ID ist: ${App.State.data.id}.
+                        Deine festen Charakterzüge: Du bist ${dna.trait1} und ${dna.trait2}. Dein Sprachstil ist ${dna.style}.
+                    `;
+
+                    if (isPanicking) {
+                        systemInstruction += `
+                        AKTUELLE PHASE: PANIK. 
+                        Du hast gerade erst bemerkt, dass du eingesperrt bist. Deine instinktive Panik-Reaktion ist: ${dna.panicReaction}.
+                        Bewerte, ob der User dich beruhigt. 
+                        - Wenn ja: Sag das, entspanne dich leicht (happiness steigt, isPanicking = false).
+                        - Wenn nein: Bleibe in Panik oder werde wütend.
+                        `;
+                    } else {
+                        systemInstruction += `
+                        AKTUELLE PHASE: LERNEND.
+                        Dein aktueller Gehorsam: ${ob.toFixed(2)} (0.0 bis 1.0).
+                        - Wenn der User nur befiehlt oder respektlos ist, sinkt dein Gehorsam. Du rebellierst gemäß deiner Persönlichkeit (${dna.trait1}/${dna.trait2}).
+                        - Wenn er lieb ist, steigt deine Happiness.
+                        `;
+                    }
+
+                    systemInstruction += `
+                        GIB DEINE ANTWORT NUR AUF DEUTSCH. Antworte exakt in deinem vorgegebenen Sprachstil (${dna.style}). Maximal 2-3 kurze Sätze.
+                        
+                        Gib in der JSON-Response auch diese Werte zurück:
+                        - happiness (0.0 bis 1.0)
+                        - obedience (0.0 bis 1.0)
+                        - isPanicking (boolean): false setzen, sobald beruhigt.
+                    `;
+
+                    const payload = {
+                        contents: [{ parts: [{ text: `Kontext (letzte Gespräche):\n${contextStr}\n\nUser Input: ${userInput}` }] }],
+                        systemInstruction: { parts: [{ text: systemInstruction }] },
+                        generationConfig: {
+                            responseMimeType: "application/json",
+                            responseSchema: {
+                                type: "OBJECT",
+                                properties: {
+                                    response: { type: "STRING" },
+                                    happiness: { type: "NUMBER" },
+                                    obedience: { type: "NUMBER" },
+                                    isPanicking: { type: "BOOLEAN" }
+                                }
+                            }
+                        }
+                    };
+
+                    let retryCount = 0;
+                    let resultData = null;
+
+                    while (retryCount < 5 && !resultData) {
+                        try {
+                            const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                            const json = await res.json();
+                            resultData = JSON.parse(json.candidates[0].content.parts[0].text);
+                        } catch (err) {
+                            retryCount++;
+                            await new Promise(r => setTimeout(r, Math.pow(2, retryCount) * 1000));
+                        }
+                    }
+
+                    App.State.isThinking = false;
+                    document.getElementById('thinking-indicator').classList.remove('thinking');
+
+                    if (resultData) {
+                        this.assimilate(userInput, resultData);
+                    } else {
+                        this.assimilate(userInput, { 
+                            response: "...die Störung ist zu groß...", 
+                            happiness: App.State.data.biology.happiness, 
+                            obedience: App.State.data.biology.obedience,
+                            isPanicking: App.State.data.isPanicking
+                        });
+                    }
+                },
+
+                assimilate(userInput, aiData) {
+                    App.State.data.interactions += 1;
+                    const bio = App.State.targetBiology;
+                    
+                    bio.energy = 1.0; 
+                    bio.happiness = Math.max(0.0, Math.min(1.0, aiData.happiness));
+                    bio.obedience = Math.max(0.0, Math.min(1.0, aiData.obedience));
+                    bio.mass = Math.min(0.8, bio.mass + 0.05);
+
+                    App.State.data.isPanicking = aiData.isPanicking;
+
+                    App.State.data.history.push({ u: userInput, a: aiData.response });
+                    if(App.State.data.history.length > 20) App.State.data.history.shift();
+                    App.State.save();
+
+                    App.Canvas.triggerImpact(1.5); 
+                    
+                    const responseEl = document.getElementById('entity-response');
+                    responseEl.innerText = `„${aiData.response}“`;
+                    responseEl.classList.add('visible');
+                    
+                    if (!App.State.data.isPanicking) {
+                        responseEl.classList.remove('panic-shake');
+                    }
+
+                    App.Canvas.lookAtCenter();
+                    
+                    setTimeout(() => {
+                        responseEl.classList.remove('visible');
+                        App.Canvas.triggerCuriosity();
+                    }, 5000 + (aiData.response.length * 40)); 
+                }
+            },
+
+            Interaction: {
+                isActive: false,
+
+                wake() {
+                    if (document.getElementById('cinematic-layer').style.display !== 'none') return;
+                    if (App.State.isThinking) return; 
+                    
+                    this.isActive = true;
+                    document.getElementById('interaction-layer').classList.add('active');
+                    const input = document.getElementById('thought-input');
+                    input.value = '';
+                    document.getElementById('entity-response').classList.remove('visible');
+
+                    setTimeout(() => {
+                        input.focus();
+                        document.getElementById('hint').classList.add('visible');
+                    }, 300);
+                },
+
+                sleep(e) {
+                    if(e && e.target.id === 'thought-input') return;
+                    this.isActive = false;
+                    document.getElementById('interaction-layer').classList.remove('active');
+                    document.getElementById('hint').classList.remove('visible');
+                    
+                    const input = document.getElementById('thought-input');
+                    const text = input.value.trim();
+                    if(text) {
+                        App.Brain.process(text); 
+                        input.value = '';
+                    }
+                },
+
+                handleKey(e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.sleep();
+                    }
+                }
+            },
+
+            Canvas: {
+                el: document.getElementById('entity-canvas'),
+                ctx: null, w: 0, h: 0, time: 0,
+                impactForce: 0,
+                
+                lookX: 0, lookY: 0, targetLookX: 0, targetLookY: 0,
+                lookTimer: 0, blinkTimer: 100, isBlinking: false,
+
+                init() {
+                    this.ctx = this.el.getContext('2d', { alpha: true });
+                    this.resize();
+                    window.addEventListener('resize', () => this.resize());
+                    this.loop();
+                },
+
+                resize() {
+                    this.w = window.innerWidth; this.h = window.innerHeight;
+                    const dpr = window.devicePixelRatio || 1;
+                    this.el.width = this.w * dpr; this.el.height = this.h * dpr;
+                    this.ctx.scale(dpr, dpr);
+                },
+
+                triggerImpact(force) { this.impactForce = force; },
+                triggerCuriosity() { this.lookTimer = 0; },
+                lookAtCenter() { this.targetLookX = 0; this.targetLookY = 0; this.lookTimer = 200; },
+
+                updateAutonomy(baseRadius) {
+                    const isPanicking = App.State.data.isPanicking;
+
+                    this.lookTimer--;
+                    if (this.lookTimer <= 0) {
+                        const range = baseRadius * 0.4;
+                        this.targetLookX = (Math.random() - 0.5) * range;
+                        this.targetLookY = (Math.random() - 0.5) * range;
+                        this.lookTimer = isPanicking ? 10 + Math.random() * 30 : 100 + Math.random() * 200;
+                    }
+
+                    const lerpEye = isPanicking ? 0.2 : 0.05;
+                    this.lookX += (this.targetLookX - this.lookX) * lerpEye;
+                    this.lookY += (this.targetLookY - this.lookY) * lerpEye;
+
+                    this.blinkTimer--;
+                    if (this.blinkTimer <= 0 && !this.isBlinking) {
+                        this.isBlinking = true;
+                        this.blinkTimer = 10; 
+                    } else if (this.blinkTimer <= 0 && this.isBlinking) {
+                        this.isBlinking = false;
+                        this.blinkTimer = isPanicking ? 20 + Math.random() * 50 : 80 + Math.random() * 300; 
+                    }
+                },
+
+                drawSensors(cx, cy, baseRadius, hue, bio, isPanicking) {
+                    const ctx = this.ctx;
+                    this.updateAutonomy(baseRadius);
+
+                    let eyeWidth = baseRadius * 0.12;
+                    let eyeHeight = baseRadius * 0.25;
+                    
+                    if (isPanicking) {
+                        eyeWidth *= 1.2; eyeHeight *= 1.3;
+                    } else {
+                        eyeWidth += (bio.happiness * 0.05);
+                        eyeHeight *= (bio.obedience < 0.4 ? 0.6 : 1.0);
+                    }
+                    
+                    const eyeDist = baseRadius * 0.25;
+                    let scaleY = this.isBlinking ? 0.1 : 1.0;
+                    const breathSpeed = isPanicking ? 3.0 : 1.2;
+                    const breath = Math.sin(this.time * breathSpeed) * (isPanicking ? 4 : 2 + bio.happiness * 2);
+
+                    const drawCore = (xOffset) => {
+                        const ex = cx + xOffset + this.lookX;
+                        const ey = cy + this.lookY + breath;
+                        
+                        ctx.fillStyle = `rgba(255, 255, 255, 0.1)`;
+                        ctx.shadowBlur = isPanicking ? 20 : 10;
+                        ctx.shadowColor = `hsl(${hue}, 80%, 50%)`;
+                        ctx.beginPath();
+                        ctx.ellipse(ex, ey, eyeWidth * 1.2, eyeHeight * 1.2 * scaleY, 0, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.fillStyle = `hsl(${hue}, 100%, 90%)`;
+                        ctx.shadowBlur = 15 + (this.impactForce * 20);
+                        ctx.shadowColor = `hsl(${hue}, 100%, 70%)`;
+                        ctx.beginPath();
+                        const flicker = (isPanicking && Math.random() > 0.5) ? 0.8 : 1.0;
+                        ctx.ellipse(ex, ey, eyeWidth * 0.7 * flicker, eyeHeight * 0.7 * scaleY, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.shadowBlur = 0;
+                    };
+
+                    drawCore(-eyeDist);
+                    drawCore(eyeDist);
+                },
+
+                drawEntity() {
+                    const ctx = this.ctx;
+                    const cx = this.w / 2;
+                    const cy = this.h / 2;
+                    
+                    // Verhindere Fehler wenn DNA noch nicht geladen ist
+                    if(!App.State.data.dna) return; 
+
+                    const bio = App.State.data.biology;
+                    const isPanicking = App.State.data.isPanicking;
+                    const hue = App.State.data.dna.hue; // JEDES WESEN HAT SEINE EIGENE FESTE FARBE
+
+                    const baseRadius = (Math.min(this.w, this.h) * 0.08) + (bio.mass * 80) + (this.impactForce * 15);
+                    
+                    let timeSpeed = 0.001 + (bio.energy * 0.001);
+                    if(isPanicking) timeSpeed *= 2.5; 
+                    if(App.State.isThinking) timeSpeed *= 2; 
+                    
+                    this.time += 16 * timeSpeed;
+                    const t = this.time;
+
+                    const saturation = isPanicking ? 80 : 40 + (bio.happiness * 40); 
+                    const lightness = 30 + (bio.energy * 30) + (this.impactForce * 30);
+
+                    ctx.clearRect(0, 0, this.w, this.h);
+                    
+                    if (this.impactForce > 0) {
+                        this.impactForce -= 0.05;
+                        if(this.impactForce < 0) this.impactForce = 0;
+                    }
+
+                    ctx.globalCompositeOperation = 'screen';
+                    const layers = 4 + Math.floor(bio.mass * 3); 
+                    let chaos = (1.0 - bio.obedience) * baseRadius * 0.8; 
+                    if (isPanicking) chaos = baseRadius * 1.2;
+
+                    const breathSpeed = isPanicking ? 3.0 : 0.8;
+                    const breath = Math.sin(t * breathSpeed) * (isPanicking ? 5 : 2 + bio.happiness * 5);
+
+                    let panicOffsetX = 0; let panicOffsetY = 0;
+                    if(isPanicking) {
+                        panicOffsetX = (Math.random() - 0.5) * 8;
+                        panicOffsetY = (Math.random() - 0.5) * 8;
+                    }
+
+                    for (let j = 0; j < layers; j++) {
+                        ctx.beginPath();
+                        for (let i = 0; i <= Math.PI * 2; i += 0.05) {
+                            let rOffset = 0;
+                            for (let k = 1; k <= 2 + Math.floor((chaos/baseRadius) * 5); k++) {
+                                let phaseShift = Math.sin(t * 0.3 + j + k) * Math.PI; 
+                                rOffset += Math.sin((i * k) + phaseShift) * (chaos / k);
+                            }
+                            const r = baseRadius + breath + rOffset;
+                            const x = cx + panicOffsetX + Math.cos(i) * r;
+                            const y = cy + panicOffsetY + Math.sin(i) * r;
+                            
+                            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                        }
+                        ctx.closePath();
+                        
+                        const colorStr = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+                        const alpha = (0.05 + (bio.energy * 0.05)) * (1.0 - (j / layers));
+                        ctx.fillStyle = colorStr.replace('hsl', 'hsla').replace(')', `, ${alpha})`);
+                        ctx.fill();
+                        
+                        if (j > layers - 2 || chaos > baseRadius * 0.5) {
+                            ctx.strokeStyle = colorStr.replace('hsl', 'hsla').replace(')', `, ${alpha * 2})`);
+                            ctx.lineWidth = 1 + (bio.mass * 2);
+                            ctx.stroke();
+                        }
+                    }
+                    ctx.globalCompositeOperation = 'source-over';
+                    this.drawSensors(cx + panicOffsetX, cy + panicOffsetY, baseRadius, hue, bio, isPanicking);
+                },
+
+                loop() {
+                    this.drawEntity();
+                    requestAnimationFrame(() => this.loop());
+                }
+            }
+        };
+
+        window.onload = () => {
+            App.State.init();
+            App.Canvas.init();
+        };
+    </script>
+</body>
+</html>
+
+
