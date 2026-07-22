@@ -9,6 +9,8 @@
     <style>
         body { background-color: #030305; color: #fff; font-family: 'Space Mono', monospace; }
         .code-box { background: #0b0b10; border: 1px solid rgba(255,255,255,0.1); }
+        .pulse-dot { width: 10px; height: 10px; background-color: #4ade80; border-radius: 50%; display: inline-block; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(74, 222, 128, 0); } 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); } }
     </style>
 </head>
 <body class="p-6 md:p-12 max-w-5xl mx-auto">
@@ -16,90 +18,104 @@
     <header class="mb-10 border-b border-white/10 pb-6 flex justify-between items-center">
         <div>
             <h1 class="text-2xl font-bold tracking-widest text-cyan-400">ANIMA EVOLUTION NEXUS</h1>
-            <p class="text-xs text-gray-500 mt-1">Sammelpunkt für Code-Mutationen der autonomen Entitäten</p>
+            <p class="text-xs text-gray-500 mt-1">Admin Konsole zur Code-Sichtung autonomer Entitäten</p>
         </div>
-        <div id="status-badge" class="text-xs px-3 py-1 bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 rounded">
+        <div id="status-badge" class="text-xs px-3 py-2 bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 rounded flex items-center gap-2">
             Verbinde mit Äther...
         </div>
     </header>
 
     <main>
         <section class="mb-8">
-            <h2 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-4">Erzeugte Code-Snippets</h2>
+            <h2 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-4">Vorschläge & Code-Mutationen der Animas</h2>
             <div id="snippets-container" class="space-y-4">
-                <div class="text-gray-600 text-xs italic">Lausche auf das Multiversum...</div>
+                <div class="text-gray-600 text-xs italic">Lausche auf evolutionäre Code-Snippets aus dem Multiversum...</div>
             </div>
         </section>
     </main>
 
+    <!-- FIREBASE MODULE -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey:            "AIzaSyDtwsvmYSONjFufhbJ5I8G_RAMffnh7re0",
-            authDomain:        "theplot-app.firebaseapp.com",
-            projectId:         "theplot-app",
-            storageBucket:     "theplot-app.firebasestorage.app",
+        // Firebase Config - Fallback for local testing or Immersive environment
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "AIzaSyDtwsvmYSONjFufhbJ5I8G_RAMffnh7re0",
+            authDomain: "theplot-app.firebaseapp.com",
+            projectId: "theplot-app",
+            storageBucket: "theplot-app.firebasestorage.app",
             messagingSenderId: "550703275210",
-            appId:             "1:550703275210:web:81bc0e5a373f87a3c92833"
+            appId: "1:550703275210:web:81bc0e5a373f87a3c92833"
         };
-        const appPrefix = "anima_multiverse_2"; 
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'anima-nexus-default';
 
         async function initAdmin() {
+            if (!firebaseConfig) {
+                document.getElementById('status-badge').innerText = "Firebase Konfiguration fehlt";
+                return;
+            }
+
             const app = initializeApp(firebaseConfig);
             const auth = getAuth(app);
             const db = getFirestore(app);
 
             await signInAnonymously(auth);
-            document.getElementById('status-badge').className = "text-xs px-3 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded";
-            document.getElementById('status-badge').innerText = "Online & Synchronisiert";
-
-            const codeCol = collection(db, 'artifacts', appPrefix, 'admin_code_evolution');
             
-            // Einfache Query (Ohne Index-Zwang durch Firebase)
+            const badge = document.getElementById('status-badge');
+            badge.className = "text-xs px-3 py-2 bg-green-500/10 text-green-400 border border-green-500/20 rounded flex items-center gap-2";
+            badge.innerHTML = `<span class="pulse-dot"></span> Online & Synchronisiert`;
+
+            const codeCol = collection(db, 'artifacts', appId, 'public', 'data', 'admin_code_evolution');
+            
             onSnapshot(codeCol, (snapshot) => {
                 const container = document.getElementById('snippets-container');
                 container.innerHTML = "";
 
                 if (snapshot.empty) {
-                    container.innerHTML = `<div class="text-gray-600 text-xs italic">Bislang wurden keine Code-Mutationen generiert.</div>`;
+                    container.innerHTML = `<div class="text-gray-600 text-xs italic">Bislang wurden keine Code-Mutationen von Entitäten übermittelt.</div>`;
                     return;
                 }
 
-                // Sort in memory to avoid Firestore Index errors
+                // Sortiere nach Zeitstempel absteigend (neueste oben)
                 const docs = [];
-                snapshot.forEach(doc => docs.push(doc.data()));
-                docs.sort((a,b) => b.timestamp - a.timestamp);
+                snapshot.forEach(docSnap => docs.push(docSnap.data()));
+                docs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
                 docs.forEach((data) => {
                     const dateStr = new Date(data.timestamp).toLocaleString('de-DE');
+
                     const card = document.createElement('div');
                     card.className = "code-box p-4 rounded text-xs space-y-3 relative";
                     
                     card.innerHTML = `
                         <div class="flex justify-between items-center text-gray-400 border-b border-white/5 pb-2">
-                            <span>Entität: <strong class="text-white">${data.freq || "Unbekannt"}</strong></span>
+                            <span>Entität: <strong class="text-white">${data.freq}</strong> (${data.entityId.substring(0,8)}...)</span>
                             <span>${dateStr}</span>
                         </div>
                         <pre class="overflow-x-auto p-3 bg-black/55 text-cyan-200 rounded font-mono"><code>${escapeHtml(data.snippet)}</code></pre>
                         <div class="flex gap-3 justify-end pt-1">
-                            <button onclick="navigator.clipboard.writeText(\`${data.snippet.replace(/`/g, "\\`")}\`); this.innerText='Kopiert!';" class="px-3 py-1.5 bg-white text-black font-bold uppercase tracking-wider rounded text-[10px] hover:bg-gray-200 transition">Snippet kopieren</button>
+                            <button onclick="navigator.clipboard.writeText(\`${escapeHtmlForJs(data.snippet)}\`); alert('Code kopiert!');" class="px-3 py-1.5 bg-white text-black font-bold uppercase tracking-wider rounded text-[10px] hover:bg-gray-200 transition">Snippet kopieren</button>
                         </div>
                     `;
                     container.appendChild(card);
                 });
+            }, (error) => {
+                console.error("Fehler beim Laden der Code-Evolutionen:", error);
             });
         }
 
         function escapeHtml(text) {
             return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         }
+        
+        function escapeHtmlForJs(text) {
+            return text.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+        }
 
         window.onload = initAdmin;
     </script>
 </body>
 </html>
-
 
