@@ -3,108 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Aetheria: AAA HD-2D Engine</title>
+    <title>Aetheria: AAA Cinematic HD-2D</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;700;900&family=Playfair+Display:ital,wght@1,400&family=Plus+Jakarta+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;700;900&family=Playfair+Display:ital,wght@1,400&family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --ui-glow: rgba(56, 189, 248, 0.4);
+            --ui-glow: rgba(56, 189, 248, 0.5);
             --ui-dark: rgba(3, 7, 18, 0.85);
+            --ui-accent: #38bdf8;
         }
         
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
             background-color: #000;
-            overflow: hidden; /* KEIN SCROLLEN MEHR */
+            overflow: hidden;
             user-select: none; touch-action: none;
             font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* ECHTE GAME CANVAS PIPELINE */
         #game-container {
             position: absolute; inset: 0;
             display: flex; justify-content: center; align-items: center;
             background: #000;
         }
 
-        /* Der High-Res Canvas fürs Post-Processing und UI rendering */
         canvas {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10;
         }
 
-        /* PS5 Cinematic Letterbox */
+        /* Cinematic Letterbox */
         .cinematic-bar {
-            position: absolute; left: 0; width: 100%; height: 10vh;
+            position: absolute; left: 0; width: 100%; height: 8vh;
             background: #000; z-index: 50;
-            box-shadow: 0 0 50px rgba(0,0,0,1);
+            box-shadow: 0 0 60px rgba(0,0,0,1);
+            transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .cinematic-bar.top { top: 0; }
         .cinematic-bar.bottom { bottom: 0; }
+        
+        /* Action-Modus: Balken werden größer für mehr Kino-Feeling */
+        .mode-action .cinematic-bar { height: 15vh; }
 
-        /* Minimalistische AAA UI */
+        /* UI Container */
+        .ui-layer {
+            position: absolute; inset: 0; z-index: 60;
+            pointer-events: none; /* UI klickt durch, außer bei pointer-events: auto */
+            transition: opacity 0.4s ease;
+        }
+        .mode-action .ui-layer { opacity: 0; } /* Verstecke UI im Action-Modus */
+
         .hud-panel {
-            position: absolute; z-index: 60;
             background: var(--ui-dark);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.9);
+            pointer-events: auto;
         }
 
-        .hud-top-left {
-            top: 12vh; left: 3vw;
-            padding: 1rem; border-radius: 4px;
-            border-left: 3px solid #38bdf8;
-            min-width: 250px;
+        /* Status oben Mitte */
+        .hud-top {
+            position: absolute; top: 10vh; left: 50%; transform: translateX(-50%);
+            padding: 1rem 2rem; border-radius: 8px;
+            border-bottom: 2px solid var(--ui-accent);
+            text-align: center; min-width: 300px;
         }
 
-        .hud-bottom-right {
-            bottom: 12vh; right: 3vw;
-            display: flex; gap: 10px;
-        }
-
-        /* RPG Dialog Box für Gedanken */
+        /* RPG Dialog Box für Gedanken (Unten Mitte) */
         .dialogue-box {
-            position: absolute; bottom: 12vh; left: 50%; transform: translateX(-50%);
-            width: 90%; max-width: 600px;
-            background: linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(10,15,30,0.9) 20%, rgba(10,15,30,0.9) 80%, rgba(0,0,0,0) 100%);
-            text-align: center; padding: 1.5rem; z-index: 60;
-            border-top: 1px solid rgba(56, 189, 248, 0.3);
-            border-bottom: 1px solid rgba(56, 189, 248, 0.3);
+            position: absolute; bottom: 10vh; left: 50%; transform: translateX(-50%);
+            width: 80%; max-width: 700px;
+            background: linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(10,15,30,0.95) 20%, rgba(10,15,30,0.95) 80%, rgba(0,0,0,0) 100%);
+            text-align: center; padding: 1.5rem;
+            border-top: 1px solid rgba(56, 189, 248, 0.2);
+            border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+            pointer-events: auto;
+        }
+
+        /* Knöpfe elegant an den Rändern */
+        .hud-left { position: absolute; left: 4vw; top: 50%; transform: translateY(-50%); }
+        .hud-right { position: absolute; right: 4vw; top: 50%; transform: translateY(-50%); }
+
+        .action-btn {
+            background: rgba(10, 15, 30, 0.8);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #fff; width: 70px; height: 70px;
+            border-radius: 16px; display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1.2);
+            cursor: pointer; pointer-events: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .action-btn:active { transform: scale(0.9); border-color: var(--ui-accent); box-shadow: 0 0 30px var(--ui-glow); }
+        .action-btn span.icon { font-size: 28px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+        
+        .progress-thin { height: 2px; background: rgba(255,255,255,0.1); width: 100%; margin-top: 5px; }
+        .progress-fill { height: 100%; transition: width 0.3s ease; }
+
+        /* Cinematic Prompts */
+        #cinematic-prompt {
+            position: absolute; top: 20vh; left: 50%; transform: translateX(-50%);
+            font-family: 'Cinzel', serif; font-size: 2rem; color: #fff;
+            text-shadow: 0 0 20px rgba(56, 189, 248, 0.8), 0 0 10px #000;
+            opacity: 0; transition: opacity 0.3s; z-index: 100;
+            pointer-events: none; letter-spacing: 0.2em;
         }
 
         .font-serif-italic { font-family: 'Playfair Display', serif; font-style: italic; }
         .font-cinzel { font-family: 'Cinzel', serif; }
-
-        /* PS5 Style Buttons */
-        .action-btn {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(255,255,255,0.2);
-            color: #fff; width: 60px; height: 60px;
-            border-radius: 50%; display: flex; flex-direction: column;
-            justify-content: center; align-items: center;
-            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            cursor: pointer; position: relative; overflow: hidden;
-        }
-        .action-btn::before {
-            content: ''; position: absolute; inset: 0;
-            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
-            opacity: 0; transition: opacity 0.2s;
-        }
-        .action-btn:active { transform: scale(0.85); border-color: #38bdf8; box-shadow: 0 0 20px var(--ui-glow); }
-        .action-btn:active::before { opacity: 1; }
-        
-        .progress-thin {
-            height: 2px; background: rgba(255,255,255,0.1); width: 100%; margin-top: 4px;
-        }
-        .progress-fill { height: 100%; transition: width 0.3s ease; }
-
-        /* Depth of Field Foreground Blur (CSS Fallback for extreme edges) */
-        .vignette-dof {
-            position: absolute; inset: 0; pointer-events: none; z-index: 40;
-            background: radial-gradient(circle, transparent 50%, rgba(0,2,10,0.6) 100%);
-            box-shadow: inset 0 0 100px rgba(0,0,0,0.9);
-        }
     </style>
 </head>
 <body>
@@ -112,79 +120,78 @@
     <div id="game-container">
         <!-- Render Canvases -->
         <canvas id="mainCanvas"></canvas>
-        <div class="vignette-dof"></div>
 
         <!-- Cinematic Bars -->
         <div class="cinematic-bar top"></div>
         <div class="cinematic-bar bottom"></div>
 
-        <!-- UI: Top Left Vitals -->
-        <div class="hud-panel hud-top-left">
-            <h1 class="font-cinzel text-lg font-bold text-sky-100 tracking-widest uppercase mb-1">Aether-Batrachos</h1>
-            <p class="text-[10px] text-sky-400 font-mono mb-4" id="ui-status">SUBJEKT-STATUS: HOMEOSTASE</p>
+        <!-- Prompts for Mini-Games -->
+        <div id="cinematic-prompt">ZIELEN...</div>
+
+        <!-- UI Layer -->
+        <div class="ui-layer" id="ui-layer">
             
-            <div class="mb-2">
-                <div class="flex justify-between text-[9px] text-slate-300 font-bold tracking-wider">
-                    <span>VITALITÄT</span> <span id="val-hp">100%</span>
+            <!-- Vitals (Top Center) -->
+            <div class="hud-panel hud-top">
+                <h1 class="font-cinzel text-xl font-bold text-sky-100 tracking-[0.2em] uppercase mb-1">Aether-Batrachos</h1>
+                <p class="text-[10px] text-sky-400 font-mono mb-4 tracking-widest" id="ui-status">STATUS: HOMEOSTASE</p>
+                
+                <div class="flex gap-4 justify-center w-full">
+                    <div class="flex-1">
+                        <div class="flex justify-between text-[9px] text-slate-400 font-bold tracking-wider">
+                            <span>VITALITÄT</span> <span id="val-hp" class="text-emerald-300">100%</span>
+                        </div>
+                        <div class="progress-thin"><div class="progress-fill bg-emerald-400" id="bar-hp" style="width: 100%;"></div></div>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex justify-between text-[9px] text-slate-400 font-bold tracking-wider">
+                            <span>FEUCHTIGKEIT</span> <span id="val-h2o" class="text-sky-300">92%</span>
+                        </div>
+                        <div class="progress-thin"><div class="progress-fill bg-sky-400" id="bar-h2o" style="width: 92%;"></div></div>
+                    </div>
                 </div>
-                <div class="progress-thin"><div class="progress-fill bg-emerald-400" id="bar-hp" style="width: 100%;"></div></div>
             </div>
-            <div class="mb-2">
-                <div class="flex justify-between text-[9px] text-slate-300 font-bold tracking-wider">
-                    <span>FEUCHTIGKEIT</span> <span id="val-h2o">92%</span>
-                </div>
-                <div class="progress-thin"><div class="progress-fill bg-sky-400" id="bar-h2o" style="width: 92%;"></div></div>
-            </div>
-            <div>
-                <div class="flex justify-between text-[9px] text-slate-300 font-bold tracking-wider">
-                    <span>STRESS (CORTISOL)</span> <span id="val-stress" class="text-rose-400">12%</span>
-                </div>
-                <div class="progress-thin"><div class="progress-fill bg-rose-500" id="bar-stress" style="width: 12%;"></div></div>
-            </div>
-        </div>
 
-        <!-- UI: Cinematic Dialogue (Thoughts) -->
-        <div class="dialogue-box">
-            <p class="text-xs text-sky-500/80 font-mono mb-2" id="ui-time">00:00:00 - NEURONALER STREAM</p>
-            <p class="font-serif-italic text-lg sm:text-xl text-slate-100 leading-relaxed shadow-black drop-shadow-md" id="ui-thought">
-                "Das Wasser ruht. Ich spüre das Flüstern des Aethers..."
-            </p>
-        </div>
+            <!-- Dialogue (Bottom Center) -->
+            <div class="dialogue-box">
+                <p class="text-[10px] text-sky-500/80 font-mono mb-2 tracking-widest" id="ui-time">00:00:00 - NEURONALER STREAM</p>
+                <p class="font-serif-italic text-lg sm:text-2xl text-slate-100 leading-relaxed drop-shadow-lg" id="ui-thought">
+                    "Das Wasser ruht. Ich spüre das Flüstern des Aethers..."
+                </p>
+            </div>
 
-        <!-- UI: Bottom Right Actions -->
-        <div class="hud-bottom-right z-60">
-            <button class="action-btn" onpointerdown="triggerAction('spray')">
-                <span class="text-xl">💧</span>
-                <span class="text-[8px] mt-1 text-slate-300 font-bold">SPRÜHEN</span>
-            </button>
-            <button class="action-btn" onpointerdown="triggerAction('feed')">
-                <span class="text-xl">🪰</span>
-                <span class="text-[8px] mt-1 text-slate-300 font-bold">FÜTTERN</span>
-            </button>
-        </div>
-        
-        <!-- Touch Hint Overlay -->
-        <div id="interaction-hint" class="absolute inset-0 z-50 pointer-events-none flex items-center justify-center opacity-70 transition-opacity duration-1000">
-            <p class="text-white/50 text-sm tracking-widest font-cinzel">Berühre das Wesen, um zu interagieren</p>
+            <!-- Interaction Buttons (Edges) -->
+            <div class="hud-left">
+                <button class="action-btn" onpointerdown="triggerAction('spray')">
+                    <span class="icon">🌧️</span>
+                    <span class="text-[9px] mt-1 text-slate-300 font-bold tracking-wider">SPRÜHEN</span>
+                </button>
+            </div>
+
+            <div class="hud-right">
+                <button class="action-btn" onpointerdown="startFeedingSequence()">
+                    <span class="icon">🪰</span>
+                    <span class="text-[9px] mt-1 text-slate-300 font-bold tracking-wider">FÜTTERN</span>
+                </button>
+            </div>
+            
         </div>
     </div>
 
 <script>
 /**
- * AETHERIA HD-2D ENGINE
- * AAA Quality Rendering & Bio-Simulation
+ * AETHERIA HD-2D ENGINE : AAA EDITION
+ * Includes Cinematic Camera, Time Scaling (Bullet Time), and IK Animation.
  */
 
-// --- 1. ENGINE SETUP ---
+// --- 1. ENGINE & CANVAS SETUP ---
 const canvas = document.getElementById('mainCanvas');
-const ctx = canvas.getContext('2d', { alpha: false }); // Optimierung
+const ctx = canvas.getContext('2d', { alpha: false });
 
-// Offscreen Canvas für das harte, echte PIXEL-ART
 const pixelCanvas = document.createElement('canvas');
 const pCtx = pixelCanvas.getContext('2d', { alpha: false });
-// Feste Retro-Auflösung für den Octopath-Look
-const PIXEL_W = 480; 
-const PIXEL_H = 270;
+const PIXEL_W = 640; 
+const PIXEL_H = 360;
 pixelCanvas.width = PIXEL_W;
 pixelCanvas.height = PIXEL_H;
 
@@ -194,476 +201,581 @@ function resize() {
     height = window.innerHeight;
     canvas.width = width;
     canvas.height = height;
-    ctx.imageSmoothingEnabled = false; // HD-2D Crispness
+    ctx.imageSmoothingEnabled = false;
 }
 window.addEventListener('resize', resize);
 resize();
 
-// --- 2. AUDIO SYNTH (Procedural) ---
+// --- 2. AUDIO ENGINE ---
 let actx = null;
 function playFX(type) {
     try {
         if(!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
         if(actx.state === 'suspended') actx.resume();
+        const t = actx.currentTime;
         const osc = actx.createOscillator();
         const gain = actx.createGain();
         osc.connect(gain);
         gain.connect(actx.destination);
-        const t = actx.currentTime;
 
         if (type === 'splash') {
             osc.type = 'sine';
             osc.frequency.setValueAtTime(600, t);
-            osc.frequency.exponentialRampToValueAtTime(100, t + 0.2);
-            gain.gain.setValueAtTime(0.3, t);
-            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
-            osc.start(t); osc.stop(t+0.2);
-        } else if (type === 'croak') {
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(90, t);
-            osc.frequency.linearRampToValueAtTime(50, t + 0.3);
-            gain.gain.setValueAtTime(0.2, t);
+            osc.frequency.exponentialRampToValueAtTime(100, t + 0.3);
+            gain.gain.setValueAtTime(0.4, t);
             gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
             osc.start(t); osc.stop(t+0.3);
-        } else if (type === 'purr') {
+        } else if (type === 'croak') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(80, t);
+            osc.frequency.linearRampToValueAtTime(40, t + 0.4);
+            gain.gain.setValueAtTime(0.3, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
+            osc.start(t); osc.stop(t+0.4);
+        } else if (type === 'shatter') {
+            // Glass breaking noise
             osc.type = 'square';
-            osc.frequency.setValueAtTime(40, t);
-            osc.frequency.linearRampToValueAtTime(60, t + 0.5);
-            gain.gain.setValueAtTime(0.05, t);
-            gain.gain.linearRampToValueAtTime(0.01, t + 0.5);
-            osc.start(t); osc.stop(t+0.5);
+            osc.frequency.setValueAtTime(1200, t);
+            osc.frequency.exponentialRampToValueAtTime(200, t + 0.1);
+            gain.gain.setValueAtTime(0.5, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+            osc.start(t); osc.stop(t+0.1);
+        } else if (type === 'slowmo') {
+            // Bass drop / Time slowdown
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(200, t);
+            osc.frequency.exponentialRampToValueAtTime(30, t + 1.0);
+            gain.gain.setValueAtTime(0.5, t);
+            gain.gain.linearRampToValueAtTime(0.1, t + 1.0);
+            osc.start(t); osc.stop(t+1.0);
+        } else if (type === 'whip') {
+            // Tongue strike
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, t);
+            osc.frequency.exponentialRampToValueAtTime(800, t + 0.05);
+            gain.gain.setValueAtTime(0.6, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+            osc.start(t); osc.stop(t+0.1);
         }
     } catch(e){}
 }
 
-// --- 3. TIEFE BIO-SIMULATION ---
+// --- 3. CAMERA & TIME SYSTEM ---
+const cam = {
+    x: PIXEL_W / 2, y: PIXEL_H / 2, zoom: 1.0,
+    targetX: PIXEL_W / 2, targetY: PIXEL_H / 2, targetZoom: 1.0,
+    shake: 0,
+    timeScale: 1.0, targetTimeScale: 1.0
+};
+
+// --- 4. BIOLOGY ENGINE ---
 const bio = {
     alive: true,
-    hp: 100,
-    water: 92,
-    stress: 12,
-    food: 80,
-    bpm: 50,
+    hp: 100, water: 92, stress: 12, food: 80, bpm: 50,
     
-    // IK & Anatomie (In Pixel-Koordinaten 480x270)
-    torsoX: PIXEL_W / 2,
-    torsoY: PIXEL_H / 2 + 20,
-    headX: PIXEL_W / 2,
-    headY: PIXEL_H / 2 - 10,
-    targetHeadX: PIXEL_W / 2,
-    targetHeadY: PIXEL_H / 2 - 10,
+    torsoX: PIXEL_W / 2, torsoY: PIXEL_H / 2 + 30,
+    headX: PIXEL_W / 2, headY: PIXEL_H / 2,
+    targetHeadX: PIXEL_W / 2, targetHeadY: PIXEL_H / 2,
+    neckLength: 28, // Fixiert den Kopf!
     
-    neckLength: 22, // MAXIMALER HALS-RADIUS (Verhindert "Kopf abziehen")
-    
-    throatBreath: 0,
-    blink: 0,
-    isShaking: false,
-    
+    throatBreath: 0, blink: 0, isShaking: false,
+
     update(dt) {
         if (!this.alive) return;
         
-        // Metabolismus
-        this.water = Math.max(0, this.water - 0.4 * dt);
-        this.food = Math.max(0, this.food - 0.2 * dt);
-        this.stress = Math.max(0, this.stress - 0.5 * dt); // Erholt sich langsam
+        const realDt = dt * cam.timeScale; // Metabolism slows down in bullet time!
+
+        this.water = Math.max(0, this.water - 0.3 * realDt);
+        this.food = Math.max(0, this.food - 0.15 * realDt);
+        this.stress = Math.max(0, this.stress - 0.5 * realDt);
 
         if (this.water < 30 || this.food < 20) {
-            this.hp = Math.max(0, this.hp - 1.5 * dt);
-            this.stress = Math.min(100, this.stress + 1.0 * dt);
+            this.hp = Math.max(0, this.hp - 1.0 * realDt);
         } else if (this.hp < 100) {
-            this.hp = Math.min(100, this.hp + 0.5 * dt);
+            this.hp = Math.min(100, this.hp + 0.5 * realDt);
         }
-
-        this.bpm = 40 + (this.stress * 0.8) + (100 - this.water) * 0.3;
-
         if (this.hp <= 0) this.alive = false;
 
-        // Blinzel-Logik (Niktitaut-Membran)
-        if (Math.random() < 0.01 + (100 - this.water) * 0.001) this.blink = 1.0;
-        this.blink = Math.max(0, this.blink - 5 * dt); // Schnelles Öffnen
+        this.bpm = 40 + (this.stress * 0.8) + (100 - this.water) * 0.2;
 
-        // INVERSE KINEMATIK (Constraint für den Kopf)
-        // 1. Zuerst Kopf sanft zum Target bewegen (Interpolation)
-        this.headX += (this.targetHeadX - this.headX) * 10 * dt;
-        this.headY += (this.targetHeadY - this.headY) * 10 * dt;
+        if (Math.random() < 0.01 * cam.timeScale) this.blink = 1.0;
+        this.blink = Math.max(0, this.blink - 6 * realDt);
 
-        // 2. CONSTRAINT (Abstand zum Torso limitieren = Kopf abreißen verhindern)
+        // INVERSE KINEMATICS (Head follows target but is clamped to torso)
+        this.headX += (this.targetHeadX - this.headX) * 8 * realDt;
+        this.headY += (this.targetHeadY - this.headY) * 8 * realDt;
+
         const dx = this.headX - this.torsoX;
         const dy = this.headY - this.torsoY;
         const dist = Math.hypot(dx, dy);
-        
         if (dist > this.neckLength) {
-            // Kopf auf maximalen Radius zurückziehen
             this.headX = this.torsoX + (dx / dist) * this.neckLength;
             this.headY = this.torsoY + (dy / dist) * this.neckLength;
         }
 
-        // Atmung
         this.throatBreath = Math.sin(performance.now() * 0.001 * (this.bpm / 20)) * (this.stress > 50 ? 5 : 3);
     }
 };
 
-// --- 4. KI-GEDANKEN ENGINE ---
-const thoughts = [
-    { cond: () => bio.stress > 70, txt: "Mein Puls rast... Die Welt dreht sich zu schnell." },
-    { cond: () => bio.water < 30, txt: "Meine Epidermis reißt. Ich brauche Feuchtigkeit..." },
-    { cond: () => bio.food < 30, txt: "Der Magen krampft. Die Jagd ruft, doch ich bin schwach." },
-    { cond: () => bio.stress < 20 && bio.water > 80, txt: "Der Aether fließt ruhig. Ein perfekter Zustand." },
-    { cond: () => true, txt: "Das Licht bricht sich im Teich. Ich wache." }
-];
+// --- 5. CINEMATIC FEEDING MINI-GAME ---
+let gameState = 'IDLE'; // IDLE, VIAL_DROP, BULLET_TIME, STRIKE
+let vial = { x: 0, y: 0, pressure: 0, active: false };
+let fly = { x: 0, y: 0, vx: 0, vy: 0, active: false };
+let tongue = { active: false, progress: 0, startX: 0, startY: 0, targetX: 0, targetY: 0, phase: 'out' };
 
-function updateThought() {
-    if(!bio.alive) {
-        document.getElementById('ui-thought').innerText = "Das Aether ist erloschen. Die Hülle versteinert.";
-        document.getElementById('ui-status').innerText = "SUBJEKT-STATUS: VERSTORBEN";
-        return;
+function setCinematicMode(active) {
+    const container = document.getElementById('game-container');
+    const ui = document.getElementById('ui-layer');
+    if (active) {
+        container.classList.add('mode-action');
+    } else {
+        container.classList.remove('mode-action');
     }
-    
-    let selected = thoughts.find(t => t.cond());
-    document.getElementById('ui-thought').innerText = `"${selected.txt}"`;
-    
-    const now = new Date();
-    document.getElementById('ui-time').innerText = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')} - NEURONALER STREAM`;
-    
-    let status = "HOMEOSTASE";
-    if(bio.stress > 60) status = "KRITISCHER STRESS";
-    else if(bio.water < 40) status = "AUSTROCKNUNG";
-    document.getElementById('ui-status').innerText = `SUBJEKT-STATUS: ${status}`;
-}
-setInterval(updateThought, 5000);
-
-// --- 5. INTERAKTIONEN & PHYSIK ---
-let interactParticles = [];
-let screenShake = 0;
-
-function triggerAction(type) {
-    if (!bio.alive) return;
-    document.getElementById('interaction-hint').style.opacity = '0';
-    
-    if (type === 'spray') {
-        bio.water = Math.min(100, bio.water + 30);
-        bio.stress = Math.max(0, bio.stress - 15);
-        playFX('splash');
-        screenShake = 5;
-        // Erzeuge Partikel im Pixel-Raum
-        for(let i=0; i<30; i++) {
-            interactParticles.push({
-                x: bio.torsoX + (Math.random()-0.5)*100,
-                y: bio.torsoY - 50 + (Math.random()-0.5)*50,
-                vx: (Math.random()-0.5)*2,
-                vy: 2 + Math.random()*3,
-                life: 1.0, color: '#38bdf8'
-            });
-        }
-    } else if (type === 'feed') {
-        bio.food = Math.min(100, bio.food + 40);
-        playFX('croak');
-        bio.targetHeadY -= 20; // Schnapp-Bewegung
-        setTimeout(() => bio.targetHeadY += 20, 200);
-    }
-    updateUI();
-    updateThought();
 }
 
-let isTouching = false;
-let lastTx = 0, lastTy = 0, lastTime = 0;
+function showPrompt(text) {
+    const p = document.getElementById('cinematic-prompt');
+    p.innerText = text;
+    p.style.opacity = '1';
+    setTimeout(() => p.style.opacity = '0', 2000);
+}
+
+function startFeedingSequence() {
+    if (gameState !== 'IDLE' || !bio.alive) return;
+    gameState = 'VIAL_DROP';
+    setCinematicMode(true);
+    
+    // Phiole droppt ins Bild (rechts oben)
+    vial = { x: PIXEL_W * 0.7, y: PIXEL_H * 0.3, pressure: 0, active: true };
+    cam.targetX = vial.x - 50;
+    cam.targetY = vial.y + 20;
+    cam.targetZoom = 1.3;
+    
+    showPrompt("PHIOLE HALTEN ZUM BRECHEN");
+}
+
+function shatterVial() {
+    vial.active = false;
+    playFX('shatter');
+    playFX('slowmo');
+    cam.shake = 15;
+    
+    // Spawn Fly
+    fly = { x: vial.x, y: vial.y, vx: -2, vy: -1, active: true };
+    
+    // Enter Bullet Time!
+    gameState = 'BULLET_TIME';
+    cam.targetTimeScale = 0.15; // Slow mo!
+    cam.targetZoom = 1.8;
+    cam.targetX = PIXEL_W / 2; // Fokus auf Frosch und Fliege
+    cam.targetY = PIXEL_H / 2 - 20;
+    
+    setTimeout(() => showPrompt("ZIELEN & LOSLASSEN"), 500);
+}
+
+function executeStrike() {
+    gameState = 'STRIKE';
+    cam.targetTimeScale = 1.0; // Zeit läuft normal!
+    cam.targetZoom = 1.1;
+    cam.shake = 20;
+    playFX('whip');
+    
+    tongue = { 
+        active: true, progress: 0, phase: 'out',
+        startX: bio.headX, startY: bio.headY,
+        targetX: aimTarget.x, targetY: aimTarget.y
+    };
+    
+    // Prüfen ob getroffen
+    const dist = Math.hypot(aimTarget.x - fly.x, aimTarget.y - fly.y);
+    if (dist < 30) {
+        // Treffer! Fliege wird gefressen
+        setTimeout(() => {
+            fly.active = false;
+            bio.food = Math.min(100, bio.food + 30);
+            playFX('croak');
+        }, 150);
+    }
+}
+
+// --- 6. INTERACTION LOGIC (Touch/Mouse) ---
+let isInteracting = false;
+let aimTarget = { x: 0, y: 0 };
 
 window.addEventListener('pointerdown', (e) => {
-    if(!bio.alive) return;
-    isTouching = true;
-    lastTx = e.clientX; lastTy = e.clientY;
-    lastTime = performance.now();
-    document.getElementById('interaction-hint').style.opacity = '0';
+    if (!bio.alive) return;
+    isInteracting = true;
+    updateAimTarget(e);
 });
 
 window.addEventListener('pointermove', (e) => {
-    if (!isTouching || !bio.alive) return;
-    
-    const now = performance.now();
-    const dt = Math.max(1, now - lastTime);
-    const dist = Math.hypot(e.clientX - lastTx, e.clientY - lastTy);
-    const speed = dist / dt; // px/ms
+    if (!isInteracting) return;
+    updateAimTarget(e);
 
-    // Mappe Bildschirm-Koordinaten in Pixel-Koordinaten
-    const scaleX = PIXEL_W / width;
-    const scaleY = PIXEL_H / height;
-    
-    bio.targetHeadX = e.clientX * scaleX;
-    bio.targetHeadY = e.clientY * scaleY;
-
-    // Physikalisches Feedback: Zu schnell = Stress, Sanft = Purr
-    if (speed > 2.0) {
-        bio.stress = Math.min(100, bio.stress + 3);
-        if(!bio.isShaking) {
-            bio.isShaking = true;
-            playFX('croak');
-            screenShake = 8;
-            setTimeout(() => bio.isShaking = false, 500);
-        }
-    } else if (speed > 0.1 && speed < 1.0) {
-        bio.stress = Math.max(0, bio.stress - 1);
+    // Normales Streicheln im IDLE
+    if (gameState === 'IDLE') {
+        bio.targetHeadX = aimTarget.x;
+        bio.targetHeadY = aimTarget.y;
+        
+        // Sanftes Feedback
         if(Math.random() < 0.05) playFX('purr');
     }
-
-    lastTx = e.clientX; lastTy = e.clientY;
-    lastTime = now;
 });
 
 window.addEventListener('pointerup', () => {
-    isTouching = false;
-    // Kopf geht in Ruheposition zurück
-    bio.targetHeadX = PIXEL_W / 2;
-    bio.targetHeadY = PIXEL_H / 2 - 10;
+    isInteracting = false;
+    
+    if (gameState === 'IDLE') {
+        bio.targetHeadX = PIXEL_W / 2;
+        bio.targetHeadY = PIXEL_H / 2 - 10;
+    } else if (gameState === 'VIAL_DROP') {
+        vial.pressure = 0; // Druck fällt ab, wenn man zu früh loslässt
+    } else if (gameState === 'BULLET_TIME') {
+        executeStrike();
+    }
 });
 
-// --- 6. UI UPDATE LOGIC ---
-function updateUI() {
-    document.getElementById('val-hp').innerText = `${Math.round(bio.hp)}%`;
-    document.getElementById('bar-hp').style.width = `${bio.hp}%`;
+function updateAimTarget(e) {
+    // Wandelt Screen-Koordinaten in Pixel-Canvas Koordinaten mit Berücksichtigung der Kamera um!
+    const rect = canvas.getBoundingClientRect();
+    const sx = (e.clientX - rect.left) / rect.width;
+    const sy = (e.clientY - rect.top) / rect.height;
     
-    document.getElementById('val-h2o').innerText = `${Math.round(bio.water)}%`;
-    document.getElementById('bar-h2o').style.width = `${bio.water}%`;
+    // Kamera Inverse Transform
+    const viewW = PIXEL_W / cam.zoom;
+    const viewH = PIXEL_H / cam.zoom;
     
-    document.getElementById('val-stress').innerText = `${Math.round(bio.stress)}%`;
-    document.getElementById('bar-stress').style.width = `${bio.stress}%`;
+    aimTarget.x = cam.x - viewW/2 + (sx * viewW);
+    aimTarget.y = cam.y - viewH/2 + (sy * viewH);
 }
 
-// --- 7. HD-2D RENDER PIPELINE ---
+function triggerAction(type) {
+    if (type === 'spray' && gameState === 'IDLE') {
+        bio.water = Math.min(100, bio.water + 30);
+        bio.stress = Math.max(0, bio.stress - 10);
+        playFX('splash');
+        cam.shake = 5;
+        // Erzeuge Wasserpartikel im Pixelraum
+        for(let i=0; i<40; i++) {
+            particles.push({
+                x: bio.torsoX + (Math.random()-0.5)*120,
+                y: bio.torsoY - 80 + (Math.random()-0.5)*60,
+                vx: (Math.random()-0.5)*3,
+                vy: 2 + Math.random()*4,
+                life: 1.0, color: '#38bdf8', type: 'water'
+            });
+        }
+    }
+    updateUI();
+}
+
+// --- 7. RENDERING ENGINE ---
 let globalTime = 0;
+let particles = [];
 
-function drawPixelArtScene() {
-    // 1. CLEAR
-    pCtx.fillStyle = '#020617'; // Deep dark void
+function drawPixelScene() {
+    pCtx.fillStyle = '#020617';
     pCtx.fillRect(0, 0, PIXEL_W, PIXEL_H);
-
     const horizonY = PIXEL_H * 0.45;
 
-    // 2. PARALLAX BACKGROUND (Nebliger Wald/Höhle)
+    // Background (Cave)
     const bgGrad = pCtx.createLinearGradient(0, 0, 0, horizonY);
     bgGrad.addColorStop(0, '#000000');
-    bgGrad.addColorStop(0.5, '#061329');
-    bgGrad.addColorStop(1, '#0f2947');
+    bgGrad.addColorStop(1, '#0f172a');
     pCtx.fillStyle = bgGrad;
     pCtx.fillRect(0, 0, PIXEL_W, horizonY);
-    
-    // Fake Bäume/Silhouetten (Tiefenunschärfe simuliert durch dunkle Farben)
-    pCtx.fillStyle = '#030b1a';
-    pCtx.fillRect(50, 20, 20, horizonY);
-    pCtx.fillRect(300, 40, 30, horizonY);
-    pCtx.fillRect(400, 10, 15, horizonY);
 
-    // 3. WASSER (Aether Pond)
+    // Water
     const waterGrad = pCtx.createLinearGradient(0, horizonY, 0, PIXEL_H);
     waterGrad.addColorStop(0, '#0c4a6e');
     waterGrad.addColorStop(1, '#020617');
     pCtx.fillStyle = waterGrad;
     pCtx.fillRect(0, horizonY, PIXEL_W, PIXEL_H - horizonY);
 
-    // Wellen (Ripples)
-    pCtx.strokeStyle = 'rgba(56, 189, 248, 0.15)';
-    pCtx.lineWidth = 1;
-    for (let y = horizonY + 5; y < PIXEL_H; y += 8) {
-        const wave = Math.sin(globalTime*2 + y * 0.1) * 4;
+    // Water Ripples
+    pCtx.strokeStyle = 'rgba(56, 189, 248, 0.2)';
+    pCtx.lineWidth = 1.5;
+    for (let y = horizonY + 5; y < PIXEL_H; y += 12) {
+        const wave = Math.sin(globalTime*3 + y * 0.1) * 3;
         pCtx.beginPath();
         pCtx.moveTo(0, y);
         pCtx.lineTo(PIXEL_W, y + wave);
         pCtx.stroke();
     }
 
-    // 4. REFLEXION DES WESENS (Screen Space Reflection Fake)
-    pCtx.save();
-    pCtx.translate(0, horizonY * 2 + 10);
-    pCtx.scale(1, -1); // Vertikal spiegeln
-    pCtx.globalAlpha = 0.15;
-    drawFrogBody(true); // Draw Simplified
-    pCtx.restore();
-    pCtx.globalAlpha = 1.0;
-
-    // 5. DAS WESEN (Hauptkörper)
-    drawFrogBody(false);
-
-    // 6. PIXEL PARTIKEL
-    for (let i = interactParticles.length - 1; i >= 0; i--) {
-        let p = interactParticles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.life -= 0.05;
-        pCtx.fillStyle = p.color;
-        pCtx.globalAlpha = p.life;
-        pCtx.fillRect(p.x, p.y, 2, 2);
-        if (p.life <= 0) interactParticles.splice(i, 1);
-    }
-    pCtx.globalAlpha = 1.0;
-}
-
-function drawFrogBody(isReflection) {
-    // Erschüttern
-    let ox = 0, oy = 0;
-    if (bio.isShaking && !isReflection) {
-        ox = (Math.random()-0.5)*4;
-        oy = (Math.random()-0.5)*4;
-    }
-
-    pCtx.save();
-    pCtx.translate(ox, oy);
-
+    // --- FROG ---
     const skinColor = bio.water < 40 ? '#451a03' : (bio.alive ? '#064e3b' : '#1e293b');
     const lightSkin = bio.water < 40 ? '#78350f' : (bio.alive ? '#047857' : '#334155');
 
-    // Schatten
-    if (!isReflection) {
-        pCtx.fillStyle = 'rgba(0,0,0,0.7)';
-        pCtx.beginPath();
-        pCtx.ellipse(bio.torsoX, bio.torsoY + 45, 65, 15, 0, 0, Math.PI*2);
-        pCtx.fill();
-    }
+    // Shadow
+    pCtx.fillStyle = 'rgba(0,0,0,0.8)';
+    pCtx.beginPath(); pCtx.ellipse(bio.torsoX, bio.torsoY + 45, 70, 15, 0, 0, Math.PI*2); pCtx.fill();
 
-    // Oberschenkel
+    // Body
     pCtx.fillStyle = skinColor;
-    pCtx.fillRect(bio.torsoX - 70, bio.torsoY - 10, 30, 40);
-    pCtx.fillRect(bio.torsoX + 40, bio.torsoY - 10, 30, 40);
-
-    // Torso
+    pCtx.fillRect(bio.torsoX - 75, bio.torsoY - 10, 30, 45); // Legs
+    pCtx.fillRect(bio.torsoX + 45, bio.torsoY - 10, 30, 45);
+    
     pCtx.fillStyle = lightSkin;
-    pCtx.beginPath();
-    pCtx.ellipse(bio.torsoX, bio.torsoY, 55, 40, 0, 0, Math.PI*2);
-    pCtx.fill();
+    pCtx.beginPath(); pCtx.ellipse(bio.torsoX, bio.torsoY, 60, 45, 0, 0, Math.PI*2); pCtx.fill(); // Torso
 
-    // Textur-Punkte (Schuppen)
-    pCtx.fillStyle = skinColor;
-    pCtx.fillRect(bio.torsoX - 20, bio.torsoY - 20, 4, 4);
-    pCtx.fillRect(bio.torsoX + 15, bio.torsoY - 10, 3, 3);
-    pCtx.fillRect(bio.torsoX - 10, bio.torsoY + 15, 5, 5);
-
-    // Vorderbeine
-    pCtx.fillStyle = skinColor;
-    pCtx.fillRect(bio.torsoX - 45, bio.torsoY + 15, 12, 35);
-    pCtx.fillRect(bio.torsoX + 33, bio.torsoY + 15, 12, 35);
-
-    // --- KOPF MIT CONSTRAINTS ---
+    // Head (IK bound)
     pCtx.save();
     pCtx.translate(bio.headX, bio.headY);
-
-    // Kehlsack
+    
     if (bio.alive) {
         pCtx.fillStyle = '#a7f3d0';
-        pCtx.beginPath();
-        pCtx.ellipse(0, 15 + bio.throatBreath, 28 + bio.throatBreath*0.5, 20 + bio.throatBreath, 0, 0, Math.PI*2);
-        pCtx.fill();
+        pCtx.beginPath(); pCtx.ellipse(0, 15 + bio.throatBreath, 32 + bio.throatBreath*0.5, 22 + bio.throatBreath, 0, 0, Math.PI*2); pCtx.fill();
     }
-
-    // Schädel
-    pCtx.fillStyle = lightSkin;
-    pCtx.beginPath();
-    pCtx.ellipse(0, -10, 45, 25, 0, 0, Math.PI*2);
-    pCtx.fill();
-
-    // Augenhöhlen
-    pCtx.fillStyle = skinColor;
-    pCtx.beginPath();
-    pCtx.arc(-22, -28, 12, 0, Math.PI*2);
-    pCtx.arc(22, -28, 12, 0, Math.PI*2);
-    pCtx.fill();
-
-    if (bio.alive) {
-        // Leuchtende Iris
-        const irisColor = bio.stress > 60 ? '#f43f5e' : '#facc15';
-        pCtx.fillStyle = irisColor;
-        pCtx.beginPath();
-        pCtx.arc(-22, -28, 8, 0, Math.PI*2);
-        pCtx.arc(22, -28, 8, 0, Math.PI*2);
-        pCtx.fill();
-
-        // Pupille & Niktitaut-Blinzeln
-        pCtx.fillStyle = '#000';
-        const eyeOpen = Math.max(0.5, 6 * (1.0 - bio.blink));
-        pCtx.fillRect(-28, -28 - eyeOpen/2, 12, eyeOpen);
-        pCtx.fillRect(16, -28 - eyeOpen/2, 12, eyeOpen);
-
-        // Glanzlicht
-        pCtx.fillStyle = '#fff';
-        pCtx.fillRect(-24, -30, 2, 2);
-        pCtx.fillRect(20, -30, 2, 2);
-    }
-
-    // Mund
-    pCtx.strokeStyle = '#020617';
-    pCtx.lineWidth = 2;
-    pCtx.beginPath();
-    pCtx.arc(0, -5, 30, 0.2, Math.PI-0.2);
-    pCtx.stroke();
-
-    pCtx.restore(); // Ende Kopf
-    pCtx.restore(); // Ende Körper
-}
-
-// --- 8. POST-PROCESSING (HD-2D) ---
-function renderHighResEffects() {
-    // Screen Shake anwenden
-    if(screenShake > 0) {
-        const dx = (Math.random()-0.5)*screenShake;
-        const dy = (Math.random()-0.5)*screenShake;
-        ctx.translate(dx, dy);
-        screenShake *= 0.9;
-        if(screenShake < 0.5) screenShake = 0;
-    }
-
-    // Zeichne das Pixel-Art Bild GESTOCHEN SCHARF auf den Fullscreen
-    ctx.drawImage(pixelCanvas, 0, 0, width, height);
-
-    // --- HD EFFEKTE ---
-    ctx.globalCompositeOperation = 'screen';
-
-    // 1. God Rays (Volumetrisches Licht)
-    const rayGrad = ctx.createLinearGradient(width/2, 0, width/2, height);
-    rayGrad.addColorStop(0, 'rgba(56, 189, 248, 0.2)');
-    rayGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
     
-    ctx.fillStyle = rayGrad;
-    ctx.beginPath();
-    ctx.moveTo(width/2 - 200, 0);
-    ctx.lineTo(width/2 + 200, 0);
-    ctx.lineTo(width/2 + Math.sin(globalTime)*100 + 400, height);
-    ctx.lineTo(width/2 + Math.sin(globalTime)*100 - 400, height);
-    ctx.fill();
-
-    // 2. Ambient Bloom / Glow
+    pCtx.fillStyle = lightSkin;
+    pCtx.beginPath(); pCtx.ellipse(0, -10, 50, 30, 0, 0, Math.PI*2); pCtx.fill();
+    
+    // Eyes
+    pCtx.fillStyle = skinColor;
+    pCtx.beginPath(); pCtx.arc(-25, -30, 14, 0, Math.PI*2); pCtx.arc(25, -30, 14, 0, Math.PI*2); pCtx.fill();
+    
     if (bio.alive) {
-        const bloom = ctx.createRadialGradient(width/2, height/2, 0, width/2, height/2, height*0.6);
-        bloom.addColorStop(0, 'rgba(56, 189, 248, 0.15)');
-        bloom.addColorStop(1, 'rgba(0, 0, 0, 0)');
-        ctx.fillStyle = bloom;
-        ctx.fillRect(0,0,width,height);
+        pCtx.fillStyle = bio.stress > 60 ? '#f43f5e' : '#facc15';
+        pCtx.beginPath(); pCtx.arc(-25, -30, 9, 0, Math.PI*2); pCtx.arc(25, -30, 9, 0, Math.PI*2); pCtx.fill();
+        
+        pCtx.fillStyle = '#000';
+        const eyeOpen = Math.max(0.5, 8 * (1.0 - bio.blink));
+        pCtx.fillRect(-32, -30 - eyeOpen/2, 14, eyeOpen);
+        pCtx.fillRect(18, -30 - eyeOpen/2, 14, eyeOpen);
+        
+        // Wesen fixiert die Fliege im Action-Mode!
+        if(fly.active) {
+            const angle = Math.atan2(fly.y - bio.headY, fly.x - bio.headX);
+            pCtx.fillStyle = '#fff';
+            pCtx.fillRect(-25 + Math.cos(angle)*3, -32 + Math.sin(angle)*3, 3, 3);
+            pCtx.fillRect(25 + Math.cos(angle)*3, -32 + Math.sin(angle)*3, 3, 3);
+        } else {
+            pCtx.fillStyle = '#fff'; pCtx.fillRect(-27, -32, 3, 3); pCtx.fillRect(23, -32, 3, 3);
+        }
+    }
+    
+    pCtx.strokeStyle = '#020617'; pCtx.lineWidth = 2.5;
+    pCtx.beginPath(); pCtx.arc(0, -5, 35, 0.2, Math.PI-0.2); pCtx.stroke(); // Mouth
+    
+    pCtx.restore(); // End Head
+
+    // --- MINI-GAME ENTITIES ---
+    // 1. Phiole
+    if (vial.active) {
+        // Druck aufbauen
+        if (isInteracting && gameState === 'VIAL_DROP') {
+            vial.pressure += 2;
+            cam.shake = vial.pressure * 0.05;
+            if (vial.pressure > 100) shatterVial();
+        } else {
+            vial.pressure = Math.max(0, vial.pressure - 5);
+        }
+        
+        const shake = (Math.random()-0.5) * (vial.pressure/10);
+        pCtx.save();
+        pCtx.translate(vial.x + shake, vial.y + Math.sin(globalTime*4)*5 + shake);
+        
+        // Glas
+        pCtx.fillStyle = `rgba(186, 230, 253, ${0.4 + vial.pressure/200})`;
+        pCtx.strokeStyle = '#38bdf8'; pCtx.lineWidth = 2;
+        pCtx.beginPath(); pCtx.roundRect(-15, -25, 30, 50, 10); pCtx.fill(); pCtx.stroke();
+        
+        // Leuchtende Fliege drinnen
+        pCtx.fillStyle = '#fef08a';
+        pCtx.beginPath(); pCtx.arc(0, 0, 4 + (vial.pressure/20), 0, Math.PI*2); pCtx.fill();
+        pCtx.restore();
     }
 
-    // Reset Transformation & Blend Mode
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    // 2. Fliege
+    if (fly.active) {
+        // Fliegen Bewegung (Perlin-ish Noise durch Sine)
+        const dt = (1/60) * cam.timeScale;
+        fly.x += fly.vx * 60 * dt + Math.sin(globalTime*20)*2;
+        fly.y += fly.vy * 60 * dt + Math.cos(globalTime*25)*2;
+        
+        // Screen Bounds
+        if(fly.x < 50 || fly.x > PIXEL_W-50) fly.vx *= -1;
+        if(fly.y < 50 || fly.y > PIXEL_H-50) fly.vy *= -1;
+
+        pCtx.fillStyle = '#fef08a'; // Leuchtend gelb
+        pCtx.beginPath(); pCtx.arc(fly.x, fly.y, 4, 0, Math.PI*2); pCtx.fill();
+        // Glow effect
+        pCtx.fillStyle = 'rgba(254, 240, 138, 0.4)';
+        pCtx.beginPath(); pCtx.arc(fly.x, fly.y, 10, 0, Math.PI*2); pCtx.fill();
+    }
+
+    // 3. Aiming Line (Bullet Time)
+    if (gameState === 'BULLET_TIME' && isInteracting) {
+        pCtx.strokeStyle = 'rgba(239, 68, 68, 0.6)'; // Rote Ziellinie
+        pCtx.lineWidth = 1;
+        pCtx.setLineDash([5, 5]);
+        pCtx.beginPath();
+        pCtx.moveTo(bio.headX, bio.headY);
+        pCtx.lineTo(aimTarget.x, aimTarget.y);
+        pCtx.stroke();
+        pCtx.setLineDash([]);
+        
+        // Crosshair
+        pCtx.strokeStyle = '#ef4444'; pCtx.lineWidth = 2;
+        pCtx.beginPath(); pCtx.arc(aimTarget.x, aimTarget.y, 8, 0, Math.PI*2); pCtx.stroke();
+    }
+
+    // 4. Tongue Strike
+    if (tongue.active) {
+        if(tongue.phase === 'out') {
+            tongue.progress += 0.2; // Sehr schnell
+            if(tongue.progress >= 1) { tongue.progress = 1; tongue.phase = 'in'; }
+        } else {
+            tongue.progress -= 0.15;
+            if(tongue.progress <= 0) {
+                tongue.active = false;
+                gameState = 'IDLE';
+                setCinematicMode(false);
+            }
+        }
+        
+        const curX = tongue.startX + (tongue.targetX - tongue.startX) * tongue.progress;
+        const curY = tongue.startY + (tongue.targetY - tongue.startY) * tongue.progress;
+        
+        pCtx.strokeStyle = '#be123c'; // Zungenfarbe
+        pCtx.lineWidth = 8;
+        pCtx.lineCap = 'round';
+        pCtx.beginPath();
+        pCtx.moveTo(tongue.startX, tongue.startY);
+        
+        // Bezier Kurve für Elastizität
+        const cpX = (tongue.startX + curX)/2;
+        const cpY = Math.min(tongue.startY, curY) - 30 * Math.sin(tongue.progress * Math.PI);
+        pCtx.quadraticCurveTo(cpX, cpY, curX, curY);
+        pCtx.stroke();
+        
+        // Zungenspitze (Klebrig)
+        pCtx.fillStyle = '#f43f5e';
+        pCtx.beginPath(); pCtx.arc(curX, curY, 8, 0, Math.PI*2); pCtx.fill();
+    }
+
+    // 5. Partikel
+    for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        const dt = (1/60) * cam.timeScale;
+        p.x += p.vx * 60 * dt;
+        p.y += p.vy * 60 * dt;
+        p.life -= 0.05 * cam.timeScale;
+        pCtx.fillStyle = p.color;
+        pCtx.globalAlpha = p.life;
+        pCtx.fillRect(p.x, p.y, p.type==='water'?2:4, p.type==='water'?2:4);
+        if (p.life <= 0) particles.splice(i, 1);
+    }
+    pCtx.globalAlpha = 1.0;
 }
 
-// --- 9. MAIN GAME LOOP ---
-let lastFrameTime = performance.now();
+// --- 8. POST-PROCESSING (HD-2D & CAMERA) ---
+function renderFinalScene() {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, width, height);
 
+    ctx.save();
+    
+    // Apply Camera Transform (Zoom, Pan, Shake)
+    ctx.translate(width/2, height/2);
+    
+    if(cam.shake > 0) {
+        ctx.translate((Math.random()-0.5)*cam.shake, (Math.random()-0.5)*cam.shake);
+        cam.shake *= 0.9;
+        if(cam.shake < 0.5) cam.shake = 0;
+    }
+    
+    ctx.scale(cam.zoom, cam.zoom);
+    
+    // Draw Pixel Canvas centered on camera target
+    const scale = Math.min(width / PIXEL_W, height / PIXEL_H) * 1.05; // Base scale to fill screen
+    const drawW = PIXEL_W * scale;
+    const drawH = PIXEL_H * scale;
+    
+    // Map cam.x/y (Pixel space) to draw space
+    const offsetX = (PIXEL_W/2 - cam.x) * scale;
+    const offsetY = (PIXEL_H/2 - cam.y) * scale;
+    
+    ctx.translate(offsetX, offsetY);
+    ctx.drawImage(pixelCanvas, -drawW/2, -drawH/2, drawW, drawH);
+
+    // Vignette / Focus Effect in Bullet Time
+    if (gameState === 'BULLET_TIME') {
+        ctx.globalCompositeOperation = 'multiply';
+        const darkGrad = ctx.createRadialGradient(
+            (cam.x - PIXEL_W/2)*scale, (cam.y - PIXEL_H/2)*scale, 50,
+            (cam.x - PIXEL_W/2)*scale, (cam.y - PIXEL_H/2)*scale, 300
+        );
+        darkGrad.addColorStop(0, 'rgba(255,255,255,1)'); // Zentrum hell
+        darkGrad.addColorStop(1, 'rgba(80,80,100,1)'); // Außen dunkel/entsättigt
+        ctx.fillStyle = darkGrad;
+        ctx.fillRect(-drawW, -drawH, drawW*2, drawH*2);
+        ctx.globalCompositeOperation = 'source-over';
+    }
+
+    ctx.restore();
+}
+
+// --- 9. MAIN LOOP ---
+let lastFrameTime = performance.now();
 function loop() {
     const now = performance.now();
-    const dt = (now - lastFrameTime) / 1000;
+    let dt = (now - lastFrameTime) / 1000;
+    if(dt > 0.1) dt = 0.1; // Cap delta time
     lastFrameTime = now;
-    globalTime += dt;
+    
+    // Smooth Camera & Time transitions
+    cam.timeScale += (cam.targetTimeScale - cam.timeScale) * 5 * dt;
+    cam.x += (cam.targetX - cam.x) * 5 * dt;
+    cam.y += (cam.targetY - cam.y) * 5 * dt;
+    cam.zoom += (cam.targetZoom - cam.zoom) * 3 * dt;
+    
+    globalTime += dt * cam.timeScale;
 
-    // Logik
     bio.update(dt);
-    if(Math.random() < 0.1) updateUI(); // UI nicht jeden Frame aktualisieren (Performance)
+    
+    // UI Update throttling
+    if(Math.random() < 0.1) {
+        document.getElementById('val-hp').innerText = `${Math.round(bio.hp)}%`;
+        document.getElementById('bar-hp').style.width = `${bio.hp}%`;
+        document.getElementById('val-h2o').innerText = `${Math.round(bio.water)}%`;
+        document.getElementById('bar-h2o').style.width = `${bio.water}%`;
+    }
 
-    // Rendering Pipeline
-    drawPixelArtScene(); // Rendere tiefe Pixel
-    renderHighResEffects(); // Rendere PS5 Post-Processing
+    drawPixelScene();
+    renderFinalScene();
 
     requestAnimationFrame(loop);
 }
 
 // Start
+setInterval(() => {
+    if(gameState === 'IDLE') updateThought();
+}, 6000);
 updateThought();
 loop();
+
+function updateThought() {
+    const thoughts = [
+        "Das Wasser ruht. Ich spüre das Flüstern des Aethers...",
+        "Mein Herzschlag ist im Einklang mit dem Ozean...",
+        "Ein sanftes Licht durchbricht die Dunkelheit.",
+        "Meine Lungen füllen sich mit frischer Energie."
+    ];
+    if(!bio.alive) {
+        document.getElementById('ui-thought').innerText = "Das Aether ist erloschen. Die Hülle versteinert.";
+        document.getElementById('ui-status').innerText = "STATUS: VERSTORBEN";
+        return;
+    }
+    
+    let txt = thoughts[Math.floor(Math.random()*thoughts.length)];
+    if(bio.water < 40) txt = "Meine Haut brennt. Ich brauche den Regen.";
+    
+    document.getElementById('ui-thought').innerText = `"${txt}"`;
+    const now = new Date();
+    document.getElementById('ui-time').innerText = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')} - NEURONALER STREAM`;
+}
 
 </script>
 </body>
