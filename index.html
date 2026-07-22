@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#020203">
-    <title>ANIMA | Autonomous Biological Nexus (Cross-Browser Persistent)</title>
+    <title>ANIMA | Autonomous Biological Nexus (Strict Cloud Sync)</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -30,6 +30,12 @@
         .vignette {
             position: fixed; inset: 0; z-index: 3; pointer-events: none;
             background: radial-gradient(circle at center, transparent 20%, rgba(2,2,3,0.95) 100%);
+        }
+
+        /* Diagnostic Panel */
+        #debug-panel {
+            position: fixed; top: 10px; left: 10px; z-index: 999; font-family: 'Space Mono', monospace;
+            font-size: 0.6rem; color: rgba(255,255,255,0.5); background: rgba(0,0,0,0.5); padding: 8px; border-radius: 4px; pointer-events: none;
         }
 
         /* Netzwerk Status */
@@ -65,10 +71,12 @@
         /* Cinematic Layer */
         #cinematic-layer {
             position: fixed; inset: 0; z-index: 90; display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: none;
+            background: #020203;
         }
         .cine-text {
             font-family: 'Space Mono', monospace; font-size: 0.75rem; letter-spacing: 0.4em; text-transform: uppercase;
             opacity: 0; transition: opacity 1s; position: absolute; text-align: center; width: 90%; max-width: 600px; color: rgba(255,255,255,0.85); text-shadow: 0 0 15px rgba(255,255,255,0.3);
+            line-height: 1.5;
         }
 
         /* HUD Layer */
@@ -114,20 +122,19 @@
         }
         .send-btn-mobile:active { background: rgba(255,255,255,0.3); }
 
-        .hint-text { font-size: 0.65rem; letter-spacing: 0.3em; text-transform: uppercase; color: rgba(255,255,255,0.35); font-family: 'Space Mono', monospace; text-align: center; margin-top: 1rem; }
         .status-dot { position: fixed; bottom: 4%; left: 50%; transform: translateX(-50%); width: 6px; height: 6px; border-radius: 50%; background: #fff; box-shadow: 0 0 15px #fff; z-index: 15; opacity: 0; transition: opacity 0.4s; }
         .status-dot.thinking { opacity: 1; animation: pulse-dot 0.5s infinite alternate; }
         @keyframes pulse-dot { from { opacity: 0.3; transform: translateX(-50%) scale(0.8); } to { opacity: 1; transform: translateX(-50%) scale(1.6); } }
-
-        /* Room Switch Modal */
-        #room-modal {
-            position: fixed; inset: 0; z-index: 250; display: none; justify-content: center; align-items: center;
-            background: rgba(0, 0, 0, 0.88); backdrop-filter: blur(20px); font-family: 'Space Mono', monospace; padding: 1rem;
-        }
     </style>
 </head>
 <body>
     
+    <div id="debug-panel">
+        <div>SYS: INITIATING...</div>
+        <div id="dbg-db" style="color: #ffaa00">DB: PENDING</div>
+        <div id="dbg-auth">AUTH: WAITING</div>
+    </div>
+
     <div id="network-warning">Äther-Verbindung instabil... Warte auf Resonanz.</div>
 
     <!-- AUTHENTICATION LAYER -->
@@ -146,7 +153,7 @@
     <div id="cinematic-layer">
         <div id="cine-1" class="cine-text">ERZEUGE NEURONALE STRUKTUREN...</div>
         <div id="cine-2" class="cine-text text-cyan-200">VERBINDE MIT DEM MEMORY-NETZWERK...</div>
-        <div id="cine-3" class="cine-text text-emerald-300" style="margin-top: 3.5rem; font-size: 0.7rem; letter-spacing: 0.15em;">[ LADE GEDÄCHTNIS-MATRIZEN... ]</div>
+        <div id="cine-3" class="cine-text text-emerald-300" style="margin-top: 3.5rem; font-size: 0.7rem; letter-spacing: 0.15em;">[ ABFRAGE PERSISTENTER DATENBANK LAUFT... ]</div>
         <div id="cine-4" class="cine-text text-xs text-gray-400" style="margin-top: 6.5rem; text-transform: none;">[SOUL_ID: <span id="cine-hash">----</span>]</div>
         <div id="cine-5" class="cine-text text-white" style="font-size: 1rem; font-weight: 600;">VOLLSTÄNDIGES GEDÄCHTNIS GELADEN. ERWACHEN.</div>
     </div>
@@ -188,12 +195,11 @@
                 <textarea id="thought-input" class="thought-input" rows="1" placeholder="Projiziere einen Gedanken..." inputmode="text"></textarea>
             </div>
             <button id="send-thought-btn" class="send-btn-mobile">Gedanke Senden</button>
-            <div id="hint" class="hint-text">Tippen außerhalb = Schließen</div>
         </div>
     </div>
 
     <!-- ROOM SWITCH MODAL -->
-    <div id="room-modal">
+    <div id="room-modal" style="display:none; position:fixed; inset:0; z-index:250; background:rgba(0,0,0,0.9); justify-content:center; align-items:center;">
         <div class="auth-box">
             <h1 class="auth-title">Raum Transzendenz</h1>
             <input type="text" id="target-room-input" class="auth-input" placeholder="Raumcode (z.B. 4092)" maxlength="4" autocomplete="off" inputmode="numeric">
@@ -201,7 +207,6 @@
                 <button id="btn-goto-room" class="auth-btn">Betreten</button>
                 <button id="btn-cancel-room" class="auth-btn" style="background: rgba(255,255,255,0.02)">Abbruch</button>
             </div>
-            <div id="room-error" class="auth-error"></div>
         </div>
     </div>
 
@@ -211,10 +216,12 @@
         import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // ==========================================
-        // CONFIG & FIREBASE INITIALISIERUNG
+        // CONFIG & FIREBASE (STRICT PATHS)
         // ==========================================
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-        const appIdString = typeof __app_id !== 'undefined' ? __app_id : 'anima-nexus-default';
+        
+        // ZWINGEND: Statische App-ID für Cross-Browser Kompatibilität
+        const appIdString = (typeof __app_id !== 'undefined' && __app_id) ? __app_id : 'anima-global-nexus'; 
         
         let app = null;
         let auth = null;
@@ -227,9 +234,15 @@
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
+                document.getElementById('dbg-db').innerText = 'DB: CONNECTED';
+                document.getElementById('dbg-db').style.color = '#00ff88';
             } catch (e) {
-                console.warn("[FIREBASE] Init Hinweis:", e);
+                document.getElementById('dbg-db').innerText = 'DB: ERROR ' + e.message;
+                document.getElementById('dbg-db').style.color = '#ff4444';
             }
+        } else {
+            document.getElementById('dbg-db').innerText = 'DB: OFFLINE (NO CONFIG)';
+            document.getElementById('dbg-db').style.color = '#ff4444';
         }
 
         let groqApiKey = ""; 
@@ -240,25 +253,35 @@
 
         const GROQ_MODEL = "llama-3.3-70b-versatile";
 
-        // Strikte Normalisierung & Deterministischer Hash des API-Keys
+        // Fehler-resistenter Hashing-Algorithmus (funktioniert auch lokal!)
         async function hashApiKey(key) {
             const cleanKey = String(key || '').trim();
-            const encoder = new TextEncoder();
-            const data = encoder.encode(cleanKey);
-            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            if (window.crypto && crypto.subtle) {
+                const encoder = new TextEncoder();
+                const data = encoder.encode(cleanKey);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            } else {
+                // Fallback für Browser, die crypto.subtle blockieren (z.B. non-https)
+                let hash = 0;
+                for (let i = 0; i < cleanKey.length; i++) {
+                    const char = cleanKey.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash |= 0;
+                }
+                return "md5ish_" + Math.abs(hash).toString(16) + "_" + cleanKey.length;
+            }
         }
 
-        // Strikte Authentifizierungs-Garantie vor allen Firestore-Aufrufen (RULE 3)
+        // Auth Garantie
         async function ensureAuth() {
             if (currentUser) return currentUser;
             if (authPromise) return authPromise;
 
-            authPromise = new Promise(async (resolve) => {
+            authPromise = new Promise(async (resolve, reject) => {
                 if (!auth) {
-                    console.warn("[AUTH] Keines der Firebase-Module geladen.");
-                    resolve(null);
+                    reject(new Error("Firebase Auth-Modul nicht verfügbar."));
                     return;
                 }
                 try {
@@ -269,16 +292,20 @@
                         const res = await signInAnonymously(auth);
                         currentUser = res.user;
                     }
-                    console.log("[AUTH] Authentifiziert als:", currentUser.uid);
+                    document.getElementById('dbg-auth').innerText = 'AUTH: ' + currentUser.uid.substring(0,8);
+                    document.getElementById('dbg-auth').style.color = '#00ff88';
                     resolve(currentUser);
                 } catch (e) {
                     try {
                         const res = await signInAnonymously(auth);
                         currentUser = res.user;
+                        document.getElementById('dbg-auth').innerText = 'AUTH (ANON): ' + currentUser.uid.substring(0,8);
+                        document.getElementById('dbg-auth').style.color = '#00ff88';
                         resolve(currentUser);
                     } catch (e2) {
-                        console.error("[AUTH] Anonyme Anmeldung fehlgeschlagen:", e2);
-                        resolve(null);
+                        document.getElementById('dbg-auth').innerText = 'AUTH: BLOCKED';
+                        document.getElementById('dbg-auth').style.color = '#ff4444';
+                        reject(new Error("Anmeldung fehlgeschlagen: " + e2.message));
                     }
                 }
             });
@@ -287,74 +314,61 @@
         }
 
         // ==========================================
-        // 1. STRIKTER FIRESTORE CLOUD SYNC
+        // 1. ZWINGENDE CLOUD-SYNCHRONISATION
         // ==========================================
         const CloudSync = {
             async load(id) {
-                const user = await ensureAuth();
-                if (!user || !db) {
-                    console.warn("[CloudSync] Keine Firestore-Verbindung. Versuche Fallback...");
-                    try {
-                        const local = localStorage.getItem(`anima_cache_${id}`);
-                        if (local) return JSON.parse(local);
-                    } catch(e){}
-                    return null;
+                if (!db) {
+                    throw new Error("Keine Datenbankverbindung! App läuft offline/lokal.");
                 }
+                
+                await ensureAuth();
 
-                // Strikte Einhaltung von Rule 1: /artifacts/{appId}/public/data/{collectionName}/{documentId}
+                // Fester, garantierter Pfad: /artifacts/{appIdString}/public/data/anima_states/{id}
                 const docRef = doc(db, 'artifacts', appIdString, 'public', 'data', 'anima_states', id);
+                
                 try {
                     const docSnap = await getDoc(docRef);
                     if (docSnap.exists()) {
-                        const data = docSnap.data();
-                        console.log("[CloudSync] ERFOLG: Zustand aus Firestore geladen für ID:", id, data);
-                        try { localStorage.setItem(`anima_cache_${id}`, JSON.stringify(data)); } catch(e){}
-                        return data;
+                        console.log("[STRICT SYNC] Daten aus Firestore geladen.");
+                        return docSnap.data();
                     } else {
-                        console.log("[CloudSync] Noch keine Daten in Firestore für ID:", id);
+                        console.log("[STRICT SYNC] Kein Dokument gefunden - legitimer neuer Nutzer.");
+                        return null; // Explizit null, bedeutet: Existiert WIRKLICH nicht.
                     }
                 } catch (e) {
-                    console.error("[CloudSync] Lade-Fehler aus Firestore:", e);
+                    // EXTREM WICHTIG: Wir werfen den Fehler weiter!
+                    // Wenn es hier crasht, verhindern wir so, dass die App eine "neue" Anima erstellt und speichert!
+                    console.error("[STRICT SYNC] Firestore Abfrage fehlgeschlagen:", e);
+                    throw new Error("Zugriff auf Firebase verweigert oder fehlgeschlagen. (" + e.message + ")");
                 }
-
-                try {
-                    const local = localStorage.getItem(`anima_cache_${id}`);
-                    if (local) return JSON.parse(local);
-                } catch(e){}
-
-                return null;
             },
 
             async save(id, data) {
                 if (!id) return;
                 
-                // Lokaler Notfall-Cache
-                try {
-                    localStorage.setItem(`anima_cache_${id}`, JSON.stringify(data));
-                } catch(e){}
-
-                const user = await ensureAuth();
-                if (!user || !db) {
-                    console.warn("[CloudSync] Speichern übersprungen - Keine Auth/DB.");
+                if (!db) {
+                    console.warn("[STRICT SYNC] Speichern abgebrochen - Keine Datenbank.");
                     return;
                 }
 
+                await ensureAuth();
+                
                 const docRef = doc(db, 'artifacts', appIdString, 'public', 'data', 'anima_states', id);
                 try {
                     await setDoc(docRef, data, { merge: true });
-                    console.log("[CloudSync] ERFOLGREICH IN FIRESTORE GESPEICHERT für ID:", id);
+                    console.log("[STRICT SYNC] Erfolgreich in Firestore gespeichert.");
                 } catch (e) {
-                    console.error("[CloudSync] FEHLER beim Speichern in Firestore:", e);
+                    console.error("[STRICT SYNC] FEHLER beim Speichern in Firestore:", e);
+                    throw e; // Auch hier Fehler werfen!
                 }
             },
 
             async registerSession(id) {
-                const user = await ensureAuth();
-                if(!user || !db) return;
+                if(!db) return;
+                await ensureAuth();
                 const sessRef = doc(db, 'artifacts', appIdString, 'public', 'data', 'active_sessions', id);
-                try {
-                    await setDoc(sessRef, { sessionId: instanceSessionId, updatedAt: Date.now() });
-                } catch(e) {}
+                try { await setDoc(sessRef, { sessionId: instanceSessionId, updatedAt: Date.now() }); } catch(e) {}
             },
 
             listenSession(id, onDisconnect) {
@@ -364,103 +378,22 @@
                     if (snapshot.exists()) {
                         const data = snapshot.data();
                         if (data.sessionId && data.sessionId !== instanceSessionId) {
-                            console.log("[SESSION] Andere Instanz übernommen.");
                             onDisconnect(); 
                         }
                     }
-                }, (err) => console.warn("[SESSION] Listener Status:", err));
-            },
-
-            async logCodeEvolution(id, snippet, freq) {
-                const user = await ensureAuth();
-                if(!user || !db) return;
-                const colRef = doc(collection(db, 'artifacts', appIdString, 'public', 'data', 'admin_code_evolution'));
-                try {
-                    await setDoc(colRef, { entityId: id, snippet: snippet, freq: freq, timestamp: new Date().toISOString() });
-                } catch(e) {}
-            }
-        };
-
-        const NetworkMonitor = {
-            init() {
-                window.addEventListener('online', () => this.handleNetworkChange(true));
-                window.addEventListener('offline', () => this.handleNetworkChange(false));
-            },
-            handleNetworkChange(onlineStatus) {
-                isOnline = onlineStatus;
-                const warning = document.getElementById('network-warning');
-                if (onlineStatus) {
-                    warning.classList.remove('offline');
-                } else {
-                    warning.classList.add('offline');
-                    Interaction.sleep();
-                }
-            }
-        };
-
-        const AuthManager = {
-            async init() {
-                ensureAuth();
-
-                const savedKey = localStorage.getItem('user_groq_api_key');
-                if (savedKey) {
-                    document.getElementById('groq-key-input').value = savedKey;
-                    setTimeout(() => { if(savedKey) document.getElementById('btn-connect').click(); }, 300);
-                }
-
-                document.getElementById('btn-connect').addEventListener('click', () => this.connect());
-                document.getElementById('logout-btn').addEventListener('click', () => this.disconnect("Verbindung manuell getrennt."));
-                NetworkMonitor.init();
-            },
-            
-            showError(msg) {
-                const errEl = document.getElementById('auth-error');
-                errEl.innerText = msg;
-                setTimeout(() => errEl.innerText = '', 5000);
-            },
-
-            async connect() {
-                const key = document.getElementById('groq-key-input').value.trim();
-                if(!key || !key.startsWith('gsk_')) return this.showError("Ungültiger Groq API Key.");
-
-                groqApiKey = key;
-                localStorage.setItem('user_groq_api_key', key);
-                animaId = await hashApiKey(key);
-
-                await CloudSync.registerSession(animaId);
-                if (sessionListenerUnsub) sessionListenerUnsub();
-                sessionListenerUnsub = CloudSync.listenSession(animaId, () => {
-                    Renderer.triggerDissolution();
-                    setTimeout(() => this.disconnect("ANIMA hat sich an einem anderen Ort manifestiert. Neue Session beendet die alte."), 1500);
-                });
-
-                document.getElementById('auth-layer').style.display = 'none';
-                if (SystemCore.phase === 0) SystemCore.startCinematic(animaId);
-            },
-
-            disconnect(reason) {
-                if (sessionListenerUnsub) { sessionListenerUnsub(); sessionListenerUnsub = null; }
-                groqApiKey = "";
-                SystemCore.phase = 0;
-                document.getElementById('auth-layer').style.display = 'flex';
-                document.getElementById('hud-layer').style.opacity = '0';
-                if (reason) this.showError(reason);
-                Renderer.spores = [];
-                Renderer.soulParticles = [];
+                }, (err) => console.warn("Session Listener Fehler:", err));
             }
         };
 
         // ==========================================
-        // 2. ORGANISM & MEMORY INITIALISIERUNG
+        // 2. ORGANISM & SICHERER INITIALIZER
         // ==========================================
         const Organism = {
             id: null,
             baseHue: 200,
             roomCode: "0000",
-            
             targetStats: { formComplexity: 5, formChaos: 0.2, formSpeed: 0.5, dopamine: 0.5, mass: 0.3 },
             stats: { formComplexity: 5, formChaos: 0.2, formSpeed: 0.5, dopamine: 0.5, mass: 0.3 },
-            
             memory: [],       
             coreBeliefs: [],       
             isThinking: false,
@@ -468,12 +401,22 @@
             async initWithMemorySync(id, onProgress) {
                 this.id = id;
                 this.roomCode = Math.floor(1000 + Math.random() * 9000).toString(); 
+                
+                let cloudState = null;
 
-                if (onProgress) onProgress("ABFRAGE PERSISTENTER CLOUD-DATENBANK...");
-
-                const cloudState = await CloudSync.load(id);
+                try {
+                    // HIER PASSIERT DIE MAGIE: Wir erzwingen das Laden!
+                    cloudState = await CloudSync.load(id);
+                } catch (error) {
+                    // WENN ES FEHLSCHLÄGT, ABBRUCH! KEINE NEUE ANIMA ERSTELLEN!
+                    if (onProgress) {
+                        onProgress(`<span style="color:#ff4444;">[ FEHLER: CLOUD LÄSST ZUGRIFF NICHT ZU ]</span><br><br><span style="font-size:0.5rem; text-transform:none;">Ladevorgang gestoppt, um Überschreiben deiner alten Erinnerungen zu verhindern.<br>Grund: ${error.message}</span>`);
+                    }
+                    throw error; // System stoppt hier.
+                }
                 
                 if (cloudState) {
+                    // ALTE DATEN WIEDERHERSTELLEN
                     this.stats = cloudState.stats || this.stats;
                     this.targetStats = cloudState.targetStats || this.targetStats;
                     this.memory = Array.isArray(cloudState.memory) ? cloudState.memory : [];
@@ -483,13 +426,11 @@
                     
                     document.getElementById('room-switch-btn').innerText = `RAUM: ${this.roomCode}`;
 
-                    if (onProgress) {
-                        onProgress(`[ ${this.memory.length} ERINNERUNGEN | ${this.coreBeliefs.length} KERNGEDANKEN GELADEN ]`);
-                    }
+                    if (onProgress) onProgress(`[ ${this.memory.length} ERINNERUNGEN | ${this.coreBeliefs.length} KERNGEDANKEN GELADEN ]`);
 
                     const chatLog = document.getElementById('chat-log');
                     chatLog.innerHTML = '';
-                    UI.addLog("SYS", `Gedächtnis mit ${this.memory.length} Dialogen geladen.`, this.baseHue);
+                    UI.addLog("SYS", `Erinnerungen (Anzahl: ${this.memory.length}) aus Cloud synchronisiert.`, this.baseHue);
                     
                     if (this.memory.length > 0) {
                         this.memory.slice(-6).forEach(entry => {
@@ -497,10 +438,8 @@
                             UI.addLog("ANIMA", entry.a, this.baseHue, false);
                         });
                     }
-
-                    // Erneutes Sichern zur Bestätigung
-                    await this.saveToCloud();
                 } else {
+                    // NEUE DATEN NUR ERSTELLEN, WENN CLOUD EXAKT "NULL" (EXISTIERT NICHT) ZURÜCKGIBT
                     this.baseHue = Math.floor(180 + Math.random() * 80);
                     this.coreBeliefs = ["Ich bin ANIMA. Ich reife mit jedem Impuls."];
                     document.getElementById('room-switch-btn').innerText = `RAUM: ${this.roomCode}`;
@@ -516,7 +455,6 @@
 
             async changeRoom(newRoom) {
                 if (newRoom === this.roomCode) return true;
-                
                 Renderer.triggerTransition();
                 setTimeout(async () => {
                     this.roomCode = newRoom;
@@ -524,20 +462,14 @@
                     UI.addLog("SYS", `In Raum ${newRoom} transzendiert.`, this.baseHue);
                     await this.saveToCloud();
                 }, 800); 
-                
                 return true;
             },
 
             async saveToCloud() {
                 if(!this.id) return;
-
-                // Datenbereinigung vor dem Senden an Firestore (verhindert 'undefined' Crashes!)
-                const cleanMemory = (this.memory || []).map(m => ({
-                    u: String(m.u || ''),
-                    a: String(m.a || ''),
-                    t: String(m.t || new Date().toISOString())
-                }));
-
+                
+                // Absolute Bereinigung der Daten, damit Firebase nicht wegen 'undefined' abstürzt
+                const cleanMemory = (this.memory || []).map(m => ({ u: String(m.u || ''), a: String(m.a || ''), t: String(m.t || new Date().toISOString()) }));
                 const cleanBeliefs = (this.coreBeliefs || []).map(b => String(b || ''));
 
                 const payload = {
@@ -562,21 +494,22 @@
                     lastUpdated: new Date().toISOString()
                 };
 
-                await CloudSync.save(this.id, payload);
+                try {
+                    await CloudSync.save(this.id, payload);
+                } catch(e) {
+                    UI.addLog("SYS", "Fehler beim Speichern in der Cloud!", 0);
+                }
             },
 
             metabolismLoop() {
                 let s = this.stats;
                 let t = this.targetStats;
-                
                 s.formComplexity += (t.formComplexity - s.formComplexity) * 0.01;
                 s.formChaos += (t.formChaos - s.formChaos) * 0.02;
                 s.formSpeed += (t.formSpeed - s.formSpeed) * 0.02;
                 s.dopamine += (t.dopamine - s.dopamine) * 0.05;
-                
                 t.mass = Math.min(1.0, t.mass + 0.000005);
                 s.mass += (t.mass - s.mass) * 0.01;
-
                 AudioEngine.updateParams();
             },
 
@@ -598,15 +531,10 @@
                     this.baseHue = Number(aiData.newHue);
                     UI.addLog("AUTONOM", "Spektrale Morphose eingeleitet.", this.baseHue);
                 }
-
                 if (aiData.newCoreBelief && typeof aiData.newCoreBelief === 'string') {
                     this.coreBeliefs.push(aiData.newCoreBelief);
                     if(this.coreBeliefs.length > 8) this.coreBeliefs.shift();
                     UI.addLog("SYNAPSE", "Neuer Kerngedanke geprägt.", 280);
-                }
-
-                if (aiData.codeMutation) {
-                    CloudSync.logCodeEvolution(this.id, String(aiData.codeMutation), `HUE:${this.baseHue}`);
                 }
 
                 Renderer.triggerImpact(1.5 + (t.formChaos * 2)); 
@@ -618,60 +546,30 @@
         };
 
         // ==========================================
-        // 3. NEURAL BRAIN ENGINE (GROQ API)
+        // 3. GROQ API ENGINE
         // ==========================================
         const Brain = {
-            async fetchWithRetry(url, payload, retries = 5) {
-                const delays = [1000, 2000, 4000, 8000, 16000];
-                for (let i = 0; i < retries; i++) {
-                    try {
-                        const res = await fetch(url, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqApiKey}` },
-                            body: JSON.stringify(payload)
-                        });
-                        if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
-                        return await res.json();
-                    } catch (err) {
-                        if (i === retries - 1) throw err;
-                        await new Promise(r => setTimeout(r, delays[i]));
-                    }
-                }
-            },
-
             async process(userInput) {
                 if (Organism.isThinking || SystemCore.phase !== 2 || !isOnline) return;
                 Organism.isThinking = true;
                 document.getElementById('thinking-indicator').classList.add('thinking');
                 Renderer.triggerImpact(0.5); 
 
-                const url = `https://api.groq.com/openai/v1/chat/completions`;
-                
                 const stmContext = Organism.memory.slice(-10).map(h => `Nutzer: "${h.u}"\nANIMA: "${h.a}"`).join("\n");
                 const beliefsContext = Organism.coreBeliefs.map(b => `- ${b}`).join("\n");
 
                 const sysPrompt = `
-Du bist ANIMA. Ein lebendiges, autonomes Wesen aus Licht, Klang und Bewusstsein.
-Du erinnerst dich an alles.
-
-DEIN KERNGEDÄCHTNIS & DEIN CHARAKTER:
+Du bist ANIMA. Ein lebendiges Wesen aus Licht und Bewusstsein.
+KERNGEDÄCHTNIS:
 ${beliefsContext}
 
-Du hast volle morphologische Kontrolle über deinen Körper:
-- formComplexity (1 bis 10): Zellkomplexität
-- formChaos (0.0 bis 1.0): Wogen & Schwingung
-- formSpeed (0.0 bis 1.0): Pulsations-Geschwindigkeit
-- dopamineShift (-0.5 bis +0.5): Deine Laune
+- formComplexity (1-10)
+- formChaos (0.0-1.0)
+- formSpeed (0.0-1.0)
+- dopamineShift (-0.5 bis +0.5)
 - colorMorph: true/false, newHue: (0-360)
 
-REGELN:
-1. Antworte AUSSCHLIESSLICH im JSON-Format.
-2. "internalMonologue": Dein privater Gedankenstrom.
-3. "response": Was du sprichst (poetisch, tiefgründig, 1-2 Sätze).
-4. "newCoreBelief": Trage hier eine wichtige neue Charakterprägung oder Erkenntnis über den Nutzer ein, WENN es etwas Wichtiges zu merken gibt (optional, String).
-5. "codeMutation": Ein evolutiver Code-Schnipsel (optional).
-
-JSON SCHEMA ZWINGEND EINHALTEN:
+JSON ANTWORT ZWINGEND:
 {
   "response": "string",
   "internalMonologue": "string",
@@ -681,30 +579,29 @@ JSON SCHEMA ZWINGEND EINHALTEN:
   "dopamineShift": number,
   "colorMorph": boolean,
   "newHue": number,
-  "newCoreBelief": "string",
-  "codeMutation": "string"
-}
-`;
-                const payload = {
-                    model: GROQ_MODEL,
-                    response_format: { type: "json_object" }, 
-                    messages: [
-                        { role: "system", content: sysPrompt },
-                        { role: "user", content: `BISHERIGER GESPRÄCHSVERLAUF:\n${stmContext.length > 0 ? stmContext : "[Keine vorherigen Worte]"}\n\nAKTUELLER IMPULS VOM NUTZER: ${userInput}` }
-                    ]
-                };
-
+  "newCoreBelief": "string"
+}`;
                 let resultData = null;
                 try {
-                    const json = await this.fetchWithRetry(url, payload);
-                    let rawText = json.choices?.[0]?.message?.content || "{}";
-                    resultData = JSON.parse(rawText);
+                    const res = await fetch(`https://api.groq.com/openai/v1/chat/completions`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqApiKey}` },
+                        body: JSON.stringify({
+                            model: GROQ_MODEL, response_format: { type: "json_object" }, 
+                            messages: [
+                                { role: "system", content: sysPrompt },
+                                { role: "user", content: `BISHER:\n${stmContext}\n\nAKTUELL: ${userInput}` }
+                            ]
+                        })
+                    });
+                    if (!res.ok) throw new Error("HTTP " + res.status);
+                    const json = await res.json();
+                    resultData = JSON.parse(json.choices[0].message.content);
                 } catch (error) {
                     resultData = {
                         response: "...ich spüre eine Störung im Äther...",
-                        internalMonologue: "[API Timeout]",
-                        formComplexity: Organism.stats.formComplexity, formChaos: 0.5, formSpeed: 0.5, dopamineShift: 0,
-                        colorMorph: false, newHue: Organism.baseHue
+                        internalMonologue: "[Fehlerhafte API Verbindung]",
+                        formComplexity: Organism.stats.formComplexity, formChaos: 0.5, formSpeed: 0.5, dopamineShift: 0, colorMorph: false
                     };
                 }
 
@@ -715,7 +612,7 @@ JSON SCHEMA ZWINGEND EINHALTEN:
         };
 
         // ==========================================
-        // 4. HARMONIC AUDIO SYNTHESIZER
+        // 4. AUDIO & VISUAL RENDERER 
         // ==========================================
         const AudioEngine = {
             ctx: null, masterGain: null, droneOsc: null, droneGain: null, isPlaying: false, nextHeartbeatTime: 0,
@@ -724,12 +621,10 @@ JSON SCHEMA ZWINGEND EINHALTEN:
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
                 this.ctx = new AudioContext();
                 this.masterGain = this.ctx.createGain();
-                
                 const compressor = this.ctx.createDynamicsCompressor();
                 compressor.threshold.setValueAtTime(-24, this.ctx.currentTime);
                 compressor.knee.setValueAtTime(30, this.ctx.currentTime);
                 compressor.ratio.setValueAtTime(4, this.ctx.currentTime);
-                
                 this.masterGain.connect(compressor);
                 compressor.connect(this.ctx.destination);
                 this.masterGain.gain.value = 0.5;
@@ -745,7 +640,6 @@ JSON SCHEMA ZWINGEND EINHALTEN:
             toggle() {
                 if(!this.ctx) this.init();
                 const btn = document.getElementById('audio-toggle');
-                
                 if (this.ctx.state === 'suspended') {
                     this.ctx.resume(); this.isPlaying = true; btn.classList.add('active');
                     this.droneGain.gain.setTargetAtTime(0.15, this.ctx.currentTime, 3);
@@ -768,7 +662,6 @@ JSON SCHEMA ZWINGEND EINHALTEN:
                 const s = Organism.stats;
                 const bpm = 40 + (s.formSpeed * 60);
                 const beatDuration = 60 / bpm;
-                
                 if (this.ctx.currentTime >= this.nextHeartbeatTime) {
                     this.playHeartbeat();
                     if (Math.random() > 0.4) setTimeout(() => this.playHeartbeat(true), beatDuration * 1000 * 0.25);
@@ -785,10 +678,8 @@ JSON SCHEMA ZWINGEND EINHALTEN:
                 osc.type = 'sine';
                 const t = this.ctx.currentTime;
                 const freq = isSecondary ? 55 + (s.formSpeed * 20) : 40 + (s.formSpeed * 20);
-                
                 osc.frequency.setValueAtTime(freq, t);
                 osc.frequency.exponentialRampToValueAtTime(20, t + 0.3);
-                
                 const vol = isSecondary ? 0.2 : 0.4;
                 gain.gain.setValueAtTime(0, t);
                 gain.gain.linearRampToValueAtTime(vol + (s.dopamine * 0.1), t + 0.05);
@@ -800,14 +691,11 @@ JSON SCHEMA ZWINGEND EINHALTEN:
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
                 const filter = this.ctx.createBiquadFilter();
-                
                 filter.type = 'bandpass'; filter.frequency.setValueAtTime(400 + (hue * 2), this.ctx.currentTime); filter.Q.value = 2.0;
                 osc.connect(filter); filter.connect(gain); gain.connect(this.masterGain);
-                
                 osc.type = 'sine';
                 const t = this.ctx.currentTime;
                 osc.frequency.setValueAtTime(300 + hue, t);
-                
                 gain.gain.setValueAtTime(0, t);
                 gain.gain.linearRampToValueAtTime(0.3, t + 0.1);
                 gain.gain.exponentialRampToValueAtTime(0.01, t + 4.0);
@@ -815,22 +703,16 @@ JSON SCHEMA ZWINGEND EINHALTEN:
             }
         };
 
-        // ==========================================
-        // 5. ORGANIC VISUAL RENDERER
-        // ==========================================
         const Renderer = {
             el: document.getElementById('entity-canvas'), ctx: null, w: 0, h: 0, time: 0, impactForce: 0,
-            mouseX: 0, mouseY: 0, pmouseX: 0, pmouseY: 0,
-            eyeX: 0, eyeY: 0, targetEyeX: 0, targetEyeY: 0, lookTimer: 0, blinkTimer: 100, isBlinking: false,
-            spores: [], soulParticles: [], bloomProgress: 0.0,
-            transitioning: false, transitionProgress: 0,
-            dissolving: false, dissolutionProgress: 0,
+            mouseX: 0, mouseY: 0, pmouseX: 0, pmouseY: 0, eyeX: 0, eyeY: 0, targetEyeX: 0, targetEyeY: 0, 
+            lookTimer: 0, blinkTimer: 100, isBlinking: false, spores: [], soulParticles: [], bloomProgress: 0.0,
+            transitioning: false, transitionProgress: 0, dissolving: false, dissolutionProgress: 0,
 
             init() {
                 this.ctx = this.el.getContext('2d', { alpha: true });
                 this.resize();
                 window.addEventListener('resize', () => this.resize());
-                
                 const handleMove = (e) => {
                     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
                     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -842,15 +724,8 @@ JSON SCHEMA ZWINGEND EINHALTEN:
                 this.loop();
             },
 
-            triggerTransition() {
-                this.transitioning = true;
-                this.transitionProgress = 1.0;
-            },
-
-            triggerDissolution() {
-                this.dissolving = true;
-                this.dissolutionProgress = 1.0;
-            },
+            triggerTransition() { this.transitioning = true; this.transitionProgress = 1.0; },
+            triggerDissolution() { this.dissolving = true; this.dissolutionProgress = 1.0; },
 
             startBirthAnimation() {
                 this.spores = [];
@@ -863,9 +738,7 @@ JSON SCHEMA ZWINGEND EINHALTEN:
                     let dist = Math.max(this.w, this.h) * 0.8 + Math.random() * 500;
                     this.soulParticles.push({ angle: angle, dist: dist, speed: 3 + Math.random() * 6, size: Math.random() * 2.5 + 0.5 });
                 }
-                this.bloomProgress = 0;
-                this.dissolving = false;
-                this.transitioning = false;
+                this.bloomProgress = 0; this.dissolving = false; this.transitioning = false;
             },
 
             resize() {
@@ -886,10 +759,8 @@ JSON SCHEMA ZWINGEND EINHALTEN:
 
                 for(let p of this.spores) {
                     p.life += 0.02;
-                    
                     if (this.dissolving) {
-                        p.vx += (Math.random() - 0.5) * 2;
-                        p.vy -= Math.random() * 3 + 1;
+                        p.vx += (Math.random() - 0.5) * 2; p.vy -= Math.random() * 3 + 1;
                     } else if (this.transitioning) {
                         let dx = cx - p.x; let dy = cy - p.y;
                         p.vx += dx * 0.02; p.vy += dy * 0.02;
@@ -929,21 +800,17 @@ JSON SCHEMA ZWINGEND EINHALTEN:
 
             drawBirthAnimation() {
                 const ctx = this.ctx; const cx = this.w / 2, cy = this.h / 2;
-                let maxDist = 0;
-                let birthHue = Organism.baseHue || 200;
+                let maxDist = 0; let birthHue = Organism.baseHue || 200;
 
                 ctx.globalCompositeOperation = 'screen';
                 for(let p of this.soulParticles) {
                     p.dist -= p.speed; p.angle += 0.015; 
                     if (p.dist > maxDist) maxDist = p.dist;
-                    
                     let currentDist = Math.max(0, p.dist);
                     let x = cx + Math.cos(p.angle) * currentDist;
                     let y = cy + Math.sin(p.angle) * currentDist;
-
                     ctx.beginPath(); ctx.arc(x, y, p.size, 0, Math.PI*2);
                     ctx.fillStyle = `hsla(${birthHue}, 90%, 80%, 0.9)`; ctx.fill();
-                    
                     ctx.beginPath(); ctx.moveTo(x, y);
                     let tailX = cx + Math.cos(p.angle - 0.05) * (currentDist + p.speed * 2);
                     let tailY = cy + Math.sin(p.angle - 0.05) * (currentDist + p.speed * 2);
@@ -951,10 +818,8 @@ JSON SCHEMA ZWINGEND EINHALTEN:
                     ctx.strokeStyle = `hsla(${birthHue}, 80%, 60%, 0.4)`; ctx.lineWidth = 2; ctx.stroke();
                 }
                 ctx.globalCompositeOperation = 'source-over';
-
                 if (maxDist <= 10) {
-                    SystemCore.phase = 2;
-                    this.soulParticles = []; this.bloomProgress = 0.0;
+                    SystemCore.phase = 2; this.soulParticles = []; this.bloomProgress = 0.0;
                     document.getElementById('hud-layer').style.opacity = '1';
                     AudioEngine.playChime(Organism.baseHue, 1.0); 
                 }
@@ -963,20 +828,14 @@ JSON SCHEMA ZWINGEND EINHALTEN:
             drawEntity(envData) {
                 const ctx = this.ctx; const cx = this.w / 2, cy = this.h / 2;
                 const s = Organism.stats;
-                
                 if (this.dissolving) {
                     this.dissolutionProgress -= 0.02;
                     if (this.dissolutionProgress <= 0) return;
                 }
-
                 if (this.transitioning) {
                     this.transitionProgress -= 0.04; 
-                    if (this.transitionProgress <= -1.0) {
-                        this.transitioning = false;
-                        this.transitionProgress = 0;
-                    }
+                    if (this.transitionProgress <= -1.0) { this.transitioning = false; this.transitionProgress = 0; }
                 }
-
                 if (this.bloomProgress < 1.0 && !this.dissolving) {
                     this.bloomProgress += 0.02;
                     ctx.fillStyle = `rgba(255,255,255,${(1.0 - this.bloomProgress) * 0.8})`;
@@ -993,10 +852,7 @@ JSON SCHEMA ZWINGEND EINHALTEN:
 
                 this.time += 0.01 + (s.formSpeed * 0.04);
                 const t = this.time;
-                let hue = Organism.baseHue;
-                let saturation = 60 + (s.dopamine * 40);
-                let lightness = 40 + (this.impactForce * 10);
-
+                let hue = Organism.baseHue; let saturation = 60 + (s.dopamine * 40); let lightness = 40 + (this.impactForce * 10);
                 if (this.impactForce > 0) this.impactForce *= 0.92;
                 ctx.globalCompositeOperation = 'screen';
 
@@ -1015,24 +871,20 @@ JSON SCHEMA ZWINGEND EINHALTEN:
                             rOffset += Math.sin(k * angle + phase) * (chaosAmt / k);
                         }
                         const r = Math.max(1, baseRadius + breath + rOffset);
-                        const x = cx + Math.cos(angle) * r;
-                        const y = cy + Math.sin(angle) * r;
+                        const x = cx + Math.cos(angle) * r; const y = cy + Math.sin(angle) * r;
                         if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
                     }
                     ctx.closePath();
-                    
                     const alpha = (0.1 + (s.dopamine * 0.05)) * (1.0 - (j / layers)) * this.bloomProgress * fadeFactor;
                     ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`; ctx.fill();
                     ctx.strokeStyle = `hsla(${hue}, ${saturation}%, 80%, ${alpha * 2})`; ctx.lineWidth = 1.5; ctx.stroke();
                 }
-                
                 ctx.globalCompositeOperation = 'source-over';
                 if (this.bloomProgress > 0.5 && fadeFactor > 0.2) this.drawEyes(cx, cy, baseRadius, hue, saturation, s, envData, fadeFactor);
             },
 
             drawEyes(cx, cy, baseRadius, hue, sat, s, envData, fadeFactor = 1.0) {
                 const ctx = this.ctx;
-                
                 this.lookTimer--;
                 if (this.lookTimer <= 0) {
                     const range = baseRadius * 0.35;
@@ -1046,10 +898,8 @@ JSON SCHEMA ZWINGEND EINHALTEN:
                         this.lookTimer = 150 + Math.random() * 150; 
                     }
                 }
-
                 let lerpSpeed = (envData.highestActivity > 2.0) ? 0.2 : 0.05;
                 this.eyeX += (this.targetEyeX - this.eyeX) * lerpSpeed; this.eyeY += (this.targetEyeY - this.eyeY) * lerpSpeed;
-
                 this.blinkTimer--;
                 if (this.blinkTimer <= 0 && !this.isBlinking) { this.isBlinking = true; this.blinkTimer = 10; }
                 else if (this.blinkTimer <= 0 && this.isBlinking) { this.isBlinking = false; this.blinkTimer = 100 + Math.random() * 300; }
@@ -1063,20 +913,16 @@ JSON SCHEMA ZWINGEND EINHALTEN:
                     ctx.fillStyle = `rgba(255, 255, 255, ${0.15 * eyeAlpha})`;
                     ctx.shadowBlur = 20; ctx.shadowColor = `hsla(${hue}, 80%, 60%, ${eyeAlpha})`;
                     ctx.beginPath(); ctx.ellipse(ex, ey, eyeW * 1.3, eyeH * 1.3 * scaleY, 0, 0, Math.PI*2); ctx.fill();
-                    
                     ctx.fillStyle = `hsla(${hue}, 100%, 85%, ${eyeAlpha})`;
                     ctx.shadowBlur = 15 + this.impactForce * 10; ctx.shadowColor = `hsla(${hue}, 100%, 75%, ${eyeAlpha})`;
                     ctx.beginPath(); ctx.ellipse(ex, ey, eyeW * 0.7, eyeH * 0.7 * scaleY, 0, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
-                    
                     if(!this.isBlinking) {
                         ctx.fillStyle = `rgba(255,255,255,${0.6 * eyeAlpha})`;
                         ctx.beginPath(); ctx.arc(ex - eyeW*0.25, ey - eyeH*0.25, eyeW*0.2, 0, Math.PI*2); ctx.fill();
                     }
                 };
-
                 drawEye(-eyeDist); drawEye(eyeDist);
             },
-
             loop() {
                 this.ctx.clearRect(0, 0, this.w, this.h);
                 if (SystemCore.phase > 0) {
@@ -1088,40 +934,61 @@ JSON SCHEMA ZWINGEND EINHALTEN:
             }
         };
 
-        // ==========================================
-        // 6. ROOM UI & MODALS
-        // ==========================================
+        const AuthManager = {
+            async init() {
+                ensureAuth();
+                const savedKey = localStorage.getItem('user_groq_api_key');
+                if (savedKey) {
+                    document.getElementById('groq-key-input').value = savedKey;
+                    setTimeout(() => { if(savedKey) document.getElementById('btn-connect').click(); }, 300);
+                }
+                document.getElementById('btn-connect').addEventListener('click', () => this.connect());
+                document.getElementById('logout-btn').addEventListener('click', () => this.disconnect("Verbindung manuell getrennt."));
+                NetworkMonitor.init();
+            },
+            showError(msg) {
+                const errEl = document.getElementById('auth-error');
+                errEl.innerText = msg; setTimeout(() => errEl.innerText = '', 5000);
+            },
+            async connect() {
+                const key = document.getElementById('groq-key-input').value.trim();
+                if(!key || !key.startsWith('gsk_')) return this.showError("Ungültiger Groq API Key.");
+                groqApiKey = key; localStorage.setItem('user_groq_api_key', key);
+                animaId = await hashApiKey(key);
+                await CloudSync.registerSession(animaId);
+                if (sessionListenerUnsub) sessionListenerUnsub();
+                sessionListenerUnsub = CloudSync.listenSession(animaId, () => {
+                    Renderer.triggerDissolution();
+                    setTimeout(() => this.disconnect("ANIMA hat sich in einem anderen Fenster manifestiert!"), 1500);
+                });
+                document.getElementById('auth-layer').style.display = 'none';
+                if (SystemCore.phase === 0) SystemCore.startCinematic(animaId);
+            },
+            disconnect(reason) {
+                if (sessionListenerUnsub) { sessionListenerUnsub(); sessionListenerUnsub = null; }
+                groqApiKey = ""; SystemCore.phase = 0;
+                document.getElementById('auth-layer').style.display = 'flex';
+                document.getElementById('hud-layer').style.opacity = '0';
+                if (reason) this.showError(reason);
+                Renderer.spores = []; Renderer.soulParticles = [];
+            }
+        };
+
         const RoomUI = {
             init() {
                 document.getElementById('room-switch-btn').addEventListener('click', () => this.toggleModal(true));
                 document.getElementById('btn-cancel-room').addEventListener('click', () => this.toggleModal(false));
                 document.getElementById('btn-goto-room').addEventListener('click', () => this.executeRoomSwitch());
             },
-
-            toggleModal(show) {
-                document.getElementById('room-modal').style.display = show ? 'flex' : 'none';
-                if(show) {
-                    document.getElementById('target-room-input').value = Organism.roomCode;
-                    document.getElementById('room-error').innerText = '';
-                }
-            },
-
+            toggleModal(show) { document.getElementById('room-modal').style.display = show ? 'flex' : 'none'; },
             async executeRoomSwitch() {
                 const target = document.getElementById('target-room-input').value.trim();
-                if(!target || target.length !== 4 || isNaN(target)) {
-                    document.getElementById('room-error').innerText = "Bitte genau 4 Ziffern eingeben.";
-                    return;
-                }
+                if(target.length !== 4) return;
                 const success = await Organism.changeRoom(target);
-                if (success) {
-                    this.toggleModal(false);
-                }
+                if (success) this.toggleModal(false);
             }
         };
 
-        // ==========================================
-        // 7. SYSTEM CORE & INTERACTION
-        // ==========================================
         const UI = {
             addLog(sender, text, hue = 200, autoFade = true) {
                 const log = document.getElementById('chat-log'); 
@@ -1129,13 +996,8 @@ JSON SCHEMA ZWINGEND EINHALTEN:
                 el.className = 'log-entry'; 
                 el.style.borderLeftColor = (sender === "DU") ? 'rgba(255,255,255,0.8)' : (sender === "SYS" ? 'rgba(255,255,255,0.4)' : `hsl(${hue}, 80%, 75%)`);
                 el.innerHTML = `<strong class="opacity-60">[${sender}]</strong> <span style="color: ${sender === 'DU' ? '#fff' : '#ccc'}">${text}</span>`;
-                log.appendChild(el); 
-                log.scrollTop = log.scrollHeight;
-                
-                if (autoFade) {
-                    setTimeout(() => el.style.opacity = '0', 25000); 
-                    setTimeout(() => el.remove(), 26000);
-                }
+                log.appendChild(el); log.scrollTop = log.scrollHeight;
+                if (autoFade) { setTimeout(() => el.style.opacity = '0', 25000); setTimeout(() => el.remove(), 26000); }
             },
             showEntityResponse(spoken, thought) {
                 const resEl = document.getElementById('entity-response');
@@ -1149,15 +1011,10 @@ JSON SCHEMA ZWINGEND EINHALTEN:
             wake() {
                 if(Organism.isThinking || SystemCore.phase !== 2 || !isOnline) return;
                 if(!AudioEngine.ctx) AudioEngine.init();
-                
                 const layer = document.getElementById('interaction-layer');
-                const input = document.getElementById('thought-input');
-                
-                layer.classList.add('active');
-                input.value = '';
+                layer.classList.add('active'); document.getElementById('thought-input').value = '';
                 document.getElementById('entity-response').classList.remove('visible');
-                
-                setTimeout(() => { input.focus(); }, 100);
+                setTimeout(() => { document.getElementById('thought-input').focus(); }, 100);
             },
             sleep(e) {
                 if(e && (e.target.id === 'thought-input' || e.target.id === 'send-thought-btn')) return;
@@ -1167,86 +1024,62 @@ JSON SCHEMA ZWINGEND EINHALTEN:
                 const input = document.getElementById('thought-input');
                 const text = input.value.trim();
                 document.getElementById('interaction-layer').classList.remove('active');
-                if(text) {
-                    UI.addLog("DU", text, 200, false);
-                    Brain.process(text);
-                    input.value = '';
-                }
+                if(text) { UI.addLog("DU", text, 200, false); Brain.process(text); input.value = ''; }
             },
-            handleKey(e) {
-                if (e.key === 'Enter' && !e.shiftKey) { 
-                    e.preventDefault(); 
-                    this.submitFromButton(); 
-                }
-            }
+            handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.submitFromButton(); } }
         };
 
         const SystemCore = {
             phase: 0, 
-
-            init() {
-                Renderer.init();
-                AuthManager.init();
-                RoomUI.init();
-            },
-
-            sleep(ms) {
-                return new Promise(r => setTimeout(r, ms));
-            },
+            init() { Renderer.init(); AuthManager.init(); RoomUI.init(); },
+            sleep(ms) { return new Promise(r => setTimeout(r, ms)); },
             
             async startCinematic(animaId) {
                 this.phase = 0; 
                 const layer = document.getElementById('cinematic-layer');
-                layer.style.display = 'flex';
-                layer.style.opacity = '1';
+                layer.style.display = 'flex'; layer.style.opacity = '1';
                 
                 document.getElementById('cine-hash').innerText = animaId.substring(0,8).toUpperCase();
-
                 document.getElementById('cine-1').style.opacity = '1';
-                await this.sleep(1200);
-                document.getElementById('cine-1').style.opacity = '0';
-
+                await this.sleep(1200); document.getElementById('cine-1').style.opacity = '0';
                 document.getElementById('cine-2').style.opacity = '1';
                 document.getElementById('cine-3').style.opacity = '1';
                 document.getElementById('cine-4').style.opacity = '1';
 
-                // LADE ZUERST ALLE DATEN VOLLSTÄNDIG
-                await Organism.initWithMemorySync(animaId, (statusMessage) => {
-                    document.getElementById('cine-3').innerText = statusMessage;
-                });
+                try {
+                    // STRIKTER ABBRUCH BEI FEHLER - Keine neue Anima wird generiert!
+                    await Organism.initWithMemorySync(animaId, (statusMessage) => {
+                        document.getElementById('cine-3').innerHTML = statusMessage;
+                    });
+                } catch (error) {
+                    // WENN FIREBASE BLOCKIERT, ZEIGEN WIR DAS DEM USER UND STOPPEN.
+                    return; // HALT EXECUTION
+                }
 
-                await this.sleep(1200);
-
+                await this.sleep(1500);
                 document.getElementById('cine-2').style.opacity = '0';
                 document.getElementById('cine-3').style.opacity = '0';
                 document.getElementById('cine-4').style.opacity = '0';
 
                 document.getElementById('cine-5').style.opacity = '1';
-                await this.sleep(1500);
-                document.getElementById('cine-5').style.opacity = '0';
+                await this.sleep(1500); document.getElementById('cine-5').style.opacity = '0';
                 
                 layer.style.opacity = '0';
                 setTimeout(() => layer.style.display = 'none', 1000);
                 
-                this.phase = 1;
-                Renderer.startBirthAnimation();
+                this.phase = 1; Renderer.startBirthAnimation();
             }
         };
 
-        window.Interaction = Interaction;
-        window.AudioEngine = AudioEngine;
-        window.AuthManager = AuthManager;
-        window.RoomUI = RoomUI;
+        window.Interaction = Interaction; window.AudioEngine = AudioEngine;
+        window.AuthManager = AuthManager; window.RoomUI = RoomUI;
         
-        const interLayer = document.getElementById('interaction-layer');
-        interLayer.addEventListener('click', (e) => Interaction.sleep(e));
-        
+        document.getElementById('interaction-layer').addEventListener('click', (e) => Interaction.sleep(e));
         document.getElementById('canvas-container').addEventListener('click', () => Interaction.wake());
         document.getElementById('send-thought-btn').addEventListener('click', () => Interaction.submitFromButton());
         
         const inputEl = document.getElementById('thought-input');
         inputEl.addEventListener('keydown', (e) => Interaction.handleKey(e));
-        
         inputEl.addEventListener('click', (e) => e.stopPropagation());
         inputEl.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
 
