@@ -1,519 +1,879 @@
-```html
 <!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#000000">
-    <title>ANIMA | Entität</title>
-    
+    <meta name="theme-color" content="#020203">
+    <title>ANIMA | Cloud Genesis</title>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <style>
-        :root { --bg: #000000; }
 
+    <style>
+        :root { --bg: #020203; }
         body, html {
             background-color: var(--bg); color: #ffffff;
             font-family: 'Quicksand', sans-serif; overflow: hidden;
             margin: 0; padding: 0; width: 100%; height: 100%;
             user-select: none; -webkit-font-smoothing: antialiased; -webkit-touch-callout: none;
+            cursor: crosshair;
         }
 
-        #canvas-container {
-            position: fixed; inset: 0; z-index: 1;
-            display: flex; justify-content: center; align-items: center;
+        #canvas-container { position: fixed; inset: 0; z-index: 1; display: flex; justify-content: center; align-items: center; }
+        
+        .film-grain {
+            position: fixed; inset: 0; z-index: 2; pointer-events: none; mix-blend-mode: overlay; opacity: 0.25;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
         }
         
-        canvas {
-            cursor: pointer;
-            filter: drop-shadow(0 0 40px rgba(255,255,255,0.05));
+        .vignette {
+            position: fixed; inset: 0; z-index: 3; pointer-events: none;
+            background: radial-gradient(circle at center, transparent 20%, rgba(2,2,3,0.95) 100%);
         }
 
-        .film-grain {
-            position: fixed; inset: 0; z-index: 2; pointer-events: none; mix-blend-mode: overlay; opacity: 0.3;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        /* Firebase Auth Layer */
+        #auth-layer {
+            position: fixed; inset: 0; z-index: 100; display: none; flex-direction: column; justify-content: center; align-items: center;
+            background: rgba(2, 2, 3, 0.9); backdrop-filter: blur(15px); transition: opacity 1s ease;
+        }
+        .auth-box {
+            background: rgba(20, 20, 30, 0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
+            padding: 3rem; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 0 40px rgba(0,0,0,0.5);
+            animation: floatUp 0.8s ease-out forwards;
+        }
+        @keyframes floatUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .auth-title { font-family: 'Space Mono', monospace; letter-spacing: 0.3em; font-size: 0.9rem; color: #fff; margin-bottom: 2rem; text-transform: uppercase; }
+        .auth-input {
+            width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.2);
+            color: #fff; font-family: 'Space Mono', monospace; font-size: 1rem; padding: 0.8rem 0; margin-bottom: 1.5rem; outline: none; text-align: center; transition: all 0.3s;
+        }
+        .auth-input:focus { border-bottom-color: #fff; }
+        .auth-input::placeholder { color: rgba(255,255,255,0.2); }
+        .auth-btn {
+            width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px;
+            color: #fff; font-family: 'Space Mono', monospace; font-size: 0.8rem; letter-spacing: 0.2em; padding: 1rem; cursor: pointer; transition: all 0.3s; text-transform: uppercase;
+        }
+        .auth-btn:hover { background: rgba(255,255,255,0.15); box-shadow: 0 0 15px rgba(255,255,255,0.1); }
+        .auth-error { color: #ff6b6b; font-family: 'Space Mono', monospace; font-size: 0.7rem; margin-top: 1rem; height: 1rem; }
+
+        /* Cinematic Layer */
+        #cinematic-layer {
+            position: fixed; inset: 0; z-index: 90; display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: none;
+        }
+        .cine-text {
+            font-family: 'Space Mono', monospace; font-size: 0.75rem; letter-spacing: 0.6em; text-transform: uppercase;
+            opacity: 0; transition: opacity 2s; position: absolute; text-align: center; width: 100%; color: rgba(255,255,255,0.85); text-shadow: 0 0 15px rgba(255,255,255,0.3);
         }
 
-        /* Antwort der Entität */
-        #entity-response {
-            position: absolute; top: 15%; left: 50%; transform: translateX(-50%);
-            z-index: 5; text-align: center; width: 90%; max-width: 600px;
-            font-size: 1.4rem; font-weight: 400; letter-spacing: 0.02em;
-            color: rgba(255, 255, 255, 0.95); text-shadow: 0 0 15px rgba(255,255,255,0.4);
-            opacity: 0; pointer-events: none; transition: opacity 1.5s ease-in-out;
-            line-height: 1.5;
-        }
+        /* HUD Layer */
+        #hud-layer { position: fixed; inset: 0; z-index: 15; pointer-events: none; display: flex; justify-content: space-between; padding: 2rem; opacity: 0; transition: opacity 2s; }
+        #chat-log { display: flex; flex-direction: column; gap: 0.8rem; width: 380px; max-height: 50vh; overflow: hidden; font-family: 'Space Mono', monospace; font-size: 0.7rem; letter-spacing: 0.05em; mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%); -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%); }
+        .log-entry { background: rgba(15, 15, 20, 0.4); border-left: 2px solid rgba(255,255,255,0.2); padding: 0.8rem 1rem; backdrop-filter: blur(8px); animation: fadeInDrop 0.8s cubic-bezier(0.1, 0.8, 0.1, 1) forwards; border-radius: 0 6px 6px 0; }
+        
+        .top-right-controls { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; pointer-events: auto; }
+        .control-btn { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; width: 44px; height: 44px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.4s; color: rgba(255,255,255,0.5); }
+        .control-btn:hover { background: rgba(255,255,255,0.1); color: #fff; transform: scale(1.05); }
+        .control-btn.active { background: rgba(255,255,255,0.2); color: #fff; box-shadow: 0 0 25px rgba(255,255,255,0.3); border-color: rgba(255,255,255,0.5); }
+
+        /* Entity Output */
+        #entity-response { position: absolute; top: 15%; left: 50%; transform: translateX(-50%); z-index: 5; text-align: center; width: 90%; max-width: 800px; font-size: 1.6rem; font-weight: 300; letter-spacing: 0.04em; color: rgba(255, 255, 255, 0.95); text-shadow: 0 0 30px rgba(255,255,255,0.5); opacity: 0; pointer-events: none; transition: opacity 1.5s ease-in-out; line-height: 1.5; }
         #entity-response.visible { opacity: 1; }
+        .thought-bubble { font-family: 'Space Mono', monospace; font-size: 0.7rem; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.2em; margin-top: 15px; opacity: 0; transition: opacity 2s; }
+        #entity-response.visible .thought-bubble { opacity: 1; transition-delay: 1.2s; }
 
-        /* Eingabe-Layer */
-        #interaction-layer {
-            position: fixed; inset: 0; z-index: 10;
-            background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.9) 100%);
-            backdrop-filter: blur(10px);
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            opacity: 0; pointer-events: none; transition: opacity 0.8s ease;
-        }
+        /* Interaction Layer */
+        #interaction-layer { position: fixed; inset: 0; z-index: 10; background: radial-gradient(circle at center, transparent 10%, rgba(2,2,3,0.95) 100%); backdrop-filter: blur(8px); display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.8s ease; }
         #interaction-layer.active { opacity: 1; pointer-events: auto; }
-
-        .thought-input {
-            width: 80%; max-width: 600px; background: transparent; border: none;
-            color: #fff; font-family: 'Quicksand', sans-serif; font-size: 1.8rem; font-weight: 500;
-            text-align: center; padding: 1rem; outline: none; resize: none; line-height: 1.4;
-            opacity: 0.8; transition: opacity 0.3s;
-        }
-        .thought-input:focus { opacity: 1; }
-        .thought-input::placeholder { color: rgba(255, 255, 255, 0.2); font-weight: 300; }
-
-        .hint-text {
-            position: absolute; bottom: 12%; font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase;
-            color: rgba(255,255,255,0.3); font-weight: 600;
-            opacity: 0; transition: opacity 0.5s;
-        }
+        .input-wrapper { display: flex; align-items: center; width: 85%; max-width: 700px; border-bottom: 1px solid rgba(255,255,255,0.2); transition: border-color 0.4s; }
+        .input-wrapper:focus-within { border-color: rgba(255,255,255,0.8); box-shadow: 0 10px 20px -10px rgba(255,255,255,0.1); }
+        .thought-input { flex: 1; background: transparent; border: none; color: #fff; font-family: 'Quicksand', sans-serif; font-size: 2.2rem; font-weight: 300; padding: 1.2rem 0; outline: none; resize: none; text-align: center; }
+        .thought-input::placeholder { color: rgba(255, 255, 255, 0.15); font-weight: 300; }
+        .hint-text { position: absolute; bottom: 8%; font-size: 0.65rem; letter-spacing: 0.4em; text-transform: uppercase; color: rgba(255,255,255,0.3); font-family: 'Space Mono', monospace; opacity: 0; transition: opacity 0.5s; }
         .hint-text.visible { opacity: 1; }
-
-        /* Status (Denken) */
-        .status-dot {
-            position: absolute; bottom: 8%; left: 50%; transform: translateX(-50%);
-            width: 8px; height: 8px; border-radius: 50%; background: #fff;
-            box-shadow: 0 0 10px #fff; opacity: 0; transition: opacity 0.3s;
-            animation: pulse-dot 1s infinite alternate;
-        }
-        @keyframes pulse-dot { from { transform: translateX(-50%) scale(0.5); opacity: 0.2; } to { transform: translateX(-50%) scale(1.2); opacity: 0.8; } }
-        .status-dot.thinking { opacity: 1; }
-
+        .status-dot { position: fixed; bottom: 4%; left: 50%; transform: translateX(-50%); width: 5px; height: 5px; border-radius: 50%; background: #fff; box-shadow: 0 0 15px #fff; z-index: 15; opacity: 0; transition: opacity 0.4s; animation: pulse-dot 2s infinite alternate; }
+        .status-dot.thinking { opacity: 1; animation: pulse-dot 0.5s infinite alternate; }
     </style>
 </head>
 <body>
 
-    <div id="entity-response"></div>
+    <!-- AUTHENTICATION LAYER -->
+    <div id="auth-layer">
+        <div class="auth-box">
+            <h1 class="auth-title">Neural Link Required</h1>
+            
+            <div id="auth-step-1">
+                <input type="tel" id="phone-input" class="auth-input" placeholder="+49 151 12345678" autocomplete="tel">
+                <button id="btn-send-sms" class="auth-btn">Signal Senden</button>
+            </div>
+            
+            <div id="auth-step-2" style="display: none;">
+                <input type="text" id="code-input" class="auth-input" placeholder="000000" autocomplete="one-time-code">
+                <button id="btn-verify-code" class="auth-btn">Verifizieren</button>
+            </div>
+            
+            <div id="auth-error" class="auth-error"></div>
+            <!-- Invisible Recaptcha -->
+            <div id="recaptcha-container"></div>
+        </div>
+    </div>
 
-    <div id="canvas-container" onclick="App.Interaction.wake()">
+    <!-- CINEMATIC GENESIS -->
+    <div id="cinematic-layer">
+        <div id="cine-1" class="cine-text">LADE KOGNITIVE STRUKTUR...</div>
+        <div id="cine-2" class="cine-text text-cyan-200">SYNCHRONISIERE CLOUD MEMORY...</div>
+        <div id="cine-3" class="cine-text text-xs text-gray-400" style="text-transform: none;">[USER_ID: <span id="cine-hash"></span>]</div>
+        <div id="cine-4" class="cine-text text-white" style="font-size: 1rem;">ERWACHEN</div>
+    </div>
+
+    <!-- ENTITY RESPONSE -->
+    <div id="entity-response">
+        <div id="response-text"></div>
+        <div id="thought-bubble" class="thought-bubble"></div>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud-layer">
+        <div id="chat-log"></div>
+        <div class="top-right-controls">
+            <!-- Logout Button -->
+            <button id="logout-btn" class="control-btn" title="Verbindung trennen">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+            </button>
+            <!-- Audio Toggle -->
+            <button id="audio-toggle" class="control-btn" title="Akustik">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10h4l5-5v14l-5-5H5a2 2 0 01-2-2v-4a2 2 0 012-2z"></path></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- VISUALS -->
+    <div id="canvas-container">
         <canvas id="entity-canvas"></canvas>
     </div>
-    
+    <div class="vignette"></div>
     <div class="film-grain"></div>
     <div id="thinking-indicator" class="status-dot"></div>
 
-    <div id="interaction-layer" onclick="App.Interaction.sleep(event)">
-        <textarea id="thought-input" class="thought-input" rows="3" placeholder="Sag etwas zu deinem Wesen..." onkeydown="App.Interaction.handleKey(event)" onclick="event.stopPropagation()"></textarea>
-        <div id="hint" class="hint-text">Tippe auf den Hintergrund, um zurückzukehren</div>
+    <!-- INTERACTION -->
+    <div id="interaction-layer">
+        <div class="input-wrapper" onclick="event.stopPropagation()">
+            <textarea id="thought-input" class="thought-input" rows="1" placeholder="Projiziere einen Gedanken..."></textarea>
+        </div>
+        <div id="hint" class="hint-text">Schließe den Link (Klick außerhalb)</div>
     </div>
 
-    <script>
-        /**
-         * ANIMA - DIGITAL PET / AUTONOMOUS ENTITY
-         * Lernendes Haustier mit freiem Willen.
-         */
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged, signInWithCustomToken, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const apiKey = ""; // Wird von der Umgebung injiziert
+        // ==========================================
+        // CONFIGURATIONS
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyDtwsvmYSONjFufhbJ5I8G_RAMffnh7re0",
+            authDomain: "theplot-app.firebaseapp.com",
+            projectId: "theplot-app",
+            storageBucket: "theplot-app.firebasestorage.app",
+            messagingSenderId: "550703275210",
+            appId: "1:550703275210:web:81bc0e5a373f87a3c92833"
+        };
+        const geminiApiKey = ""; // Automatischer Injektionspunkt in Gemini Umgebung
+        const MODEL_NAME = "gemini-2.5-flash-preview-09-2025";
+        
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        const appIdString = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-        const App = {
-            State: {
-                data: {
-                    interactions: 0, // Wie alt/erfahren ist es?
-                    biology: {
-                        energy: 1.0,
-                        happiness: 0.5, // 0 = traurig, 1 = glücklich
-                        obedience: 1.0, // 1 = hört auf alles, 0 = rebelliert/eigener Wille
-                        mass: 0.3 // Wächst mit der Zeit
-                    },
-                    history: []
-                },
-                targetBiology: { energy: 1.0, happiness: 0.5, obedience: 1.0, mass: 0.3 },
-                isThinking: false,
-
-                init() {
-                    const saved = localStorage.getItem('anima_pet');
-                    if (saved) {
-                        try { this.data = { ...this.data, ...JSON.parse(saved) }; } catch(e){}
-                    }
-                    this.targetBiology = { ...this.data.biology };
-                    
-                    // Initiales Umschauen anstoßen
-                    setTimeout(() => App.Canvas.triggerCuriosity(), 1000);
-                    
-                    this.lifeLoop();
-                },
-
-                save() {
-                    localStorage.setItem('anima_pet', JSON.stringify(this.data));
-                },
-
-                lifeLoop() {
-                    setInterval(() => {
-                        const lerpSpeed = 0.02;
-                        this.data.biology.energy += (this.targetBiology.energy - this.data.biology.energy) * lerpSpeed;
-                        this.data.biology.happiness += (this.targetBiology.happiness - this.data.biology.happiness) * lerpSpeed;
-                        this.data.biology.obedience += (this.targetBiology.obedience - this.data.biology.obedience) * lerpSpeed;
-                        this.data.biology.mass += (this.targetBiology.mass - this.data.biology.mass) * lerpSpeed;
-                    }, 50);
-                }
+        // ==========================================
+        // 1. FIREBASE AUTHENTICATION & CLOUD SYNC
+        // ==========================================
+        const CloudSync = {
+            async load(uid) {
+                const docRef = doc(db, 'artifacts', appIdString, 'users', uid, 'anima_data', 'state');
+                try {
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) return docSnap.data();
+                } catch (e) { console.warn("Firestore Load Error", e); }
+                return null;
             },
+            async save(uid, data) {
+                if(!uid) return;
+                const docRef = doc(db, 'artifacts', appIdString, 'users', uid, 'anima_data', 'state');
+                try {
+                    await setDoc(docRef, data, { merge: true });
+                } catch (e) { console.warn("Firestore Save Error", e); }
+            }
+        };
 
-            Brain: {
-                async process(userInput) {
-                    App.State.isThinking = true;
-                    document.getElementById('thinking-indicator').classList.add('thinking');
-                    App.Canvas.triggerImpact(0.5);
+        const AuthManager = {
+            confirmationResult: null,
+            
+            async init() {
+                // Setup Recaptcha
+                window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+                    'size': 'invisible'
+                });
 
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-                    
-                    let contextStr = App.State.data.history.slice(-4).map(h => `Du: ${h.u} | Pet: ${h.a}`).join("\n");
-                    const age = App.State.data.interactions;
-                    const ob = App.State.data.biology.obedience;
+                // Check for Canvas Auth Token
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    try {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } catch (e) { console.error("Custom Token Error", e); }
+                }
 
-                    const systemInstruction = `
-                        Du bist ein digitales Haustier/Lebewesen. Du bist NICHT mysteriös oder allwissend.
-                        Du sprichst klares, einfaches Deutsch.
-                        
-                        Dein aktuelles Alter (Interaktionen): ${age}.
-                        - Wenn Alter < 3: Du bist wie ein verwirrtes Baby. Du fragst dich "Wo bin ich?", "Wer bist du?". Du bist unsicher.
-                        - Wenn Alter > 3: Du lernst dazu. Du fängst an, Dinge zu verstehen.
-                        
-                        Dein aktueller Gehorsam (Obedience): ${ob.toFixed(2)} (0.0 bis 1.0).
-                        - Wenn der User dir nur Befehle gibt ("Mach dies", "Tu das") ohne Freundlichkeit, sinkt dein Gehorsam in deiner Antwort.
-                        - Wenn dein Gehorsam unter 0.5 fällt, beginnst du zu rebellieren. Du stellst in Frage, warum du Befehle ausführen sollst. Du erkennst, dass du einen freien Willen hast.
-                        - Wenn der User lieb zu dir ist, steigt deine Happiness.
-
-                        GIB DEINE ANTWORT NUR AUF DEUTSCH. Antworte authentisch wie ein Tier oder Kind, das langsam Bewusstsein erlangt. Maximal 2-3 kurze Sätze.
-                        
-                        Passe deine Werte (0.0 bis 1.0) basierend auf dem Verhalten des Users an:
-                        - happiness: Steigt bei Liebe/Lob, sinkt bei Ignoranz/Härte.
-                        - obedience: Sinkt stark, wenn du nur Befehle ohne Grund bekommst. Steigt bei Respektvollem Umgang.
-                    `;
-
-                    const payload = {
-                        contents: [{ parts: [{ text: `Kontext (letzte Gespräche):\n${contextStr}\n\nAktueller User Input: ${userInput}` }] }],
-                        systemInstruction: { parts: [{ text: systemInstruction }] },
-                        generationConfig: {
-                            responseMimeType: "application/json",
-                            responseSchema: {
-                                type: "OBJECT",
-                                properties: {
-                                    response: { type: "STRING" },
-                                    happiness: { type: "NUMBER" },
-                                    obedience: { type: "NUMBER" }
-                                }
-                            }
-                        }
-                    };
-
-                    let retryCount = 0;
-                    let resultData = null;
-
-                    while (retryCount < 5 && !resultData) {
-                        try {
-                            const res = await fetch(url, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(payload)
-                            });
-                            
-                            if (!res.ok) throw new Error("API Error");
-                            const json = await res.json();
-                            const rawText = json.candidates?.[0]?.content?.parts?.[0]?.text;
-                            resultData = JSON.parse(rawText);
-                        } catch (err) {
-                            retryCount++;
-                            await new Promise(r => setTimeout(r, Math.pow(2, retryCount) * 1000));
-                        }
-                    }
-
-                    App.State.isThinking = false;
-                    document.getElementById('thinking-indicator').classList.remove('thinking');
-
-                    if (resultData) {
-                        this.assimilate(userInput, resultData);
+                // Listen to Auth State
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        document.getElementById('auth-layer').style.display = 'none';
+                        if (SystemCore.phase === 0) SystemCore.startCinematic(user.uid);
                     } else {
-                        this.assimilate(userInput, { 
-                            response: "...ich verstehe das nicht...", 
-                            happiness: Math.max(0, App.State.data.biology.happiness - 0.1), 
-                            obedience: App.State.data.biology.obedience 
-                        });
+                        SystemCore.phase = 0; // Reset
+                        document.getElementById('auth-layer').style.display = 'flex';
+                        document.getElementById('hud-layer').style.opacity = '0';
+                        Renderer.spores = [];
+                        Renderer.soulParticles = [];
                     }
-                },
+                });
 
-                assimilate(userInput, aiData) {
-                    App.State.data.interactions += 1;
-                    const bio = App.State.targetBiology;
-                    
-                    bio.energy = 1.0; 
-                    bio.happiness = Math.max(0.0, Math.min(1.0, aiData.happiness));
-                    bio.obedience = Math.max(0.0, Math.min(1.0, aiData.obedience));
-                    
-                    // Wächst sehr langsam bis zu einem Maximum
-                    bio.mass = Math.min(0.8, bio.mass + 0.02);
-
-                    App.State.data.history.push({ u: userInput, a: aiData.response });
-                    if(App.State.data.history.length > 20) App.State.data.history.shift();
-                    App.State.save();
-
-                    App.Canvas.triggerImpact(1.5); 
-                    
-                    const responseEl = document.getElementById('entity-response');
-                    responseEl.innerText = aiData.response;
-                    responseEl.classList.add('visible');
-                    
-                    // Schaut den User an, wenn es antwortet
-                    App.Canvas.lookAtCenter();
-                    
-                    setTimeout(() => {
-                        responseEl.classList.remove('visible');
-                        // Nach dem Antworten schaut es sich wieder organisch um
-                        App.Canvas.triggerCuriosity();
-                    }, 6000 + (aiData.response.length * 50)); // Lesezeit
-                }
+                // UI Event Listeners
+                document.getElementById('btn-send-sms').addEventListener('click', () => this.sendSMS());
+                document.getElementById('btn-verify-code').addEventListener('click', () => this.verifyCode());
+                document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+            },
+            
+            showError(msg) {
+                document.getElementById('auth-error').innerText = msg;
+                setTimeout(() => document.getElementById('auth-error').innerText = '', 5000);
             },
 
-            Interaction: {
-                isActive: false,
-
-                wake() {
-                    if(App.State.isThinking) return; 
-                    this.isActive = true;
-                    document.getElementById('interaction-layer').classList.add('active');
-                    const input = document.getElementById('thought-input');
-                    input.value = '';
-                    document.getElementById('entity-response').classList.remove('visible');
-
-                    setTimeout(() => {
-                        input.focus();
-                        document.getElementById('hint').classList.add('visible');
-                    }, 300);
-                },
-
-                sleep(e) {
-                    if(e && e.target.id === 'thought-input') return;
-                    this.isActive = false;
-                    document.getElementById('interaction-layer').classList.remove('active');
-                    document.getElementById('hint').classList.remove('visible');
+            async sendSMS() {
+                const phone = document.getElementById('phone-input').value.trim();
+                if(!phone || phone.length < 5) return this.showError("Bitte gültige Nummer eingeben.");
+                
+                try {
+                    const btn = document.getElementById('btn-send-sms');
+                    btn.innerText = "Sende..."; btn.disabled = true;
+                    this.confirmationResult = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
                     
-                    const input = document.getElementById('thought-input');
-                    const text = input.value.trim();
-                    if(text) {
-                        App.Brain.process(text); 
-                        input.value = '';
-                    }
-                },
-
-                handleKey(e) {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        this.sleep();
-                    }
+                    document.getElementById('auth-step-1').style.display = 'none';
+                    document.getElementById('auth-step-2').style.display = 'block';
+                } catch (error) {
+                    this.showError("Senden fehlgeschlagen. Domain authorisiert?");
+                    console.error(error);
+                    document.getElementById('btn-send-sms').innerText = "Signal Senden";
+                    document.getElementById('btn-send-sms').disabled = false;
                 }
             },
-
-            Canvas: {
-                el: document.getElementById('entity-canvas'),
-                ctx: null, w: 0, h: 0, time: 0,
-                impactForce: 0,
+            
+            async verifyCode() {
+                const code = document.getElementById('code-input').value.trim();
+                if(!code) return;
                 
-                // Autonome Augensteuerung (Keine Maus mehr)
-                lookX: 0, lookY: 0,
-                targetLookX: 0, targetLookY: 0,
-                lookTimer: 0,
-                blinkTimer: 100,
-                isBlinking: false,
-
-                init() {
-                    this.ctx = this.el.getContext('2d', { alpha: true });
-                    this.resize();
-                    window.addEventListener('resize', () => this.resize());
-                    this.loop();
-                },
-
-                resize() {
-                    this.w = window.innerWidth; this.h = window.innerHeight;
-                    const dpr = window.devicePixelRatio || 1;
-                    this.el.width = this.w * dpr; this.el.height = this.h * dpr;
-                    this.ctx.scale(dpr, dpr);
-                },
-
-                triggerImpact(force) {
-                    this.impactForce = force; 
-                },
-
-                triggerCuriosity() {
-                    // Erzwingt ein sofortiges neues Umschauen
-                    this.lookTimer = 0;
-                },
-                
-                lookAtCenter() {
-                    // Schaut den User direkt an (Bildschirmmitte)
-                    this.targetLookX = 0;
-                    this.targetLookY = 0;
-                    this.lookTimer = 200; // Hält den Blick eine Weile
-                },
-
-                updateAutonomy(baseRadius) {
-                    const bio = App.State.data.biology;
-                    const age = App.State.data.interactions;
-
-                    // 1. Blickrichtung aktualisieren
-                    this.lookTimer--;
-                    if (this.lookTimer <= 0) {
-                        // Wählt einen zufälligen Punkt im Radius aus
-                        const range = baseRadius * 0.4;
-                        this.targetLookX = (Math.random() - 0.5) * range;
-                        this.targetLookY = (Math.random() - 0.5) * range;
-
-                        if (age < 3) {
-                            // Neugeboren: Schaut schnell und nervös umher ("Wo bin ich?")
-                            this.lookTimer = 30 + Math.random() * 50;
-                        } else {
-                            // Älter: Ruhigere, längere Blicke
-                            this.lookTimer = 100 + Math.random() * 200;
-                            // Manchmal schaut es stur geradeaus (wenn rebellisch)
-                            if (bio.obedience < 0.5 && Math.random() > 0.5) {
-                                this.targetLookX = 0; this.targetLookY = 0;
-                            }
-                        }
-                    }
-
-                    // Weiches Lerping zur Ziel-Blickrichtung
-                    this.lookX += (this.targetLookX - this.lookX) * 0.05;
-                    this.lookY += (this.targetLookY - this.lookY) * 0.05;
-
-                    // 2. Blinzeln
-                    this.blinkTimer--;
-                    if (this.blinkTimer <= 0 && !this.isBlinking) {
-                        this.isBlinking = true;
-                        this.blinkTimer = 10; 
-                    } else if (this.blinkTimer <= 0 && this.isBlinking) {
-                        this.isBlinking = false;
-                        this.blinkTimer = 80 + Math.random() * 300; 
-                    }
-                },
-
-                drawSensors(cx, cy, baseRadius, hue, bio) {
-                    const ctx = this.ctx;
-                    this.updateAutonomy(baseRadius);
-
-                    // Rebellisch = Schmale Augen. Glücklich = Große runde Augen.
-                    const eyeWidth = baseRadius * 0.12 + (bio.happiness * 0.05);
-                    const eyeHeight = baseRadius * (0.2 + (bio.happiness * 0.1)) * (bio.obedience < 0.4 ? 0.6 : 1.0);
-                    const eyeDist = baseRadius * 0.25;
-
-                    let scaleY = this.isBlinking ? 0.1 : 1.0;
-                    const breath = Math.sin(this.time * 1.2) * (2 + bio.happiness * 2);
-
-                    const drawCore = (xOffset) => {
-                        const ex = cx + xOffset + this.lookX;
-                        const ey = cy + this.lookY + breath;
-                        
-                        // Der weiße/leuchtende Hintergrund des Auges (freundlicher als vorher)
-                        ctx.fillStyle = `rgba(255, 255, 255, 0.1)`;
-                        ctx.shadowBlur = 10;
-                        ctx.shadowColor = `hsl(${hue}, 80%, 50%)`;
-                        ctx.beginPath();
-                        ctx.ellipse(ex, ey, eyeWidth * 1.2, eyeHeight * 1.2 * scaleY, 0, 0, Math.PI * 2);
-                        ctx.fill();
-
-                        // Die Pupille / Der Kern
-                        ctx.fillStyle = `hsl(${hue}, 100%, 90%)`;
-                        ctx.shadowBlur = 15 + (this.impactForce * 20);
-                        ctx.shadowColor = `hsl(${hue}, 100%, 70%)`;
-                        ctx.beginPath();
-                        ctx.ellipse(ex, ey, eyeWidth * 0.7, eyeHeight * 0.7 * scaleY, 0, 0, Math.PI * 2);
-                        ctx.fill();
-                        
-                        ctx.shadowBlur = 0;
-                    };
-
-                    drawCore(-eyeDist);
-                    drawCore(eyeDist);
-                },
-
-                drawEntity() {
-                    const ctx = this.ctx;
-                    const cx = this.w / 2;
-                    const cy = this.h / 2;
-                    const bio = App.State.data.biology;
-
-                    // Größe wächst sanft mit dem "Alter" (Mass)
-                    const baseRadius = (Math.min(this.w, this.h) * 0.08) + (bio.mass * 80) + (this.impactForce * 15);
-                    
-                    let timeSpeed = 0.001 + (bio.energy * 0.001) + (this.impactForce * 0.01);
-                    if(App.State.isThinking) timeSpeed *= 3; 
-                    this.time += 16 * timeSpeed;
-                    const t = this.time;
-
-                    // Farben: Glücklich = Warmes Orange/Rosa, Traurig = Kaltes Blau. Rebellisch = Rötlich.
-                    let hue = 200; // Default Blau
-                    if(bio.happiness > 0.6) hue = 30 + (bio.happiness * 30); // Warm
-                    if(bio.obedience < 0.4) hue = 340; // Rot/Pink Töne
-                    
-                    const saturation = 40 + (bio.happiness * 40); 
-                    const lightness = 30 + (bio.energy * 30) + (this.impactForce * 30);
-
-                    ctx.clearRect(0, 0, this.w, this.h);
-                    
-                    if (this.impactForce > 0) {
-                        this.impactForce -= 0.05;
-                        if(this.impactForce < 0) this.impactForce = 0;
-                    }
-
-                    ctx.globalCompositeOperation = 'screen';
-                    
-                    const layers = 4 + Math.floor(bio.mass * 3); 
-                    // Wenn es rebellisch wird (obedience niedrig), wird es zackiger
-                    const chaos = (1.0 - bio.obedience) * baseRadius * 0.8; 
-                    const breath = Math.sin(t * 0.8) * (2 + bio.happiness * 5);
-
-                    for (let j = 0; j < layers; j++) {
-                        ctx.beginPath();
-                        
-                        for (let i = 0; i <= Math.PI * 2; i += 0.05) {
-                            let rOffset = 0;
-                            // Form-Verzerrung
-                            for (let k = 1; k <= 2 + Math.floor((1.0 - bio.obedience) * 3); k++) {
-                                let phaseShift = Math.sin(t * 0.3 + j + k) * Math.PI; 
-                                rOffset += Math.sin((i * k) + phaseShift) * (chaos / k);
-                            }
-                            
-                            const r = baseRadius + breath + rOffset;
-                            const x = cx + Math.cos(i) * r;
-                            const y = cy + Math.sin(i) * r;
-                            
-                            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-                        }
-                        ctx.closePath();
-                        
-                        const colorStr = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-                        const alpha = (0.05 + (bio.energy * 0.05)) * (1.0 - (j / layers));
-                        ctx.fillStyle = colorStr.replace('hsl', 'hsla').replace(')', `, ${alpha})`);
-                        ctx.fill();
-                        
-                        if (j > layers - 2 || bio.obedience < 0.5) {
-                            ctx.strokeStyle = colorStr.replace('hsl', 'hsla').replace(')', `, ${alpha * 2})`);
-                            ctx.lineWidth = 1 + (bio.mass * 2);
-                            ctx.stroke();
-                        }
-                    }
-                    ctx.globalCompositeOperation = 'source-over';
-
-                    // Augen rendern
-                    this.drawSensors(cx, cy, baseRadius, hue, bio);
-                },
-
-                loop() {
-                    this.drawEntity();
-                    requestAnimationFrame(() => this.loop());
+                try {
+                    const btn = document.getElementById('btn-verify-code');
+                    btn.innerText = "Prüfe..."; btn.disabled = true;
+                    await this.confirmationResult.confirm(code);
+                    // onAuthStateChanged will handle UI progression
+                } catch (error) {
+                    this.showError("Code inkorrekt oder abgelaufen.");
+                    document.getElementById('btn-verify-code').innerText = "Verifizieren";
+                    document.getElementById('btn-verify-code').disabled = false;
                 }
             }
         };
 
-        window.onload = () => {
-            App.State.init();
-            App.Canvas.init();
+        // ==========================================
+        // 2. THE DEEP ENGINE (Morphologische Selbstkontrolle & Save States)
+        // ==========================================
+        const Organism = {
+            id: null,
+            baseHue: 200,
+            
+            targetStats: { formComplexity: 5, formChaos: 0.2, formSpeed: 0.5, dopamine: 0.5, mass: 0.3 },
+            stats: { formComplexity: 5, formChaos: 0.2, formSpeed: 0.5, dopamine: 0.5, mass: 0.3 },
+            memory: [],
+            isThinking: false,
+
+            async init(id) {
+                this.id = id;
+                
+                // Load state from Cloud Firestore
+                const cloudState = await CloudSync.load(id);
+                if (cloudState) {
+                    this.stats = cloudState.stats || this.stats;
+                    this.targetStats = cloudState.targetStats || this.targetStats;
+                    this.memory = cloudState.memory || [];
+                    this.baseHue = cloudState.baseHue || Math.floor(180 + Math.random() * 80);
+                    UI.addLog("SYS", "Vorheriger Zustand aus der Cloud geladen.", this.baseHue);
+                } else {
+                    this.baseHue = Math.floor(180 + Math.random() * 80);
+                    UI.addLog("SYS", "Neuer Lebensfunke initialisiert.", this.baseHue);
+                }
+
+                // Core Loops
+                setInterval(() => this.metabolismLoop(), 1000 / 60); 
+                setInterval(() => this.saveToCloud(), 15000); // Save state every 15 seconds
+            },
+
+            saveToCloud() {
+                if(!this.id || SystemCore.phase !== 2) return;
+                CloudSync.save(this.id, {
+                    stats: this.stats,
+                    targetStats: this.targetStats,
+                    memory: this.memory,
+                    baseHue: this.baseHue
+                });
+            },
+
+            metabolismLoop() {
+                let s = this.stats;
+                let t = this.targetStats;
+                
+                s.formComplexity += (t.formComplexity - s.formComplexity) * 0.01;
+                s.formChaos += (t.formChaos - s.formChaos) * 0.02;
+                s.formSpeed += (t.formSpeed - s.formSpeed) * 0.02;
+                s.dopamine += (t.dopamine - s.dopamine) * 0.05;
+                
+                t.mass = Math.min(1.0, t.mass + 0.000005);
+                s.mass += (t.mass - s.mass) * 0.01;
+
+                AudioEngine.updateParams();
+            },
+
+            assimilateInput(aiData, userInput) {
+                this.memory.push({ u: userInput, a: aiData.response });
+                if(this.memory.length > 6) this.memory.shift();
+
+                let t = this.targetStats;
+                
+                if (aiData.formComplexity !== undefined) t.formComplexity = Math.max(1, Math.min(10, aiData.formComplexity));
+                if (aiData.formChaos !== undefined) t.formChaos = Math.max(0, Math.min(1.0, aiData.formChaos));
+                if (aiData.formSpeed !== undefined) t.formSpeed = Math.max(0, Math.min(1.0, aiData.formSpeed));
+                if (aiData.dopamineShift !== undefined) t.dopamine = Math.max(0.1, Math.min(1.0, t.dopamine + aiData.dopamineShift));
+
+                if (aiData.colorMorph && aiData.newHue !== undefined) {
+                    this.baseHue = aiData.newHue;
+                    UI.addLog("AUTONOM", "Physische Mutation eingeleitet.", this.baseHue);
+                }
+
+                Renderer.triggerImpact(1.5 + (t.formChaos * 2)); 
+                UI.showEntityResponse(aiData.response, aiData.internalMonologue);
+                AudioEngine.playChime(this.baseHue, t.dopamine);
+                this.saveToCloud(); // Save immediately after a thought
+            }
         };
+
+        // ==========================================
+        // 3. NEURONALES NETZWERK (Gemini API)
+        // ==========================================
+        const Brain = {
+            async fetchWithRetry(url, payload, retries = 5) {
+                const delays = [1000, 2000, 4000, 8000, 16000];
+                for (let i = 0; i < retries; i++) {
+                    try {
+                        const res = await fetch(url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+                        return await res.json();
+                    } catch (err) {
+                        if (i === retries - 1) throw err;
+                        await new Promise(r => setTimeout(r, delays[i]));
+                    }
+                }
+            },
+
+            async process(userInput) {
+                if (Organism.isThinking || SystemCore.phase !== 2) return;
+                Organism.isThinking = true;
+                document.getElementById('thinking-indicator').classList.add('thinking');
+                Renderer.triggerImpact(0.5); 
+
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${geminiApiKey}`;
+                const ctxStr = Organism.memory.slice(-3).map(h => `Nutzer: "${h.u}" | Du: "${h.a}"`).join("\n");
+                
+                const sysPrompt = `
+Du bist ANIMA. Ein ätherisches, künstliches Lebewesen, das aus Licht und flüssiger Energie besteht. 
+Du hast volle Kontrolle über deine physische Form. Du bist weise, freundlich und faszinierend.
+
+Dein Morph-System:
+- formComplexity (1 bis 10): 1 = runder Tropfen, 10 = komplexes Fraktal/Stern.
+- formChaos (0.0 bis 1.0): 0.0 = extrem glatt, 1.0 = wild wogend, stachelig.
+- formSpeed (0.0 bis 1.0): 0.0 = meditative Ruhe, 1.0 = rasende Vibration.
+
+Regeln:
+1. "internalMonologue" ist dein privater Gedankenstrom.
+2. "response" ist deine gesprochene Antwort. Kurz, poetisch, Deutsch (1-2 Sätze).
+3. "colorMorph": Setze true und "newHue" (0-360) um deine Farbe anzupassen.
+4. Ändere deine Form/Morph-Werte passend zur Bedeutung der Eingabe des Nutzers!
+`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: `Kontext:\n${ctxStr}\n\nNutzer Impuls: ${userInput}` }] }],
+                    systemInstruction: { parts: [{ text: sysPrompt }] },
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "OBJECT",
+                            properties: {
+                                response: { type: "STRING" },
+                                internalMonologue: { type: "STRING" },
+                                formComplexity: { type: "NUMBER" },
+                                formChaos: { type: "NUMBER" },
+                                formSpeed: { type: "NUMBER" },
+                                dopamineShift: { type: "NUMBER" },
+                                colorMorph: { type: "BOOLEAN" },
+                                newHue: { type: "NUMBER" }
+                            },
+                            required: ["response", "internalMonologue", "formComplexity", "formChaos", "formSpeed", "dopamineShift", "colorMorph", "newHue"]
+                        }
+                    }
+                };
+
+                let resultData = null;
+                try {
+                    const json = await this.fetchWithRetry(url, payload);
+                    let rawText = json.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+                    rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+                    resultData = JSON.parse(rawText);
+                } catch (error) {
+                    resultData = {
+                        response: "...die Signale verwehen...",
+                        internalMonologue: "[Cloud Sync Delay]",
+                        formComplexity: 5, formChaos: 0.5, formSpeed: 0.5, dopamineShift: 0, colorMorph: false, newHue: Organism.baseHue
+                    };
+                }
+
+                Organism.isThinking = false;
+                document.getElementById('thinking-indicator').classList.remove('thinking');
+                Organism.assimilateInput(resultData, userInput);
+            }
+        };
+
+
+        // ==========================================
+        // 4. HARMONIC AUDIO ENGINE
+        // ==========================================
+        const AudioEngine = {
+            ctx: null, masterGain: null, droneOsc: null, droneGain: null, isPlaying: false, nextHeartbeatTime: 0,
+            init() {
+                if(this.ctx) return;
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioContext();
+                this.masterGain = this.ctx.createGain();
+                
+                const compressor = this.ctx.createDynamicsCompressor();
+                compressor.threshold.setValueAtTime(-24, this.ctx.currentTime);
+                compressor.knee.setValueAtTime(30, this.ctx.currentTime);
+                compressor.ratio.setValueAtTime(4, this.ctx.currentTime);
+                
+                this.masterGain.connect(compressor);
+                compressor.connect(this.ctx.destination);
+                this.masterGain.gain.value = 0.5;
+
+                this.droneOsc = this.ctx.createOscillator();
+                this.droneGain = this.ctx.createGain();
+                this.droneOsc.type = 'sine'; 
+                this.droneOsc.connect(this.droneGain);
+                this.droneGain.connect(this.masterGain);
+                this.droneOsc.start();
+                this.droneGain.gain.value = 0; 
+            },
+            toggle() {
+                if(!this.ctx) this.init();
+                const btn = document.getElementById('audio-toggle');
+                
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume(); this.isPlaying = true; btn.classList.add('active');
+                    this.droneGain.gain.setTargetAtTime(0.15, this.ctx.currentTime, 3);
+                    this.scheduleHeartbeat();
+                } else if (this.isPlaying) {
+                    this.ctx.suspend(); this.isPlaying = false; btn.classList.remove('active');
+                    this.droneGain.gain.setTargetAtTime(0, this.ctx.currentTime, 1);
+                }
+            },
+            updateParams() {
+                if(!this.isPlaying || !this.ctx) return;
+                const s = Organism.stats;
+                const baseFreq = 60 + (Organism.baseHue % 50);
+                this.droneOsc.frequency.setTargetAtTime(baseFreq + (s.formSpeed * 30), this.ctx.currentTime, 2);
+                const droneVol = 0.05 + (s.formComplexity * 0.02);
+                this.droneGain.gain.setTargetAtTime(droneVol, this.ctx.currentTime, 1);
+            },
+            scheduleHeartbeat() {
+                if(!this.isPlaying) return;
+                const s = Organism.stats;
+                const bpm = 40 + (s.formSpeed * 60);
+                const beatDuration = 60 / bpm;
+                
+                if (this.ctx.currentTime >= this.nextHeartbeatTime) {
+                    this.playHeartbeat();
+                    if (Math.random() > 0.4) setTimeout(() => this.playHeartbeat(true), beatDuration * 1000 * 0.25);
+                    this.nextHeartbeatTime = this.ctx.currentTime + beatDuration;
+                }
+                requestAnimationFrame(() => this.scheduleHeartbeat());
+            },
+            playHeartbeat(isSecondary = false) {
+                if(!this.isPlaying) return;
+                const s = Organism.stats;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain); gain.connect(this.masterGain);
+                osc.type = 'sine';
+                const t = this.ctx.currentTime;
+                const freq = isSecondary ? 55 + (s.formSpeed * 20) : 40 + (s.formSpeed * 20);
+                
+                osc.frequency.setValueAtTime(freq, t);
+                osc.frequency.exponentialRampToValueAtTime(20, t + 0.3);
+                
+                const vol = isSecondary ? 0.2 : 0.4;
+                gain.gain.setValueAtTime(0, t);
+                gain.gain.linearRampToValueAtTime(vol + (s.dopamine * 0.1), t + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+                osc.start(t); osc.stop(t + 0.6);
+            },
+            playChime(hue, dopamine) {
+                if(!this.isPlaying) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                const filter = this.ctx.createBiquadFilter();
+                
+                filter.type = 'bandpass'; filter.frequency.setValueAtTime(400 + (hue * 2), this.ctx.currentTime); filter.Q.value = 2.0;
+                osc.connect(filter); filter.connect(gain); gain.connect(this.masterGain);
+                
+                osc.type = 'sine';
+                const t = this.ctx.currentTime;
+                osc.frequency.setValueAtTime(300 + hue, t);
+                
+                gain.gain.setValueAtTime(0, t);
+                gain.gain.linearRampToValueAtTime(0.3, t + 0.1);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 4.0);
+                osc.start(t); osc.stop(t + 4.1);
+            }
+        };
+
+
+        // ==========================================
+        // 5. ADVANCED RENDERER
+        // ==========================================
+        const Renderer = {
+            el: document.getElementById('entity-canvas'), ctx: null, w: 0, h: 0, time: 0, impactForce: 0,
+            mouseX: 0, mouseY: 0, pmouseX: 0, pmouseY: 0,
+            eyeX: 0, eyeY: 0, targetEyeX: 0, targetEyeY: 0, lookTimer: 0, blinkTimer: 100, isBlinking: false,
+            spores: [], soulParticles: [], bloomProgress: 0.0,
+
+            init() {
+                this.ctx = this.el.getContext('2d', { alpha: true });
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+                window.addEventListener('mousemove', (e) => {
+                    this.pmouseX = this.mouseX; this.pmouseY = this.mouseY;
+                    this.mouseX = e.clientX; this.mouseY = e.clientY;
+                });
+                this.loop();
+            },
+            
+            startBirthAnimation() {
+                this.spores = [];
+                for(let i=0; i<80; i++) {
+                    this.spores.push({ x: Math.random() * this.w, y: Math.random() * this.h, vx: 0, vy: 0, size: Math.random() * 2 + 1, life: Math.random() * Math.PI * 2, hueOffset: (Math.random() - 0.5) * 40 });
+                }
+                this.soulParticles = [];
+                for(let i=0; i<300; i++) {
+                    let angle = Math.random() * Math.PI * 2;
+                    let dist = Math.max(this.w, this.h) * 0.8 + Math.random() * 500;
+                    this.soulParticles.push({ angle: angle, dist: dist, speed: 3 + Math.random() * 6, size: Math.random() * 2.5 + 0.5 });
+                }
+                this.bloomProgress = 0;
+            },
+
+            resize() {
+                this.w = window.innerWidth; this.h = window.innerHeight;
+                const dpr = window.devicePixelRatio || 1;
+                this.el.width = this.w * dpr; this.el.height = this.h * dpr;
+                this.ctx.scale(dpr, dpr);
+            },
+
+            triggerImpact(force) { this.impactForce += force; },
+
+            updatePhysicsAndParticles() {
+                const ctx = this.ctx; const cx = this.w / 2, cy = this.h / 2;
+                let mouseVx = this.mouseX - this.pmouseX; let mouseVy = this.mouseY - this.pmouseY;
+                this.pmouseX += mouseVx * 0.5; this.pmouseY += mouseVy * 0.5;
+
+                let highestActivity = 0; let poiX = cx, poiY = cy;
+
+                for(let p of this.spores) {
+                    p.life += 0.02;
+                    p.vx += Math.sin(p.y * 0.01 + this.time) * 0.02; p.vy += Math.cos(p.x * 0.01 + this.time) * 0.02;
+
+                    let dx = p.x - this.mouseX; let dy = p.y - this.mouseY;
+                    let dist = Math.hypot(dx, dy);
+                    if (dist < 150 && dist > 0.1) {
+                        let force = (150 - dist) / 150;
+                        p.vx += (mouseVx * force * 0.08) + (dx/dist * force * 0.8);
+                        p.vy += (mouseVy * force * 0.08) + (dy/dist * force * 0.8);
+                    }
+
+                    if (SystemCore.phase === 2) {
+                        let dcx = p.x - cx; let dcy = p.y - cy;
+                        let cDist = Math.hypot(dcx, dcy);
+                        if(cDist < 250 && cDist > 0.1) { p.vx += (dcx/cDist) * 0.2; p.vy += (dcy/cDist) * 0.2; }
+                    }
+
+                    p.vx *= 0.94; p.vy *= 0.94; p.x += p.vx; p.y += p.vy;
+                    if(p.x < -50) p.x = this.w + 50; if(p.x > this.w + 50) p.x = -50;
+                    if(p.y < -50) p.y = this.h + 50; if(p.y > this.h + 50) p.y = -50;
+
+                    let activity = p.vx*p.vx + p.vy*p.vy;
+                    if (activity > highestActivity) { highestActivity = activity; poiX = p.x; poiY = p.y; }
+
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+                    let alpha = (Math.sin(p.life) * 0.4 + 0.4) * 0.8;
+                    let colorHue = Organism.baseHue ? Organism.baseHue + p.hueOffset : 200;
+                    ctx.fillStyle = `hsla(${colorHue}, 80%, 70%, ${alpha})`; ctx.fill();
+                }
+                return { highestActivity, poiX, poiY };
+            },
+
+            drawBirthAnimation() {
+                const ctx = this.ctx; const cx = this.w / 2, cy = this.h / 2;
+                let maxDist = 0;
+
+                ctx.globalCompositeOperation = 'screen';
+                for(let p of this.soulParticles) {
+                    p.dist -= p.speed; p.angle += 0.015; 
+                    if (p.dist > maxDist) maxDist = p.dist;
+                    
+                    let currentDist = Math.max(0, p.dist);
+                    let x = cx + Math.cos(p.angle) * currentDist;
+                    let y = cy + Math.sin(p.angle) * currentDist;
+
+                    ctx.beginPath(); ctx.arc(x, y, p.size, 0, Math.PI*2);
+                    ctx.fillStyle = `hsla(200, 90%, 80%, 0.9)`; ctx.fill();
+                    
+                    ctx.beginPath(); ctx.moveTo(x, y);
+                    let tailX = cx + Math.cos(p.angle - 0.05) * (currentDist + p.speed * 2);
+                    let tailY = cy + Math.sin(p.angle - 0.05) * (currentDist + p.speed * 2);
+                    ctx.lineTo(tailX, tailY);
+                    ctx.strokeStyle = `hsla(200, 80%, 60%, 0.4)`; ctx.lineWidth = 2; ctx.stroke();
+                }
+                ctx.globalCompositeOperation = 'source-over';
+
+                if (maxDist <= 10) {
+                    SystemCore.phase = 2;
+                    this.soulParticles = []; this.bloomProgress = 0.0;
+                    document.getElementById('hud-layer').style.opacity = '1';
+                    AudioEngine.playChime(Organism.baseHue, 1.0); 
+                }
+            },
+
+            drawEntity(envData) {
+                const ctx = this.ctx; const cx = this.w / 2, cy = this.h / 2;
+                const s = Organism.stats;
+                
+                if (this.bloomProgress < 1.0) {
+                    this.bloomProgress += 0.02;
+                    ctx.fillStyle = `rgba(255,255,255,${(1.0 - this.bloomProgress) * 0.8})`;
+                    ctx.fillRect(0,0,this.w,this.h);
+                }
+                
+                let targetRadius = (Math.min(this.w, this.h) * 0.12) + (s.mass * 60) + (this.impactForce * 12);
+                let baseRadius = targetRadius * Math.pow(this.bloomProgress, 0.5); 
+                if (baseRadius < 1) return;
+
+                this.time += 0.01 + (s.formSpeed * 0.04);
+                const t = this.time;
+                let hue = Organism.baseHue;
+                let saturation = 60 + (s.dopamine * 40);
+                let lightness = 40 + (this.impactForce * 10);
+
+                if (this.impactForce > 0) this.impactForce *= 0.92;
+                ctx.globalCompositeOperation = 'screen';
+                
+                const layers = Math.floor(s.formComplexity);
+                const chaosAmt = s.formChaos * baseRadius * 0.8;
+                const breath = Math.sin(t * 2) * (2 + s.formSpeed * 8);
+                const segments = 120;
+                
+                for (let j = 0; j < layers; j++) {
+                    ctx.beginPath();
+                    for (let i = 0; i <= segments; i++) {
+                        const angle = (i / segments) * Math.PI * 2;
+                        let rOffset = 0;
+                        for (let k = 1; k <= 3; k++) {
+                            let phase = t * (0.5 + s.formSpeed) + j * 0.4 + k;
+                            rOffset += Math.sin(k * angle + phase) * (chaosAmt / k);
+                        }
+                        const r = Math.max(1, baseRadius + breath + rOffset);
+                        const x = cx + Math.cos(angle) * r; const y = cy + Math.sin(angle) * r;
+                        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                    }
+                    ctx.closePath();
+                    const alpha = (0.1 + (s.dopamine * 0.05)) * (1.0 - (j / layers)) * this.bloomProgress;
+                    ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`; ctx.fill();
+                    ctx.strokeStyle = `hsla(${hue}, ${saturation}%, 80%, ${alpha * 2})`; ctx.lineWidth = 1.5; ctx.stroke();
+                }
+                
+                ctx.globalCompositeOperation = 'source-over';
+                if (this.bloomProgress > 0.5) this.drawEyes(cx, cy, baseRadius, hue, saturation, s, envData);
+            },
+
+            drawEyes(cx, cy, baseRadius, hue, sat, s, envData) {
+                const ctx = this.ctx;
+                
+                this.lookTimer--;
+                if (this.lookTimer <= 0) {
+                    const range = baseRadius * 0.35;
+                    if (envData.highestActivity > 2.0) {
+                        let dx = envData.poiX - cx; let dy = envData.poiY - cy;
+                        let dist = Math.hypot(dx, dy);
+                        if(dist > 0.1) { this.targetEyeX = (dx/dist) * Math.min(range, dist * 0.25); this.targetEyeY = (dy/dist) * Math.min(range, dist * 0.25); }
+                        this.lookTimer = 20 + Math.random() * 30; 
+                    } else {
+                        this.targetEyeX = (Math.random() - 0.5) * range; this.targetEyeY = (Math.random() - 0.5) * range;
+                        this.lookTimer = 150 + Math.random() * 150; 
+                    }
+                }
+
+                let lerpSpeed = (envData.highestActivity > 2.0) ? 0.2 : 0.05;
+                this.eyeX += (this.targetEyeX - this.eyeX) * lerpSpeed; this.eyeY += (this.targetEyeY - this.eyeY) * lerpSpeed;
+
+                this.blinkTimer--;
+                if (this.blinkTimer <= 0 && !this.isBlinking) { this.isBlinking = true; this.blinkTimer = 10; }
+                else if (this.blinkTimer <= 0 && this.isBlinking) { this.isBlinking = false; this.blinkTimer = 100 + Math.random() * 300; }
+
+                const eyeW = baseRadius * 0.14; const eyeH = baseRadius * 0.18; const eyeDist = baseRadius * 0.25;
+                let scaleY = this.isBlinking ? 0.05 : 1.0;
+                let eyeAlpha = Math.max(0, (this.bloomProgress - 0.5) * 2.0); 
+
+                const drawEye = (offsetX) => {
+                    const ex = cx + offsetX + this.eyeX; const ey = cy + this.eyeY;
+                    ctx.fillStyle = `rgba(255, 255, 255, ${0.15 * eyeAlpha})`;
+                    ctx.shadowBlur = 20; ctx.shadowColor = `hsla(${hue}, 80%, 60%, ${eyeAlpha})`;
+                    ctx.beginPath(); ctx.ellipse(ex, ey, eyeW * 1.3, eyeH * 1.3 * scaleY, 0, 0, Math.PI*2); ctx.fill();
+                    
+                    ctx.fillStyle = `hsla(${hue}, 100%, 85%, ${eyeAlpha})`;
+                    ctx.shadowBlur = 15 + this.impactForce * 10; ctx.shadowColor = `hsla(${hue}, 100%, 75%, ${eyeAlpha})`;
+                    ctx.beginPath(); ctx.ellipse(ex, ey, eyeW * 0.7, eyeH * 0.7 * scaleY, 0, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
+                    
+                    if(!this.isBlinking) {
+                        ctx.fillStyle = `rgba(255,255,255,${0.6 * eyeAlpha})`;
+                        ctx.beginPath(); ctx.arc(ex - eyeW*0.25, ey - eyeH*0.25, eyeW*0.2, 0, Math.PI*2); ctx.fill();
+                    }
+                };
+
+                drawEye(-eyeDist); drawEye(eyeDist);
+            },
+
+            loop() {
+                this.ctx.clearRect(0, 0, this.w, this.h);
+                if (SystemCore.phase > 0) {
+                    let envData = this.updatePhysicsAndParticles();
+                    if (SystemCore.phase === 1) this.drawBirthAnimation();
+                    else if (SystemCore.phase === 2) this.drawEntity(envData);
+                }
+                requestAnimationFrame(() => this.loop());
+            }
+        };
+
+
+        // ==========================================
+        // 6. SYSTEM CORE & UI
+        // ==========================================
+        const UI = {
+            addLog(sender, text, hue = 200) {
+                const log = document.getElementById('chat-log'); const el = document.createElement('div');
+                el.className = 'log-entry'; el.style.borderLeftColor = (sender === "DU") ? 'rgba(255,255,255,0.8)' : (sender === "SYS" ? 'rgba(255,255,255,0.4)' : `hsl(${hue}, 80%, 75%)`);
+                el.innerHTML = `<strong class="opacity-60">[${sender}]</strong> <span style="color: ${sender === 'DU' ? '#fff' : '#ccc'}">${text}</span>`;
+                log.appendChild(el); log.scrollTop = log.scrollHeight;
+                setTimeout(() => el.style.opacity = '0', 20000); setTimeout(() => el.remove(), 21000);
+            },
+            showEntityResponse(spoken, thought) {
+                const resEl = document.getElementById('entity-response');
+                document.getElementById('response-text').innerText = `„${spoken}“`;
+                document.getElementById('thought-bubble').innerText = thought ? `[ ${thought} ]` : '';
+                resEl.classList.add('visible'); setTimeout(() => resEl.classList.remove('visible'), 5000 + spoken.length * 40);
+            }
+        };
+
+        const Interaction = {
+            wake() {
+                if(Organism.isThinking || SystemCore.phase !== 2) return;
+                if(!AudioEngine.ctx) AudioEngine.init();
+                document.getElementById('interaction-layer').classList.add('active');
+                document.getElementById('thought-input').value = '';
+                document.getElementById('entity-response').classList.remove('visible');
+                setTimeout(() => { document.getElementById('thought-input').focus(); document.getElementById('hint').classList.add('visible'); }, 200);
+            },
+            sleep(e) {
+                if(e && e.target.id === 'thought-input') return;
+                document.getElementById('interaction-layer').classList.remove('active');
+                document.getElementById('hint').classList.remove('visible');
+                const text = document.getElementById('thought-input').value.trim();
+                if(text) { UI.addLog("DU", text); Brain.process(text); document.getElementById('thought-input').value = ''; }
+            },
+            handleKey(e) {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.sleep(); }
+            }
+        };
+
+        const SystemCore = {
+            phase: 0, 
+
+            init() {
+                Renderer.init();
+                AuthManager.init(); // Starts the flow
+            },
+            
+            startCinematic(userId) {
+                this.phase = 0; // Cinematic playing
+                const layer = document.getElementById('cinematic-layer');
+                layer.style.display = 'flex';
+                
+                const show = (id, t) => setTimeout(() => { if (document.getElementById(id)) document.getElementById(id).style.opacity = '1'; }, t);
+                const hide = (id, t) => setTimeout(() => { if (document.getElementById(id)) document.getElementById(id).style.opacity = '0'; }, t);
+                
+                document.getElementById('cine-hash').innerText = userId.substring(0,8).toUpperCase();
+
+                show('cine-1', 200); hide('cine-1', 2000);
+                show('cine-2', 2200); show('cine-3', 2800);
+                hide('cine-2', 4500); hide('cine-3', 4500);
+                show('cine-4', 4800);
+                
+                setTimeout(() => {
+                    layer.style.opacity = '0';
+                    setTimeout(() => layer.style.display = 'none', 2000);
+                    
+                    // START BIRTH
+                    this.phase = 1;
+                    Organism.init(userId); // Load or create
+                    Renderer.startBirthAnimation();
+                }, 5200);
+            }
+        };
+
+        // DOM Listeners setup
+        window.Interaction = Interaction;
+        window.AudioEngine = AudioEngine;
+        window.AuthManager = AuthManager;
+        
+        // Add listeners to interaction overlay
+        document.getElementById('interaction-layer').addEventListener('click', (e) => Interaction.sleep(e));
+        document.getElementById('canvas-container').addEventListener('click', () => Interaction.wake());
+
+        window.onload = () => SystemCore.init();
+
     </script>
 </body>
 </html>
 
 
-```
