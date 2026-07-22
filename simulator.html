@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aetheria: Bio-Anatomisches Wesen</title>
+    <!-- Tailwind CSS & Cinema Fonts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,500;0,700;1,300&display=swap" rel="stylesheet">
+    <style>
+        .font-cinzel { font-family: 'Cinzel', serif; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #02040a;
+            color: #f1f5f9;
+            user-select: none;
+            touch-action: none;
+            overflow: hidden;
+        }
+
+        /* Glassmorphism & High-End FX */
+        .bio-hud {
+            background: linear-gradient(180deg, rgba(8, 12, 22, 0.85) 0%, rgba(3, 7, 18, 0.6) 100%);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.9);
+        }
+
+        .thought-bubble {
+            background: rgba(10, 16, 30, 0.88);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(125, 211, 252, 0.25);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        /* Vignette Cinema Overlay */
+        .cinema-vignette {
+            pointer-events: none;
+            position: absolute;
+            inset: 0;
+            box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.95), inset 0 0 40px rgba(2, 6, 23, 0.8);
+            z-index: 20;
+        }
+
+        canvas {
+            image-rendering: auto;
+        }
+    </style>
+</head>
+<body class="w-screen h-screen flex flex-col justify-between items-center p-3 sm:p-6 relative select-none bg-slate-950">
+
+    <!-- Cinematic Lighting Vignette Overlay -->
+    <div class="cinema-vignette"></div>
+
+    <!-- HEADER / SUBTLE BIOLOGICAL HUD -->
+    <header class="w-full max-w-lg bio-hud p-4 rounded-3xl z-30 flex items-center justify-between border-slate-800/60">
+        <div class="flex items-center gap-3">
+            <div class="relative">
+                <div class="w-3 h-3 rounded-full bg-emerald-400 animate-ping absolute inset-0 opacity-75"></div>
+                <div class="w-3 h-3 rounded-full bg-emerald-500 border border-emerald-300"></div>
+            </div>
+            <div>
+                <h1 class="font-cinzel text-sm sm:text-base font-bold text-amber-200/90 tracking-widest uppercase">Aetheria Specimen #09</h1>
+                <p class="text-[10px] text-slate-400 font-medium tracking-wide" id="bio-vital-text">Herzfrequenz: 62 BPM • Bewusstsein: Wach</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button onclick="toggleThoughtLog()" class="px-3 py-1.5 rounded-2xl bg-slate-900/80 border border-slate-700/60 text-xs font-semibold text-sky-300 hover:bg-slate-800 transition active:scale-95">
+                🧠 Gedanken-Log
+            </button>
+        </div>
+    </header>
+
+    <!-- GEHEIMER GEDANKEN-STREAM (Dynamic Thought Overlay) -->
+    <div id="thought-box" class="thought-bubble w-full max-w-lg p-4 rounded-3xl z-30 transition-all duration-500 my-2 opacity-90">
+        <div class="flex justify-between items-center mb-1">
+            <span class="text-[9px] font-bold uppercase tracking-widest text-sky-400/80 flex items-center gap-1.5">
+                <span class="inline-block w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
+                Innere Neuronal-Aktivität
+            </span>
+            <span class="text-[9px] text-slate-500 font-mono" id="thought-time">00:00</span>
+        </div>
+        <p class="text-xs sm:text-sm font-light italic text-slate-200 leading-relaxed font-cinzel" id="thought-text">
+            "Eine Präsenz ist nah... Ich spüre das Licht. Zeige mir, ob du sanft bist."
+        </p>
+    </div>
+
+    <!-- MAIN INTERACTIVE CANVAS (Big Creature Focus) -->
+    <main class="w-full max-w-lg flex-1 relative flex items-center justify-center my-1 rounded-3xl overflow-hidden border border-slate-900 shadow-2xl bg-gradient-to-b from-slate-950 via-slate-900 to-black">
+        <canvas id="creatureCanvas" class="w-full h-full cursor-crosshair z-10"></canvas>
+
+        <!-- Touch Guidance Hint -->
+        <div id="touch-hint" class="absolute bottom-6 inset-x-0 text-center pointer-events-none z-20 transition-opacity duration-700 opacity-80">
+            <span class="bg-slate-950/80 backdrop-blur-md border border-slate-800 text-slate-300 text-xs px-4 py-2 rounded-full font-light tracking-wide shadow-xl">
+                ✨ Streichle das Wesen mit sanften, langsamen Finger-Gesten
+            </span>
+        </div>
+    </main>
+
+    <!-- FOOTER / SENSORY FEEDBACK HUD -->
+    <footer class="w-full max-w-lg bio-hud p-4 rounded-3xl z-30 flex justify-around items-center border-slate-800/60">
+        <div class="flex flex-col items-center">
+            <span class="text-[9px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Vertrauen</span>
+            <div class="w-20 bg-slate-900 h-1.5 rounded-full overflow-hidden border border-slate-800">
+                <div id="bar-trust" class="bg-gradient-to-r from-amber-500 to-emerald-400 h-full w-[25%] transition-all duration-300"></div>
+            </div>
+        </div>
+        <div class="flex flex-col items-center">
+            <span class="text-[9px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Reiz-Level</span>
+            <div class="w-20 bg-slate-900 h-1.5 rounded-full overflow-hidden border border-slate-800">
+                <div id="bar-stress" class="bg-gradient-to-r from-sky-400 to-rose-500 h-full w-[10%] transition-all duration-300"></div>
+            </div>
+        </div>
+        <div class="flex flex-col items-center">
+            <span class="text-[9px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Zuneigung</span>
+            <div class="w-20 bg-slate-900 h-1.5 rounded-full overflow-hidden border border-slate-800">
+                <div id="bar-affection" class="bg-gradient-to-r from-pink-500 to-purple-400 h-full w-[40%] transition-all duration-300"></div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- LOG-MODAL FÜR VERSTECKTE GEDANKEN -->
+    <div id="modal-log" class="fixed inset-0 bg-black/90 backdrop-blur-xl z-50 flex items-center justify-center p-4 hidden">
+        <div class="bio-hud p-6 max-w-md w-full rounded-3xl border-slate-700 relative flex flex-col max-h-[80vh]">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="font-cinzel text-base font-bold text-amber-200">Gedanken-Tagebuch des Wesens</h2>
+                <button onclick="toggleThoughtLog()" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
+            </div>
+            <div id="log-list" class="flex-1 overflow-y-auto space-y-3 pr-2 text-xs font-light text-slate-300 italic font-cinzel">
+                <!-- Log Einträge werden hier dynamic erzeugt -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ANATOMICAL CREATURE ENGINE & NEURAL INTERACTION SCRIPT -->
+    <script>
+        // Canvas Initialization
+        const canvas = document.getElementById('creatureCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Synthesizer Audio Engine (Reale biologische Sound-Synthese)
+        let audioCtx = null;
+        function playBioSound(type, pitchModifier = 1) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                const t = audioCtx.currentTime;
+
+                if (type === 'purr') {
+                    // Beruhigendes Schnurren/Brummen
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(65 * pitchModifier, t);
+                    osc.frequency.exponentialRampToValueAtTime(85 * pitchModifier, t + 0.4);
+                    gain.gain.setValueAtTime(0.08, t);
+                    gain.gain.linearRampToValueAtTime(0.001, t + 0.4);
+                    osc.start(t); osc.stop(t + 0.4);
+                } else if (type === 'startle') {
+                    // Erschrecken / Hohes Zischen
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(320 * pitchModifier, t);
+                    osc.frequency.exponentialRampToValueAtTime(140 * pitchModifier, t + 0.15);
+                    gain.gain.setValueAtTime(0.12, t);
+                    gain.gain.linearRampToValueAtTime(0.001, t + 0.15);
+                    osc.start(t); osc.stop(t + 0.15);
+                } else if (type === 'heartbeat') {
+                    // Herzschlag Puls
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(55, t);
+                    osc.frequency.exponentialRampToValueAtTime(30, t + 0.1);
+                    gain.gain.setValueAtTime(0.1, t);
+                    gain.gain.linearRampToValueAtTime(0.001, t + 0.1);
+                    osc.start(t); osc.stop(t + 0.1);
+                }
+            } catch(e) {}
+        }
+
+        // --- GEHEIMES BRAIN / PSYCHE SYSTEM ---
+        let brain = {
+            trust: 25,        // 0 - 100 (Vertrauen baut sich langsam auf)
+            stress: 10,       // 0 - 100 (Überreizung durch schnelles Wischen)
+            affection: 40,    // 0 - 100 (Zuneigung)
+            bpm: 62,          // Herzschlag
+            eyeOpenness: 1.0, // 0 = geschlossen, 1 = weit offen
+            breathingSpeed: 0.03,
+            headTargetX: 0,
+            headTargetY: 0,
+            headX: 0, headY: 0,
+            earAngle: 0,
+            isStartled: false,
+            lastTouchTime: 0
+        };
+
+        // Geheime Gedanken-Datenbank (Wird dynamisch nach Psyche getriggert)
+        const thoughtDatabase = {
+            startle: [
+                "Zu schnell! Dein Schwung lässt mein Herz erstarren...",
+                "Angst! Berühre mich nicht so hektisch...",
+                "Ein kaltes Zucken durchfährt meine Wirbelsäule... Bitte langsamer."
+            ],
+            gentlePetting: [
+                "Deine Wärme beruhigt das Aether in meinen Adern...",
+                "Deine Berührung ist sanft wie der Abendwind...",
+                "Ich spüre keinen Schmerz mehr. Lass deine Hand hier verweilen...",
+                "Mein Herzschlag wird langsam... Ich vertraue deiner Hand."
+            ],
+            overstimulated: [
+                "Zuviel Berührung... Ich brauche einen Moment Atemstille.",
+                "Meine Nerven glühen. Bitte halt kurz inne...",
+                "Ich ziehe mich zurück. Meine Sinne sind überreizt."
+            ],
+            idleAlone: [
+                "Die Stille des Raums ist schwer... Bist du noch da?",
+                "Ich beobachte dich. Was denkst du über mich?",
+                "Mein Kristall schlägt leise... Ich suche deine Sanftheit."
+            ]
+        };
+
+        let thoughtHistory = [];
+
+        function triggerThought(category) {
+            const list = thoughtDatabase[category];
+            if (!list) return;
+            const text = list[Math.floor(Math.random() * list.length)];
+            document.getElementById('thought-text').innerText = `"${text}"`;
+            
+            const now = new Date();
+            const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+            document.getElementById('thought-time').innerText = timeStr;
+
+            thoughtHistory.unshift({ time: timeStr, text });
+            if (thoughtHistory.length > 20) thoughtHistory.pop();
+            updateThoughtLogUI();
+        }
+
+        function updateThoughtLogUI() {
+            const container = document.getElementById('log-list');
+            container.innerHTML = thoughtHistory.map(item => `
+                <div class="bg-slate-900/60 p-3 rounded-2xl border border-slate-800">
+                    <span class="text-[9px] text-sky-400 font-mono block mb-1">${item.time}</span>
+                    <p>"${item.text}"</p>
+                </div>
+            `).join('');
+        }
+
+        function toggleThoughtLog() {
+            document.getElementById('modal-log').classList.toggle('hidden');
+        }
+
+        // --- INTERAKTIVE TOUCH & GESTEN PHYSIK ---
+        let lastTouch = { x: 0, y: 0, time: 0 };
+        let touchSpeed = 0;
+        let isPetting = false;
+
+        function handlePointerDown(e) {
+            isPetting = true;
+            const x = e.clientX || (e.touches && e.touches[0].clientX);
+            const y = e.clientY || (e.touches && e.touches[0].clientY);
+            lastTouch = { x, y, time: performance.now() };
+            document.getElementById('touch-hint').style.opacity = '0';
+        }
+
+        function handlePointerMove(e) {
+            if (!isPetting) return;
+            const x = e.clientX || (e.touches && e.touches[0].clientX);
+            const y = e.clientY || (e.touches && e.touches[0].clientY);
+            const now = performance.now();
+            const dt = Math.max(1, now - lastTouch.time);
+
+            const dist = Math.hypot(x - lastTouch.x, y - lastTouch.y);
+            touchSpeed = dist / dt; // Pixel pro Millisekunde
+
+            // Blick des Wesens folgt dem Finger
+            const rect = canvas.getBoundingClientRect();
+            brain.headTargetX = (x - rect.left - canvas.width / 2) * 0.35;
+            brain.headTargetY = (y - rect.top - canvas.height / 2) * 0.35;
+
+            // REALISTISCHE STREICHEL-AUSWERTUNG
+            if (touchSpeed > 1.8) {
+                // ZU SCHNELL -> ERSCHRECKEN & STRESS
+                brain.stress = Math.min(100, brain.stress + 1.2);
+                brain.trust = Math.max(0, brain.trust - 0.5);
+                brain.bpm = Math.min(140, brain.bpm + 2);
+                
+                if (!brain.isStartled) {
+                    brain.isStartled = true;
+                    playBioSound('startle', 1.2);
+                    triggerThought('startle');
+                    setTimeout(() => brain.isStartled = false, 800);
+                }
+            } else if (touchSpeed > 0.05 && touchSpeed <= 1.2) {
+                // SANFTES STREICHELN -> ZUNUIGUNG & VERTRAUEN
+                brain.stress = Math.max(0, brain.stress - 0.4);
+                brain.trust = Math.min(100, brain.trust + 0.15);
+                brain.affection = Math.min(100, brain.affection + 0.2);
+                brain.bpm = Math.max(50, brain.bpm - 0.2);
+
+                if (Math.random() < 0.08) {
+                    playBioSound('purr', 0.9 + Math.random() * 0.2);
+                }
+
+                if (Math.random() < 0.015) {
+                    triggerThought('gentlePetting');
+                }
+            }
+
+            lastTouch = { x, y, time: now };
+            brain.lastTouchTime = now;
+            updateHUD();
+        }
+
+        function handlePointerUp() {
+            isPetting = false;
+            touchSpeed = 0;
+        }
+
+        canvas.addEventListener('pointerdown', handlePointerDown);
+        canvas.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerUp);
+
+        // Periodischer Herzschlag Sound & Inaktivitäts-Gedanken
+        setInterval(() => {
+            if (brain.bpm > 80) {
+                playBioSound('heartbeat');
+            }
+            // Überreizung prüfen
+            if (brain.stress > 70 && Math.random() < 0.3) {
+                triggerThought('overstimulated');
+            }
+            // Inaktivitäts-Gedanke
+            if (performance.now() - brain.lastTouchTime > 12000 && Math.random() < 0.2) {
+                triggerThought('idleAlone');
+            }
+        }, 3000);
+
+        function updateHUD() {
+            document.getElementById('bar-trust').style.width = `${brain.trust}%`;
+            document.getElementById('bar-stress').style.width = `${brain.stress}%`;
+            document.getElementById('bar-affection').style.width = `${brain.affection}%`;
+
+            const moodText = brain.stress > 60 ? "Überreizt / Ängstlich" : (brain.trust > 60 ? "Tief Vertraut" : "Beobachtend");
+            document.getElementById('bio-vital-text').innerText = `Herzfrequenz: ${Math.round(brain.bpm)} BPM • Status: ${moodText}`;
+        }
+
+        // --- ANATOMISCHE CREATURE RENDER ENGINE (Big Foreground Specimen) ---
+        let animTime = 0;
+
+        function renderCreature() {
+            const w = canvas.width;
+            const h = canvas.height;
+            animTime += 0.03;
+
+            ctx.clearRect(0, 0, w, h);
+
+            // Smooth Interpolation der Kopfposition
+            brain.headX += (brain.headTargetX - brain.headX) * 0.08;
+            brain.headY += (brain.headTargetY - brain.headY) * 0.08;
+
+            // Atmung
+            const breath = Math.sin(animTime * (brain.bpm / 30)) * 6;
+
+            const centerX = w / 2;
+            const centerY = h / 2 + 40;
+
+            ctx.save();
+            ctx.translate(centerX, centerY);
+
+            // Erschreck-Zucken
+            if (brain.isStartled) {
+                ctx.translate((Math.random() - 0.5) * 8, (Math.random() - 0.5) * 8);
+            }
+
+            // 1. SCHATTEN UND ATMENDER BRUSTKORB / RUMPF
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            ctx.beginPath();
+            ctx.ellipse(0, 180, 160, 40, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Anatomischer Torso (Sanfter Bio-Schimmer)
+            const torsoGrad = ctx.createRadialGradient(0, 60, 20, 0, 80, 180);
+            torsoGrad.addColorStop(0, '#1e293b');
+            torsoGrad.addColorStop(0.6, '#0f172a');
+            torsoGrad.addColorStop(1, '#020617');
+
+            ctx.fillStyle = torsoGrad;
+            ctx.beginPath();
+            ctx.ellipse(0, 80 + breath * 0.5, 120 + breath, 100 - breath, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Schulter-Skelett & Organische Platten
+            ctx.fillStyle = '#334155';
+            ctx.beginPath();
+            ctx.ellipse(-90, 40 + breath * 0.3, 45, 75, 0.2, 0, Math.PI * 2);
+            ctx.ellipse(90, 40 + breath * 0.3, 45, 75, -0.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 2. KOPF-STRUKTUR & ANATOMISCHER HALS
+            ctx.save();
+            ctx.translate(brain.headX, brain.headY + breath);
+
+            // Halsmuskel-Stränge
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 40;
+            ctx.beginPath();
+            ctx.moveTo(0, 40);
+            ctx.lineTo(0, -20);
+            ctx.stroke();
+
+            // Bio-Ohren / Reiz-Sensoren (Reagieren auf Stress)
+            const earSpike = brain.stress * 0.3;
+            ctx.fillStyle = '#0f172a';
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 1.5;
+
+            // Linkes Ohr
+            ctx.beginPath();
+            ctx.moveTo(-40, -60);
+            ctx.quadraticCurveTo(-120 - earSpike, -100 - earSpike, -80, -20);
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+
+            // Rechtes Ohr
+            ctx.beginPath();
+            ctx.moveTo(40, -60);
+            ctx.quadraticCurveTo(120 + earSpike, -100 - earSpike, 80, -20);
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+
+            // Hauptschädel
+            const headGrad = ctx.createRadialGradient(0, -60, 10, 0, -50, 110);
+            headGrad.addColorStop(0, '#334155');
+            headGrad.addColorStop(0.7, '#0f172a');
+            headGrad.addColorStop(1, '#020617');
+
+            ctx.fillStyle = headGrad;
+            ctx.beginPath();
+            ctx.ellipse(0, -60, 85, 70, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Stirn-Kristall (Aether-Bio-Kern, leuchtet nach Zuneigung)
+            const crystalGlow = ctx.createRadialGradient(0, -95, 2, 0, -95, 25);
+            const alphaGlow = 0.3 + (brain.affection / 100) * 0.6;
+            crystalGlow.addColorStop(0, `rgba(56, 189, 248, ${alphaGlow})`);
+            crystalGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+            ctx.fillStyle = crystalGlow;
+            ctx.beginPath();
+            ctx.arc(0, -95, 30, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Der eigentliche Kristall
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath();
+            ctx.moveTo(0, -110);
+            ctx.lineTo(12, -95);
+            ctx.lineTo(0, -80);
+            ctx.lineTo(-12, -95);
+            ctx.closePath();
+            ctx.fill();
+
+            // 3. LEBENDIGE AUGEN (Mit Iris-Puppilen-Reaktion)
+            const eyeDilation = Math.max(0.2, 1.0 - (brain.stress / 120)); // Schließt sich bei Stress
+            const eyeY = -60;
+
+            // Augenhöhlen
+            ctx.fillStyle = '#020617';
+            ctx.beginPath();
+            ctx.ellipse(-35, eyeY, 22, 16 * eyeDilation, 0, 0, Math.PI * 2);
+            ctx.ellipse(35, eyeY, 22, 16 * eyeDilation, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Iris (Farbe wechselt mit Emotion)
+            const irisColor = brain.trust > 50 ? '#10b981' : (brain.stress > 50 ? '#f43f5e' : '#38bdf8');
+            ctx.fillStyle = irisColor;
+            ctx.beginPath();
+            ctx.ellipse(-35 + brain.headX * 0.1, eyeY + brain.headY * 0.1, 12, 12 * eyeDilation, 0, 0, Math.PI * 2);
+            ctx.ellipse(35 + brain.headX * 0.1, eyeY + brain.headY * 0.1, 12, 12 * eyeDilation, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Lichtreflexionen im Auge (Lebendigkeit)
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(-30, eyeY - 4, 3, 0, Math.PI * 2);
+            ctx.arc(40, eyeY - 4, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Schnauze / Atem-Ventil
+            ctx.fillStyle = '#1e293b';
+            ctx.beginPath();
+            ctx.ellipse(0, -35, 18, 10, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+            ctx.restore();
+
+            requestAnimationFrame(renderCreature);
+        }
+
+        // Initialize Engine
+        window.onload = () => {
+            updateHUD();
+            renderCreature();
+            triggerThought('idleAlone');
+        };
+    </script>
+</body>
+</html>
+
