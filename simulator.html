@@ -2,718 +2,670 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aetheria: Amphibia Bio-Life HD-2D Ultra</title>
-    <!-- Tailwind CSS & Cinema Pixel Fonts -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Aetheria: AAA HD-2D Engine</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800;900&family=Press+Start+2P&family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;700;900&family=Playfair+Display:ital,wght@1,400&family=Plus+Jakarta+Sans:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        .font-pixel { font-family: 'Press Start 2P', monospace; }
-        .font-cinzel { font-family: 'Cinzel', serif; }
-        body {
+        :root {
+            --ui-glow: rgba(56, 189, 248, 0.4);
+            --ui-dark: rgba(3, 7, 18, 0.85);
+        }
+        
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: #000;
+            overflow: hidden; /* KEIN SCROLLEN MEHR */
+            user-select: none; touch-action: none;
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #010206;
-            color: #f1f5f9;
-            user-select: none;
-            touch-action: none;
-            overflow: hidden;
         }
 
-        .hd2d-panel {
-            background: linear-gradient(135deg, rgba(6, 11, 21, 0.94) 0%, rgba(12, 19, 36, 0.9) 100%);
-            backdrop-filter: blur(24px);
-            border: 1px solid rgba(56, 189, 248, 0.25);
-            box-shadow: 0 30px 70px rgba(0, 0, 0, 0.95), inset 0 1px 1px rgba(255, 255, 255, 0.12);
-            border-radius: 22px;
+        /* ECHTE GAME CANVAS PIPELINE */
+        #game-container {
+            position: absolute; inset: 0;
+            display: flex; justify-content: center; align-items: center;
+            background: #000;
         }
 
-        .hd2d-btn {
-            background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
-            border: 1px solid #bae6fd;
-            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.45), inset 0 1px 0 rgba(255,255,255,0.4);
-            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .hd2d-btn:active { transform: scale(0.95); filter: brightness(1.25); }
-
-        .cinema-vignette {
-            pointer-events: none;
+        /* Der High-Res Canvas fürs Post-Processing und UI rendering */
+        canvas {
             position: absolute;
-            inset: 0;
-            box-shadow: inset 0 0 160px rgba(0,0,0,0.95), inset 0 0 60px rgba(1, 4, 16, 0.9);
-            z-index: 20;
+            top: 0; left: 0; width: 100%; height: 100%;
         }
 
-        canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: #010409; }
-        ::-webkit-scrollbar-thumb { background: #0284c7; border-radius: 4px; }
+        /* PS5 Cinematic Letterbox */
+        .cinematic-bar {
+            position: absolute; left: 0; width: 100%; height: 10vh;
+            background: #000; z-index: 50;
+            box-shadow: 0 0 50px rgba(0,0,0,1);
+        }
+        .cinematic-bar.top { top: 0; }
+        .cinematic-bar.bottom { bottom: 0; }
+
+        /* Minimalistische AAA UI */
+        .hud-panel {
+            position: absolute; z-index: 60;
+            background: var(--ui-dark);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        }
+
+        .hud-top-left {
+            top: 12vh; left: 3vw;
+            padding: 1rem; border-radius: 4px;
+            border-left: 3px solid #38bdf8;
+            min-width: 250px;
+        }
+
+        .hud-bottom-right {
+            bottom: 12vh; right: 3vw;
+            display: flex; gap: 10px;
+        }
+
+        /* RPG Dialog Box für Gedanken */
+        .dialogue-box {
+            position: absolute; bottom: 12vh; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 600px;
+            background: linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(10,15,30,0.9) 20%, rgba(10,15,30,0.9) 80%, rgba(0,0,0,0) 100%);
+            text-align: center; padding: 1.5rem; z-index: 60;
+            border-top: 1px solid rgba(56, 189, 248, 0.3);
+            border-bottom: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        .font-serif-italic { font-family: 'Playfair Display', serif; font-style: italic; }
+        .font-cinzel { font-family: 'Cinzel', serif; }
+
+        /* PS5 Style Buttons */
+        .action-btn {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff; width: 60px; height: 60px;
+            border-radius: 50%; display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer; position: relative; overflow: hidden;
+        }
+        .action-btn::before {
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+            opacity: 0; transition: opacity 0.2s;
+        }
+        .action-btn:active { transform: scale(0.85); border-color: #38bdf8; box-shadow: 0 0 20px var(--ui-glow); }
+        .action-btn:active::before { opacity: 1; }
+        
+        .progress-thin {
+            height: 2px; background: rgba(255,255,255,0.1); width: 100%; margin-top: 4px;
+        }
+        .progress-fill { height: 100%; transition: width 0.3s ease; }
+
+        /* Depth of Field Foreground Blur (CSS Fallback for extreme edges) */
+        .vignette-dof {
+            position: absolute; inset: 0; pointer-events: none; z-index: 40;
+            background: radial-gradient(circle, transparent 50%, rgba(0,2,10,0.6) 100%);
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.9);
+        }
     </style>
 </head>
-<body class="w-screen h-screen flex flex-col justify-between items-center p-2 sm:p-4 relative select-none bg-slate-950">
+<body>
 
-    <!-- Cinematic Lighting Vignette -->
-    <div class="cinema-vignette"></div>
+    <div id="game-container">
+        <!-- Render Canvases -->
+        <canvas id="mainCanvas"></canvas>
+        <div class="vignette-dof"></div>
 
-    <!-- TOP HUD: BIOLOGICAL VITAL SIGNS & MONITORING -->
-    <header class="w-full max-w-2xl hd2d-panel p-3.5 z-30 flex items-center justify-between border-cyan-500/30">
-        <div class="flex items-center gap-3">
-            <div class="relative">
-                <div id="status-indicator-ping" class="w-3.5 h-3.5 rounded-full bg-emerald-400 animate-ping absolute inset-0 opacity-75"></div>
-                <div id="status-indicator" class="w-3.5 h-3.5 rounded-full bg-emerald-500 border border-emerald-300"></div>
+        <!-- Cinematic Bars -->
+        <div class="cinematic-bar top"></div>
+        <div class="cinematic-bar bottom"></div>
+
+        <!-- UI: Top Left Vitals -->
+        <div class="hud-panel hud-top-left">
+            <h1 class="font-cinzel text-lg font-bold text-sky-100 tracking-widest uppercase mb-1">Aether-Batrachos</h1>
+            <p class="text-[10px] text-sky-400 font-mono mb-4" id="ui-status">SUBJEKT-STATUS: HOMEOSTASE</p>
+            
+            <div class="mb-2">
+                <div class="flex justify-between text-[9px] text-slate-300 font-bold tracking-wider">
+                    <span>VITALITÄT</span> <span id="val-hp">100%</span>
+                </div>
+                <div class="progress-thin"><div class="progress-fill bg-emerald-400" id="bar-hp" style="width: 100%;"></div></div>
+            </div>
+            <div class="mb-2">
+                <div class="flex justify-between text-[9px] text-slate-300 font-bold tracking-wider">
+                    <span>FEUCHTIGKEIT</span> <span id="val-h2o">92%</span>
+                </div>
+                <div class="progress-thin"><div class="progress-fill bg-sky-400" id="bar-h2o" style="width: 92%;"></div></div>
             </div>
             <div>
-                <h1 class="font-cinzel text-xs sm:text-sm font-black text-cyan-200 tracking-wider flex items-center gap-2">
-                    <span id="bio-name">Aether-Batrachos Prime</span>
-                    <span id="bio-stage-badge" class="text-[8px] font-pixel px-2 py-0.5 bg-cyan-950 text-cyan-300 border border-cyan-500/40 rounded-md">Specimen #04-X</span>
-                </h1>
-                <p class="text-[9px] font-mono text-slate-400" id="vital-summary">Puls: 54 BPM • Cortisol: 12% • Status: Homeostase Stabil</p>
+                <div class="flex justify-between text-[9px] text-slate-300 font-bold tracking-wider">
+                    <span>STRESS (CORTISOL)</span> <span id="val-stress" class="text-rose-400">12%</span>
+                </div>
+                <div class="progress-thin"><div class="progress-fill bg-rose-500" id="bar-stress" style="width: 12%;"></div></div>
             </div>
         </div>
 
-        <div class="flex items-center gap-2">
-            <button onclick="toggleThoughtLog()" class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700/80 text-[10px] font-pixel text-sky-300 hover:bg-slate-800 transition active:scale-95">
-                🧠 Psyche
-            </button>
-        </div>
-    </header>
-
-    <!-- GEHEIMER NEURONALER GEDANKEN-STREAM -->
-    <div id="thought-box" class="w-full max-w-2xl hd2d-panel p-3.5 z-30 transition-all duration-500 my-1 border-cyan-500/20 bg-slate-950/85">
-        <div class="flex justify-between items-center mb-1">
-            <span class="text-[8px] font-pixel text-cyan-400 flex items-center gap-1.5">
-                <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
-                Innere Bewusstseins-Aktivität
-            </span>
-            <span class="text-[8px] font-mono text-slate-500" id="thought-time">00:00:00</span>
-        </div>
-        <p class="text-xs font-light italic text-cyan-100 font-cinzel leading-relaxed" id="thought-text">
-            "Das Aether im Teich pulsiert... Ich spüre deine Anwesenheit im Licht."
-        </p>
-    </div>
-
-    <!-- MAIN GAME CANVAS (Big HD-2D Frog Diorama) -->
-    <main class="w-full max-w-2xl flex-1 relative flex items-center justify-center my-1 hd2d-panel overflow-hidden p-0 border-cyan-500/30 bg-slate-950">
-        <canvas id="gameCanvas" class="w-full h-full cursor-crosshair z-10"></canvas>
-
-        <!-- Toast Notification Overlay -->
-        <div id="toast-msg" class="absolute top-3 left-1/2 -translate-x-1/2 bg-cyan-500/95 text-slate-950 font-bold px-4 py-1.5 rounded-full text-xs font-cinzel opacity-0 pointer-events-none transition-all duration-300 transform -translate-y-2 z-40 border border-cyan-200 shadow-xl">
-            Bio-System initialisiert
-        </div>
-
-        <!-- DEAD OVERLAY MODAL -->
-        <div id="dead-overlay" class="absolute inset-0 bg-black/95 backdrop-blur-md z-40 flex flex-col items-center justify-center p-6 text-center hidden">
-            <div class="text-5xl mb-3">🪨</div>
-            <h2 class="font-cinzel text-2xl font-black text-rose-500 mb-1">Subjekt Verdorrt</h2>
-            <p class="text-xs text-slate-400 mb-5 max-w-xs leading-relaxed">
-                Der Aether-Frosch ist aufgrund biologischen Versagens oder Austrocknung gestorben. Sein Körper ist zu Aether-Fossil erstarrt.
+        <!-- UI: Cinematic Dialogue (Thoughts) -->
+        <div class="dialogue-box">
+            <p class="text-xs text-sky-500/80 font-mono mb-2" id="ui-time">00:00:00 - NEURONALER STREAM</p>
+            <p class="font-serif-italic text-lg sm:text-xl text-slate-100 leading-relaxed shadow-black drop-shadow-md" id="ui-thought">
+                "Das Wasser ruht. Ich spüre das Flüstern des Aethers..."
             </p>
-            <button onclick="resurrectPet()" class="hd2d-btn text-xs font-pixel font-bold px-5 py-3 rounded-xl text-slate-950">
-                🥚 Neues Ei Ausbrüten
+        </div>
+
+        <!-- UI: Bottom Right Actions -->
+        <div class="hud-bottom-right z-60">
+            <button class="action-btn" onpointerdown="triggerAction('spray')">
+                <span class="text-xl">💧</span>
+                <span class="text-[8px] mt-1 text-slate-300 font-bold">SPRÜHEN</span>
+            </button>
+            <button class="action-btn" onpointerdown="triggerAction('feed')">
+                <span class="text-xl">🪰</span>
+                <span class="text-[8px] mt-1 text-slate-300 font-bold">FÜTTERN</span>
             </button>
         </div>
-
-        <!-- REAL-TIME BIOLOGICAL STATS OVERLAY -->
-        <div class="absolute bottom-2 left-2 right-2 flex justify-between gap-1.5 pointer-events-none z-30 text-[8px] font-pixel">
-            <div class="bg-slate-950/90 backdrop-blur border border-cyan-500/30 px-2 py-1 rounded-lg flex items-center gap-1 text-cyan-300">
-                <span>💧 Haut-Feuchte</span>
-                <div class="w-12 bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                    <div id="bar-moisture" class="bg-cyan-400 h-full w-[100%] transition-all duration-300"></div>
-                </div>
-            </div>
-            <div class="bg-slate-950/90 backdrop-blur border border-amber-500/30 px-2 py-1 rounded-lg flex items-center gap-1 text-amber-300">
-                <span>🍖 Glucose</span>
-                <div class="w-12 bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                    <div id="bar-hunger" class="bg-amber-400 h-full w-[80%] transition-all duration-300"></div>
-                </div>
-            </div>
-            <div class="bg-slate-950/90 backdrop-blur border border-emerald-500/30 px-2 py-1 rounded-lg flex items-center gap-1 text-emerald-300">
-                <span>❤️ Vitalität</span>
-                <div class="w-12 bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                    <div id="bar-health" class="bg-emerald-400 h-full w-[100%] transition-all duration-300"></div>
-                </div>
-            </div>
-            <div class="bg-slate-950/90 backdrop-blur border border-purple-500/30 px-2 py-1 rounded-lg flex items-center gap-1 text-purple-300">
-                <span>🧠 Serotonin</span>
-                <div class="w-12 bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                    <div id="bar-sanity" class="bg-purple-400 h-full w-[70%] transition-all duration-300"></div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- REAL-TIME CARE INTERACTION BAR -->
-    <footer class="w-full max-w-2xl hd2d-panel p-2 z-30 grid grid-cols-4 gap-2 border-cyan-500/30">
-        <button onclick="interact('spray')" class="hd2d-btn p-2.5 rounded-xl flex flex-col items-center justify-center text-cyan-950">
-            <span class="text-xl">🌧️</span>
-            <span class="text-[9px] font-pixel font-bold mt-1 text-slate-950">Befeuchten</span>
-        </button>
-        <button onclick="interact('feed')" class="hd2d-btn p-2.5 rounded-xl flex flex-col items-center justify-center text-cyan-950">
-            <span class="text-xl">🪰</span>
-            <span class="text-[9px] font-pixel font-bold mt-1 text-slate-950">Fliege</span>
-        </button>
-        <button onclick="interact('clean')" class="hd2d-btn p-2.5 rounded-xl flex flex-col items-center justify-center text-cyan-950">
-            <span class="text-xl">✨</span>
-            <span class="text-[9px] font-pixel font-bold mt-1 text-slate-950">Reinigen</span>
-        </button>
-        <button onclick="interact('heal')" class="hd2d-btn p-2.5 rounded-xl flex flex-col items-center justify-center text-cyan-950">
-            <span class="text-xl">🧪</span>
-            <span class="text-[9px] font-pixel font-bold mt-1 text-slate-950">Aether-Serum</span>
-        </button>
-    </footer>
-
-    <!-- MODAL FOR THOUGHT HISTORY LOG -->
-    <div id="modal-log" class="fixed inset-0 bg-black/90 backdrop-blur-xl z-50 flex items-center justify-center p-4 hidden">
-        <div class="hd2d-panel p-5 max-w-md w-full rounded-2xl border-cyan-500/40 relative flex flex-col max-h-[80vh]">
-            <div class="flex justify-between items-center mb-3">
-                <h2 class="font-cinzel text-base font-bold text-cyan-300">Neuronaler Bewusstseins-Log</h2>
-                <button onclick="toggleThoughtLog()" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
-            </div>
-            <div id="log-list" class="flex-1 overflow-y-auto space-y-2.5 pr-2 text-xs font-light text-slate-300 italic font-cinzel">
-            </div>
+        
+        <!-- Touch Hint Overlay -->
+        <div id="interaction-hint" class="absolute inset-0 z-50 pointer-events-none flex items-center justify-center opacity-70 transition-opacity duration-1000">
+            <p class="text-white/50 text-sm tracking-widest font-cinzel">Berühre das Wesen, um zu interagieren</p>
         </div>
     </div>
 
-    <!-- ENGINE & SIMULATION SCRIPT -->
-    <script>
-        // Canvas Setup
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+<script>
+/**
+ * AETHERIA HD-2D ENGINE
+ * AAA Quality Rendering & Bio-Simulation
+ */
 
-        function resizeCanvas() {
-            const rect = canvas.parentElement.getBoundingClientRect();
-            canvas.width = rect.width;
-            canvas.height = rect.height;
+// --- 1. ENGINE SETUP ---
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d', { alpha: false }); // Optimierung
+
+// Offscreen Canvas für das harte, echte PIXEL-ART
+const pixelCanvas = document.createElement('canvas');
+const pCtx = pixelCanvas.getContext('2d', { alpha: false });
+// Feste Retro-Auflösung für den Octopath-Look
+const PIXEL_W = 480; 
+const PIXEL_H = 270;
+pixelCanvas.width = PIXEL_W;
+pixelCanvas.height = PIXEL_H;
+
+let width, height;
+function resize() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+    ctx.imageSmoothingEnabled = false; // HD-2D Crispness
+}
+window.addEventListener('resize', resize);
+resize();
+
+// --- 2. AUDIO SYNTH (Procedural) ---
+let actx = null;
+function playFX(type) {
+    try {
+        if(!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+        if(actx.state === 'suspended') actx.resume();
+        const osc = actx.createOscillator();
+        const gain = actx.createGain();
+        osc.connect(gain);
+        gain.connect(actx.destination);
+        const t = actx.currentTime;
+
+        if (type === 'splash') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, t);
+            osc.frequency.exponentialRampToValueAtTime(100, t + 0.2);
+            gain.gain.setValueAtTime(0.3, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+            osc.start(t); osc.stop(t+0.2);
+        } else if (type === 'croak') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(90, t);
+            osc.frequency.linearRampToValueAtTime(50, t + 0.3);
+            gain.gain.setValueAtTime(0.2, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+            osc.start(t); osc.stop(t+0.3);
+        } else if (type === 'purr') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(40, t);
+            osc.frequency.linearRampToValueAtTime(60, t + 0.5);
+            gain.gain.setValueAtTime(0.05, t);
+            gain.gain.linearRampToValueAtTime(0.01, t + 0.5);
+            osc.start(t); osc.stop(t+0.5);
         }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
+    } catch(e){}
+}
 
-        // Audio System Synth (Synthetische Biolumineszenz & Amphibien-Sounds)
-        let audioCtx = null;
-        function playBioFx(type) {
-            try {
-                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                if (audioCtx.state === 'suspended') audioCtx.resume();
+// --- 3. TIEFE BIO-SIMULATION ---
+const bio = {
+    alive: true,
+    hp: 100,
+    water: 92,
+    stress: 12,
+    food: 80,
+    bpm: 50,
+    
+    // IK & Anatomie (In Pixel-Koordinaten 480x270)
+    torsoX: PIXEL_W / 2,
+    torsoY: PIXEL_H / 2 + 20,
+    headX: PIXEL_W / 2,
+    headY: PIXEL_H / 2 - 10,
+    targetHeadX: PIXEL_W / 2,
+    targetHeadY: PIXEL_H / 2 - 10,
+    
+    neckLength: 22, // MAXIMALER HALS-RADIUS (Verhindert "Kopf abziehen")
+    
+    throatBreath: 0,
+    blink: 0,
+    isShaking: false,
+    
+    update(dt) {
+        if (!this.alive) return;
+        
+        // Metabolismus
+        this.water = Math.max(0, this.water - 0.4 * dt);
+        this.food = Math.max(0, this.food - 0.2 * dt);
+        this.stress = Math.max(0, this.stress - 0.5 * dt); // Erholt sich langsam
 
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                const t = audioCtx.currentTime;
-
-                if (type === 'croak') {
-                    // Tiefes Frosch-Quaken mit Frequenzmodulation
-                    osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(120, t);
-                    osc.frequency.linearRampToValueAtTime(65, t + 0.28);
-                    gain.gain.setValueAtTime(0.18, t);
-                    gain.gain.linearRampToValueAtTime(0.001, t + 0.28);
-                    osc.start(t); osc.stop(t + 0.28);
-                } else if (type === 'splash') {
-                    // Wasser-Spritzer
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(520, t);
-                    osc.frequency.exponentialRampToValueAtTime(140, t + 0.18);
-                    gain.gain.setValueAtTime(0.22, t);
-                    gain.gain.linearRampToValueAtTime(0.001, t + 0.18);
-                    osc.start(t); osc.stop(t + 0.18);
-                } else if (type === 'eat') {
-                    // Fliege schnappen
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(280, t);
-                    osc.frequency.exponentialRampToValueAtTime(750, t + 0.12);
-                    gain.gain.setValueAtTime(0.18, t);
-                    gain.gain.linearRampToValueAtTime(0.001, t + 0.12);
-                    osc.start(t); osc.stop(t + 0.12);
-                } else if (type === 'purr') {
-                    // Sanftes Resonanz-Brummen
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(80, t);
-                    osc.frequency.exponentialRampToValueAtTime(95, t + 0.4);
-                    gain.gain.setValueAtTime(0.08, t);
-                    gain.gain.linearRampToValueAtTime(0.001, t + 0.4);
-                    osc.start(t); osc.stop(t + 0.4);
-                }
-            } catch(e) {}
-        }
-
-        // --- TIEFE BIOLOGISCHE ORGAN- & HORMONSIMULATION ---
-        class BiomimeticEngine {
-            constructor() {
-                this.isAlive = true;
-                // Vitalparameter
-                this.health = 100.0;
-                this.moisture = 92.0;       // Hautfeuchtigkeit %
-                this.glucose = 85.0;        // Blutzucker / Nahrung
-                this.serotonin = 75.0;      // Wohlbefinden / Sanity
-                this.cortisol = 12.0;       // Stresshormon (0-100)
-                this.dopamine = 40.0;       // Belohnung/Lust
-                this.lacticAcid = 5.0;      // Ermüdung der Muskeln
-
-                // Herz & Respiration
-                this.bpm = 54;
-                this.respirationRate = 1.0;
-                this.throatExpansion = 0;
-                this.nictitatingMembrane = 0; // Doppel-Lid Blinzelmembran
-                this.eyeBlink = 0;
-
-                // Position & Kinematik
-                this.headX = 0;
-                this.headY = 0;
-                this.targetHeadX = 0;
-                this.targetHeadY = 0;
-                this.spineFlex = 0;
-                this.isStartled = false;
-                this.lastTouchZone = 'none';
-
-                // Alter & Zeit
-                this.ageSec = 0;
-            }
-
-            update(dt) {
-                if (!this.isAlive) return;
-
-                this.ageSec += dt;
-
-                // 1. Stoffwechsel-Degradation
-                const tempFactor = 1.0;
-                this.moisture = Math.max(0, this.moisture - (0.35 * tempFactor) * dt);
-                this.glucose = Math.max(0, this.glucose - 0.22 * dt);
-                this.lacticAcid = Math.max(0, this.lacticAcid - 0.1 * dt);
-
-                // 2. Hormonelle Wechselwirkungen
-                if (this.cortisol > 30) {
-                    this.serotonin = Math.max(0, this.serotonin - 0.4 * dt);
-                }
-                this.cortisol = Math.max(0, this.cortisol - 0.2 * dt);
-                this.dopamine = Math.max(0, this.dopamine - 0.15 * dt);
-
-                // 3. Organ-Schaden durch unphysiologische Zustände
-                if (this.moisture < 25) {
-                    this.health = Math.max(0, this.health - 0.8 * dt);
-                    this.cortisol = Math.min(100, this.cortisol + 0.6 * dt);
-                }
-                if (this.glucose < 15) {
-                    this.health = Math.max(0, this.health - 0.5 * dt);
-                }
-                if (this.health > 0 && this.moisture > 65 && this.glucose > 50) {
-                    this.health = Math.min(100, this.health + 0.2 * dt);
-                }
-
-                // 4. Herzfrequenz-Synthese aus Cortisol & Aktivität
-                const baseBpm = 42;
-                this.bpm = Math.round(baseBpm + (this.cortisol * 0.75) + (100 - this.moisture) * 0.2);
-
-                // 5. Niktitaut-Membran Reflex (Blinzeln bei Stress oder Austrocknung)
-                if (Math.random() < 0.02 || this.moisture < 30) {
-                    this.eyeBlink = 1.0;
-                } else {
-                    this.eyeBlink = Math.max(0, this.eyeBlink - 0.1);
-                }
-
-                // 6. Tod-Prüfung
-                if (this.health <= 0) {
-                    this.isAlive = false;
-                }
-            }
+        if (this.water < 30 || this.food < 20) {
+            this.hp = Math.max(0, this.hp - 1.5 * dt);
+            this.stress = Math.min(100, this.stress + 1.0 * dt);
+        } else if (this.hp < 100) {
+            this.hp = Math.min(100, this.hp + 0.5 * dt);
         }
 
-        const bio = new BiomimeticEngine();
+        this.bpm = 40 + (this.stress * 0.8) + (100 - this.water) * 0.3;
 
-        // Dynamischer Gedanken-Generator basierend auf hormonellem Profil
-        function evaluateSubconsciousThought() {
-            if (!bio.isAlive) {
-                return "Das Licht erlischt... Meine Lungen erstarren in felsenfestem Aether...";
-            }
+        if (this.hp <= 0) this.alive = false;
 
-            if (bio.cortisol > 60) {
-                return [
-                    "Panik durchströmt meine Adern! Zu viel Druck!",
-                    "Mein Kehlsack krampft... Lass deine Hand vorsichtig sein!",
-                    "Gefahr! Mein Herz schlägt mit " + bio.bpm + " BPM!"
-                ][Math.floor(Math.random() * 3)];
-            }
+        // Blinzel-Logik (Niktitaut-Membran)
+        if (Math.random() < 0.01 + (100 - this.water) * 0.001) this.blink = 1.0;
+        this.blink = Math.max(0, this.blink - 5 * dt); // Schnelles Öffnen
 
-            if (bio.moisture < 30) {
-                return [
-                    "Meine Schuppenschicht brennt... Ich brauche Regen!",
-                    "Die Poren meiner Haut verschließen sich... Wasser!",
-                    "Ich spüre das Trocknen meiner Lebensessenz..."
-                ][Math.floor(Math.random() * 3)];
-            }
+        // INVERSE KINEMATIK (Constraint für den Kopf)
+        // 1. Zuerst Kopf sanft zum Target bewegen (Interpolation)
+        this.headX += (this.targetHeadX - this.headX) * 10 * dt;
+        this.headY += (this.targetHeadY - this.headY) * 10 * dt;
 
-            if (bio.glucose < 25) {
-                return [
-                    "Der Magen zieht sich zusammen... Wo sind die Aether-Fliegen?",
-                    "Meine Blutzucker-Reserven schwinden dahin...",
-                    "Ich brauche frische Proteine..."
-                ][Math.floor(Math.random() * 3)];
-            }
-
-            if (bio.serotonin > 70 && bio.moisture > 70) {
-                return [
-                    "Die kühle Feuchtigkeit dringt tief in meine Poren...",
-                    "Mein Kehlsack vibriert im harmonischen Rhythmus des Teichs...",
-                    "Ich spüre deine sanfte Präsenz. Der Teich ist ruhig.",
-                    "Homeostase erreicht. Ein perfekter Gleichgewichtszustand."
-                ][Math.floor(Math.random() * 4)];
-            }
-
-            return "Das Aether im Wasser pulsiert leise... Ich beobachte das Licht.";
+        // 2. CONSTRAINT (Abstand zum Torso limitieren = Kopf abreißen verhindern)
+        const dx = this.headX - this.torsoX;
+        const dy = this.headY - this.torsoY;
+        const dist = Math.hypot(dx, dy);
+        
+        if (dist > this.neckLength) {
+            // Kopf auf maximalen Radius zurückziehen
+            this.headX = this.torsoX + (dx / dist) * this.neckLength;
+            this.headY = this.torsoY + (dy / dist) * this.neckLength;
         }
 
-        let thoughtHistory = [];
+        // Atmung
+        this.throatBreath = Math.sin(performance.now() * 0.001 * (this.bpm / 20)) * (this.stress > 50 ? 5 : 3);
+    }
+};
 
-        function triggerSubconsciousUpdate() {
-            const text = evaluateSubconsciousThought();
-            document.getElementById('thought-text').innerText = `"${text}"`;
+// --- 4. KI-GEDANKEN ENGINE ---
+const thoughts = [
+    { cond: () => bio.stress > 70, txt: "Mein Puls rast... Die Welt dreht sich zu schnell." },
+    { cond: () => bio.water < 30, txt: "Meine Epidermis reißt. Ich brauche Feuchtigkeit..." },
+    { cond: () => bio.food < 30, txt: "Der Magen krampft. Die Jagd ruft, doch ich bin schwach." },
+    { cond: () => bio.stress < 20 && bio.water > 80, txt: "Der Aether fließt ruhig. Ein perfekter Zustand." },
+    { cond: () => true, txt: "Das Licht bricht sich im Teich. Ich wache." }
+];
 
-            const now = new Date();
-            const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-            document.getElementById('thought-time').innerText = timeStr;
+function updateThought() {
+    if(!bio.alive) {
+        document.getElementById('ui-thought').innerText = "Das Aether ist erloschen. Die Hülle versteinert.";
+        document.getElementById('ui-status').innerText = "SUBJEKT-STATUS: VERSTORBEN";
+        return;
+    }
+    
+    let selected = thoughts.find(t => t.cond());
+    document.getElementById('ui-thought').innerText = `"${selected.txt}"`;
+    
+    const now = new Date();
+    document.getElementById('ui-time').innerText = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')} - NEURONALER STREAM`;
+    
+    let status = "HOMEOSTASE";
+    if(bio.stress > 60) status = "KRITISCHER STRESS";
+    else if(bio.water < 40) status = "AUSTROCKNUNG";
+    document.getElementById('ui-status').innerText = `SUBJEKT-STATUS: ${status}`;
+}
+setInterval(updateThought, 5000);
 
-            thoughtHistory.unshift({ time: timeStr, text });
-            if (thoughtHistory.length > 30) thoughtHistory.pop();
-            updateThoughtLogUI();
-        }
+// --- 5. INTERAKTIONEN & PHYSIK ---
+let interactParticles = [];
+let screenShake = 0;
 
-        function updateThoughtLogUI() {
-            const container = document.getElementById('log-list');
-            container.innerHTML = thoughtHistory.map(item => `
-                <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
-                    <span class="text-[8px] font-pixel text-cyan-400 block mb-1">${item.time}</span>
-                    <p>"${item.text}"</p>
-                </div>
-            `).join('');
-        }
-
-        function toggleThoughtLog() {
-            document.getElementById('modal-log').classList.toggle('hidden');
-        }
-
-        function showToast(msg) {
-            const toast = document.getElementById('toast-msg');
-            toast.innerText = msg;
-            toast.classList.remove('opacity-0', '-translate-y-2');
-            toast.classList.add('opacity-100', 'translate-y-0');
-            setTimeout(() => {
-                toast.classList.remove('opacity-100', 'translate-y-0');
-                toast.classList.add('opacity-0', '-translate-y-2');
-            }, 2000);
-        }
-
-        // Haupt-Update Schleife (Autonom sekündlich)
-        let lastSimTime = performance.now();
-        setInterval(() => {
-            const now = performance.now();
-            const dt = (now - lastSimTime) / 1000;
-            lastSimTime = now;
-
-            bio.update(dt);
-
-            if (!bio.isAlive) {
-                document.getElementById('dead-overlay').classList.remove('hidden');
-                document.getElementById('status-indicator').className = "w-3.5 h-3.5 rounded-full bg-rose-600 border border-rose-400";
-                document.getElementById('status-indicator-ping').className = "hidden";
-            } else {
-                if (Math.random() < 0.25) {
-                    triggerSubconsciousUpdate();
-                    if (bio.serotonin > 60 && Math.random() < 0.3) playBioFx('croak');
-                }
-            }
-
-            updateHUD();
-        }, 1000);
-
-        function interact(type) {
-            if (!bio.isAlive) return;
-
-            if (type === 'spray') {
-                bio.moisture = Math.min(100, bio.moisture + 32);
-                bio.serotonin = Math.min(100, bio.serotonin + 12);
-                showToast("🌧️ Wasser gesprüht (+Feuchte)");
-                playBioFx('splash');
-                spawnWaterParticles();
-            } else if (type === 'feed') {
-                bio.glucose = Math.min(100, bio.glucose + 28);
-                bio.dopamine = Math.min(100, bio.dopamine + 25);
-                showToast("🪰 Aether-Fliege verfüttert (+Glucose)");
-                playBioFx('eat');
-            } else if (type === 'clean') {
-                bio.serotonin = Math.min(100, bio.serotonin + 22);
-                bio.cortisol = Math.max(0, bio.cortisol - 15);
-                showToast("✨ Epidermis gereinigt (+Serotonin)");
-                playBioFx('splash');
-            } else if (type === 'heal') {
-                bio.health = Math.min(100, bio.health + 38);
-                showToast("🧪 Aether-Serum verabreicht (+Vitalität)");
-                playBioFx('splash');
-            }
-
-            triggerSubconsciousUpdate();
-            updateHUD();
-        }
-
-        function resurrectPet() {
-            bio.isAlive = true;
-            bio.health = 100;
-            bio.moisture = 92;
-            bio.glucose = 85;
-            bio.serotonin = 75;
-            bio.cortisol = 12;
-            bio.dopamine = 40;
-            bio.ageSec = 0;
-
-            document.getElementById('dead-overlay').classList.add('hidden');
-            document.getElementById('status-indicator').className = "w-3.5 h-3.5 rounded-full bg-emerald-500 border border-emerald-300";
-            document.getElementById('status-indicator-ping').className = "w-3.5 h-3.5 rounded-full bg-emerald-400 animate-ping absolute inset-0 opacity-75";
-            showToast("🥚 Neues Ei ausgebrütet!");
-            updateHUD();
-        }
-
-        function updateHUD() {
-            document.getElementById('bar-moisture').style.width = `${Math.round(bio.moisture)}%`;
-            document.getElementById('bar-hunger').style.width = `${Math.round(bio.glucose)}%`;
-            document.getElementById('bar-health').style.width = `${Math.round(bio.health)}%`;
-            document.getElementById('bar-sanity').style.width = `${Math.round(bio.serotonin)}%`;
-
-            const statusText = !bio.isAlive ? "VERDORRT" : (bio.health < 40 ? "Kritisch" : (bio.moisture < 30 ? "Austrocknend" : "Homeostase Stabil"));
-            document.getElementById('vital-summary').innerText = `Puls: ${bio.bpm} BPM • Cortisol: ${Math.round(bio.cortisol)}% • Status: ${statusText}`;
-        }
-
-        // --- MULTI-ZONE TOUCH & PHYSIKALISCHES GESTEN-SYSTEM ---
-        let lastTouch = { x: 0, y: 0, time: 0 };
-        let isTouching = false;
-
-        function handlePointerDown(e) {
-            if (!bio.isAlive) return;
-            isTouching = true;
-            const x = e.clientX || (e.touches && e.touches[0].clientX);
-            const y = e.clientY || (e.touches && e.touches[0].clientY);
-            lastTouch = { x, y, time: performance.now() };
-        }
-
-        function handlePointerMove(e) {
-            if (!isTouching || !bio.isAlive) return;
-            const x = e.clientX || (e.touches && e.touches[0].clientX);
-            const y = e.clientY || (e.touches && e.touches[0].clientY);
-            const now = performance.now();
-            const dt = Math.max(1, now - lastTouch.time);
-
-            const dist = Math.hypot(x - lastTouch.x, y - lastTouch.y);
-            const speed = dist / dt; // Pixel / ms
-
-            const rect = canvas.getBoundingClientRect();
-            bio.targetHeadX = (x - rect.left - canvas.width / 2) * 0.28;
-            bio.targetHeadY = (y - rect.top - canvas.height / 2) * 0.28;
-
-            // Geschwindigkeits-Sensorik
-            if (speed > 2.2) {
-                // Hektische Schrubb-Bewegung -> Cortisol Ausstoß
-                bio.cortisol = Math.min(100, bio.cortisol + 2.5);
-                bio.serotonin = Math.max(0, bio.serotonin - 1.2);
-                
-                if (!bio.isStartled) {
-                    bio.isStartled = true;
-                    playBioFx('croak');
-                    triggerSubconsciousUpdate();
-                    setTimeout(() => bio.isStartled = false, 700);
-                }
-            } else if (speed > 0.08 && speed <= 1.4) {
-                // Sanftes rhythmisches Streicheln
-                bio.cortisol = Math.max(0, bio.cortisol - 0.8);
-                bio.serotonin = Math.min(100, bio.serotonin + 0.6);
-                bio.dopamine = Math.min(100, bio.dopamine + 0.5);
-
-                if (Math.random() < 0.08) {
-                    playBioFx('purr');
-                }
-            }
-
-            lastTouch = { x, y, time: now };
-            updateHUD();
-        }
-
-        window.addEventListener('pointerdown', handlePointerDown);
-        window.addEventListener('pointermove', handlePointerMove);
-        window.addEventListener('pointerup', () => isTouching = false);
-
-        // --- OCTOPATH HD-2D HIGH-END CANVAS ENGINE ---
-        let particles = [];
-        let animTick = 0;
-
-        function spawnWaterParticles() {
-            for (let i = 0; i < 22; i++) {
-                particles.push({
-                    x: canvas.width / 2 + (Math.random() - 0.5) * 220,
-                    y: canvas.height / 2 - 60 + (Math.random() - 0.5) * 100,
-                    vy: 2.5 + Math.random() * 3.5,
-                    life: 1.0,
-                    char: "💧"
-                });
-            }
-        }
-
-        function renderHD2DFrog() {
-            const w = canvas.width;
-            const h = canvas.height;
-            animTick += 0.04;
-
-            ctx.clearRect(0, 0, w, h);
-
-            // Kopf-Skelett Interpolation
-            bio.headX += (bio.targetHeadX - bio.headX) * 0.08;
-            bio.headY += (bio.targetHeadY - bio.headY) * 0.08;
-
-            // 1. ENVIRONMENT BACKGROUND (Aether Pond Diorama)
-            const pondY = h * 0.42;
-
-            const bgGrad = ctx.createLinearGradient(0, 0, 0, pondY);
-            bgGrad.addColorStop(0, '#010409');
-            bgGrad.addColorStop(1, '#0f172a');
-            ctx.fillStyle = bgGrad;
-            ctx.fillRect(0, 0, w, pondY);
-
-            const waterGrad = ctx.createLinearGradient(0, pondY, 0, h);
-            waterGrad.addColorStop(0, '#0284c7');
-            waterGrad.addColorStop(0.6, '#0369a1');
-            waterGrad.addColorStop(1, '#021329');
-            ctx.fillStyle = waterGrad;
-            ctx.fillRect(0, pondY, w, h - pondY);
-
-            // Wasser-Wellen Gitter (Pixel Grid)
-            ctx.strokeStyle = 'rgba(56, 189, 248, 0.18)';
-            ctx.lineWidth = 1;
-            for (let y = pondY + 8; y < h; y += 16) {
-                const waveOffset = Math.sin(animTick + y * 0.06) * 7;
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(w, y + waveOffset * 0.25);
-                ctx.stroke();
-            }
-
-            // 2. RIESIGER ANATOMISCHER FROSCH
-            const cx = w / 2;
-            const cy = h / 2 + 35;
-
-            ctx.save();
-            ctx.translate(cx, cy);
-
-            if (bio.isStartled) {
-                ctx.translate((Math.random() - 0.5) * 8, (Math.random() - 0.5) * 8);
-            }
-
-            // Kehlsack-Atmung
-            const throat = Math.sin(animTick * (bio.bpm / 20)) * (bio.isAlive ? (8 + (bio.cortisol * 0.12)) : 0);
-
-            // Schatten
-            ctx.fillStyle = 'rgba(0,0,0,0.65)';
-            ctx.beginPath();
-            ctx.ellipse(0, 110, 150, 40, 0, 0, Math.PI * 2);
-            ctx.fill();
-
-            if (!bio.isAlive) {
-                // FOSSILER GRAUER ZUSTAND
-                ctx.fillStyle = '#334155';
-                ctx.beginPath();
-                ctx.ellipse(0, 40, 120, 85, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#1e293b';
-                ctx.beginPath();
-                ctx.arc(-45, -20, 24, 0, Math.PI * 2);
-                ctx.arc(45, -20, 24, 0, Math.PI * 2);
-                ctx.fill();
-            } else {
-                // LEBENDIGER FROSCH
-                // Oberschenkel
-                ctx.fillStyle = '#065f46';
-                ctx.fillRect(-150, 30, 55, 65);
-                ctx.fillRect(95, 30, 55, 65);
-
-                // Haupt-Körper (Farbe verändert sich bei Austrocknung!)
-                const skinColor = bio.moisture < 35 ? '#78350f' : '#047857';
-                ctx.fillStyle = skinColor;
-                ctx.beginPath();
-                ctx.ellipse(0, 40, 120, 90, 0, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Kehlsack
-                ctx.fillStyle = '#a7f3d0';
-                ctx.beginPath();
-                ctx.ellipse(0, 12 + throat * 0.6, 60 + throat, 42 + throat, 0, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Vorderbeine
-                ctx.fillStyle = '#065f46';
-                ctx.fillRect(-100, 65, 28, 55);
-                ctx.fillRect(72, 65, 28, 55);
-
-                // Kopf
-                ctx.save();
-                ctx.translate(bio.headX, bio.headY);
-
-                ctx.fillStyle = bio.moisture < 35 ? '#92400e' : '#059669';
-                ctx.beginPath();
-                ctx.ellipse(0, -32, 100, 58, 0, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Augenhöhlen
-                ctx.fillStyle = '#047857';
-                ctx.beginPath();
-                ctx.arc(-52, -70, 28, 0, Math.PI * 2);
-                ctx.arc(52, -70, 28, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Aether-Iris
-                const irisColor = bio.cortisol > 50 ? '#f43f5e' : (bio.serotonin > 60 ? '#10b981' : '#facc15');
-                ctx.fillStyle = irisColor;
-                ctx.beginPath();
-                ctx.arc(-52, -70, 20, 0, Math.PI * 2);
-                ctx.arc(52, -70, 20, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Horizontale Pupille mit Niktitaut-Membran (Blinken)
-                ctx.fillStyle = '#020617';
-                const eyeHeight = Math.max(1, 7 * (1.0 - bio.eyeBlink));
-                ctx.fillRect(-65, -70 - (eyeHeight / 2), 26, eyeHeight);
-                ctx.fillRect(39, -70 - (eyeHeight / 2), 26, eyeHeight);
-
-                // Reflexe
-                ctx.fillStyle = '#ffffff';
-                ctx.beginPath();
-                ctx.arc(-48, -74, 4, 0, Math.PI * 2);
-                ctx.arc(56, -74, 4, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Schnauze
-                ctx.strokeStyle = '#022c22';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.arc(0, -26, 70, 0.1, Math.PI - 0.1);
-                ctx.stroke();
-
-                ctx.restore();
-            }
-
-            ctx.restore();
-
-            // Partikel (Regentropfen)
-            particles.forEach((p, idx) => {
-                p.y += p.vy;
-                p.life -= 0.02;
-                ctx.font = '18px sans-serif';
-                ctx.fillText(p.char, p.x, p.y);
-                if (p.life <= 0) particles.splice(idx, 1);
+function triggerAction(type) {
+    if (!bio.alive) return;
+    document.getElementById('interaction-hint').style.opacity = '0';
+    
+    if (type === 'spray') {
+        bio.water = Math.min(100, bio.water + 30);
+        bio.stress = Math.max(0, bio.stress - 15);
+        playFX('splash');
+        screenShake = 5;
+        // Erzeuge Partikel im Pixel-Raum
+        for(let i=0; i<30; i++) {
+            interactParticles.push({
+                x: bio.torsoX + (Math.random()-0.5)*100,
+                y: bio.torsoY - 50 + (Math.random()-0.5)*50,
+                vx: (Math.random()-0.5)*2,
+                vy: 2 + Math.random()*3,
+                life: 1.0, color: '#38bdf8'
             });
-
-            requestAnimationFrame(renderHD2DFrog);
         }
+    } else if (type === 'feed') {
+        bio.food = Math.min(100, bio.food + 40);
+        playFX('croak');
+        bio.targetHeadY -= 20; // Schnapp-Bewegung
+        setTimeout(() => bio.targetHeadY += 20, 200);
+    }
+    updateUI();
+    updateThought();
+}
 
-        window.onload = () => {
-            updateHUD();
-            renderHD2DFrog();
-            triggerSubconsciousUpdate();
-        };
-    </script>
+let isTouching = false;
+let lastTx = 0, lastTy = 0, lastTime = 0;
+
+window.addEventListener('pointerdown', (e) => {
+    if(!bio.alive) return;
+    isTouching = true;
+    lastTx = e.clientX; lastTy = e.clientY;
+    lastTime = performance.now();
+    document.getElementById('interaction-hint').style.opacity = '0';
+});
+
+window.addEventListener('pointermove', (e) => {
+    if (!isTouching || !bio.alive) return;
+    
+    const now = performance.now();
+    const dt = Math.max(1, now - lastTime);
+    const dist = Math.hypot(e.clientX - lastTx, e.clientY - lastTy);
+    const speed = dist / dt; // px/ms
+
+    // Mappe Bildschirm-Koordinaten in Pixel-Koordinaten
+    const scaleX = PIXEL_W / width;
+    const scaleY = PIXEL_H / height;
+    
+    bio.targetHeadX = e.clientX * scaleX;
+    bio.targetHeadY = e.clientY * scaleY;
+
+    // Physikalisches Feedback: Zu schnell = Stress, Sanft = Purr
+    if (speed > 2.0) {
+        bio.stress = Math.min(100, bio.stress + 3);
+        if(!bio.isShaking) {
+            bio.isShaking = true;
+            playFX('croak');
+            screenShake = 8;
+            setTimeout(() => bio.isShaking = false, 500);
+        }
+    } else if (speed > 0.1 && speed < 1.0) {
+        bio.stress = Math.max(0, bio.stress - 1);
+        if(Math.random() < 0.05) playFX('purr');
+    }
+
+    lastTx = e.clientX; lastTy = e.clientY;
+    lastTime = now;
+});
+
+window.addEventListener('pointerup', () => {
+    isTouching = false;
+    // Kopf geht in Ruheposition zurück
+    bio.targetHeadX = PIXEL_W / 2;
+    bio.targetHeadY = PIXEL_H / 2 - 10;
+});
+
+// --- 6. UI UPDATE LOGIC ---
+function updateUI() {
+    document.getElementById('val-hp').innerText = `${Math.round(bio.hp)}%`;
+    document.getElementById('bar-hp').style.width = `${bio.hp}%`;
+    
+    document.getElementById('val-h2o').innerText = `${Math.round(bio.water)}%`;
+    document.getElementById('bar-h2o').style.width = `${bio.water}%`;
+    
+    document.getElementById('val-stress').innerText = `${Math.round(bio.stress)}%`;
+    document.getElementById('bar-stress').style.width = `${bio.stress}%`;
+}
+
+// --- 7. HD-2D RENDER PIPELINE ---
+let globalTime = 0;
+
+function drawPixelArtScene() {
+    // 1. CLEAR
+    pCtx.fillStyle = '#020617'; // Deep dark void
+    pCtx.fillRect(0, 0, PIXEL_W, PIXEL_H);
+
+    const horizonY = PIXEL_H * 0.45;
+
+    // 2. PARALLAX BACKGROUND (Nebliger Wald/Höhle)
+    const bgGrad = pCtx.createLinearGradient(0, 0, 0, horizonY);
+    bgGrad.addColorStop(0, '#000000');
+    bgGrad.addColorStop(0.5, '#061329');
+    bgGrad.addColorStop(1, '#0f2947');
+    pCtx.fillStyle = bgGrad;
+    pCtx.fillRect(0, 0, PIXEL_W, horizonY);
+    
+    // Fake Bäume/Silhouetten (Tiefenunschärfe simuliert durch dunkle Farben)
+    pCtx.fillStyle = '#030b1a';
+    pCtx.fillRect(50, 20, 20, horizonY);
+    pCtx.fillRect(300, 40, 30, horizonY);
+    pCtx.fillRect(400, 10, 15, horizonY);
+
+    // 3. WASSER (Aether Pond)
+    const waterGrad = pCtx.createLinearGradient(0, horizonY, 0, PIXEL_H);
+    waterGrad.addColorStop(0, '#0c4a6e');
+    waterGrad.addColorStop(1, '#020617');
+    pCtx.fillStyle = waterGrad;
+    pCtx.fillRect(0, horizonY, PIXEL_W, PIXEL_H - horizonY);
+
+    // Wellen (Ripples)
+    pCtx.strokeStyle = 'rgba(56, 189, 248, 0.15)';
+    pCtx.lineWidth = 1;
+    for (let y = horizonY + 5; y < PIXEL_H; y += 8) {
+        const wave = Math.sin(globalTime*2 + y * 0.1) * 4;
+        pCtx.beginPath();
+        pCtx.moveTo(0, y);
+        pCtx.lineTo(PIXEL_W, y + wave);
+        pCtx.stroke();
+    }
+
+    // 4. REFLEXION DES WESENS (Screen Space Reflection Fake)
+    pCtx.save();
+    pCtx.translate(0, horizonY * 2 + 10);
+    pCtx.scale(1, -1); // Vertikal spiegeln
+    pCtx.globalAlpha = 0.15;
+    drawFrogBody(true); // Draw Simplified
+    pCtx.restore();
+    pCtx.globalAlpha = 1.0;
+
+    // 5. DAS WESEN (Hauptkörper)
+    drawFrogBody(false);
+
+    // 6. PIXEL PARTIKEL
+    for (let i = interactParticles.length - 1; i >= 0; i--) {
+        let p = interactParticles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.05;
+        pCtx.fillStyle = p.color;
+        pCtx.globalAlpha = p.life;
+        pCtx.fillRect(p.x, p.y, 2, 2);
+        if (p.life <= 0) interactParticles.splice(i, 1);
+    }
+    pCtx.globalAlpha = 1.0;
+}
+
+function drawFrogBody(isReflection) {
+    // Erschüttern
+    let ox = 0, oy = 0;
+    if (bio.isShaking && !isReflection) {
+        ox = (Math.random()-0.5)*4;
+        oy = (Math.random()-0.5)*4;
+    }
+
+    pCtx.save();
+    pCtx.translate(ox, oy);
+
+    const skinColor = bio.water < 40 ? '#451a03' : (bio.alive ? '#064e3b' : '#1e293b');
+    const lightSkin = bio.water < 40 ? '#78350f' : (bio.alive ? '#047857' : '#334155');
+
+    // Schatten
+    if (!isReflection) {
+        pCtx.fillStyle = 'rgba(0,0,0,0.7)';
+        pCtx.beginPath();
+        pCtx.ellipse(bio.torsoX, bio.torsoY + 45, 65, 15, 0, 0, Math.PI*2);
+        pCtx.fill();
+    }
+
+    // Oberschenkel
+    pCtx.fillStyle = skinColor;
+    pCtx.fillRect(bio.torsoX - 70, bio.torsoY - 10, 30, 40);
+    pCtx.fillRect(bio.torsoX + 40, bio.torsoY - 10, 30, 40);
+
+    // Torso
+    pCtx.fillStyle = lightSkin;
+    pCtx.beginPath();
+    pCtx.ellipse(bio.torsoX, bio.torsoY, 55, 40, 0, 0, Math.PI*2);
+    pCtx.fill();
+
+    // Textur-Punkte (Schuppen)
+    pCtx.fillStyle = skinColor;
+    pCtx.fillRect(bio.torsoX - 20, bio.torsoY - 20, 4, 4);
+    pCtx.fillRect(bio.torsoX + 15, bio.torsoY - 10, 3, 3);
+    pCtx.fillRect(bio.torsoX - 10, bio.torsoY + 15, 5, 5);
+
+    // Vorderbeine
+    pCtx.fillStyle = skinColor;
+    pCtx.fillRect(bio.torsoX - 45, bio.torsoY + 15, 12, 35);
+    pCtx.fillRect(bio.torsoX + 33, bio.torsoY + 15, 12, 35);
+
+    // --- KOPF MIT CONSTRAINTS ---
+    pCtx.save();
+    pCtx.translate(bio.headX, bio.headY);
+
+    // Kehlsack
+    if (bio.alive) {
+        pCtx.fillStyle = '#a7f3d0';
+        pCtx.beginPath();
+        pCtx.ellipse(0, 15 + bio.throatBreath, 28 + bio.throatBreath*0.5, 20 + bio.throatBreath, 0, 0, Math.PI*2);
+        pCtx.fill();
+    }
+
+    // Schädel
+    pCtx.fillStyle = lightSkin;
+    pCtx.beginPath();
+    pCtx.ellipse(0, -10, 45, 25, 0, 0, Math.PI*2);
+    pCtx.fill();
+
+    // Augenhöhlen
+    pCtx.fillStyle = skinColor;
+    pCtx.beginPath();
+    pCtx.arc(-22, -28, 12, 0, Math.PI*2);
+    pCtx.arc(22, -28, 12, 0, Math.PI*2);
+    pCtx.fill();
+
+    if (bio.alive) {
+        // Leuchtende Iris
+        const irisColor = bio.stress > 60 ? '#f43f5e' : '#facc15';
+        pCtx.fillStyle = irisColor;
+        pCtx.beginPath();
+        pCtx.arc(-22, -28, 8, 0, Math.PI*2);
+        pCtx.arc(22, -28, 8, 0, Math.PI*2);
+        pCtx.fill();
+
+        // Pupille & Niktitaut-Blinzeln
+        pCtx.fillStyle = '#000';
+        const eyeOpen = Math.max(0.5, 6 * (1.0 - bio.blink));
+        pCtx.fillRect(-28, -28 - eyeOpen/2, 12, eyeOpen);
+        pCtx.fillRect(16, -28 - eyeOpen/2, 12, eyeOpen);
+
+        // Glanzlicht
+        pCtx.fillStyle = '#fff';
+        pCtx.fillRect(-24, -30, 2, 2);
+        pCtx.fillRect(20, -30, 2, 2);
+    }
+
+    // Mund
+    pCtx.strokeStyle = '#020617';
+    pCtx.lineWidth = 2;
+    pCtx.beginPath();
+    pCtx.arc(0, -5, 30, 0.2, Math.PI-0.2);
+    pCtx.stroke();
+
+    pCtx.restore(); // Ende Kopf
+    pCtx.restore(); // Ende Körper
+}
+
+// --- 8. POST-PROCESSING (HD-2D) ---
+function renderHighResEffects() {
+    // Screen Shake anwenden
+    if(screenShake > 0) {
+        const dx = (Math.random()-0.5)*screenShake;
+        const dy = (Math.random()-0.5)*screenShake;
+        ctx.translate(dx, dy);
+        screenShake *= 0.9;
+        if(screenShake < 0.5) screenShake = 0;
+    }
+
+    // Zeichne das Pixel-Art Bild GESTOCHEN SCHARF auf den Fullscreen
+    ctx.drawImage(pixelCanvas, 0, 0, width, height);
+
+    // --- HD EFFEKTE ---
+    ctx.globalCompositeOperation = 'screen';
+
+    // 1. God Rays (Volumetrisches Licht)
+    const rayGrad = ctx.createLinearGradient(width/2, 0, width/2, height);
+    rayGrad.addColorStop(0, 'rgba(56, 189, 248, 0.2)');
+    rayGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+    
+    ctx.fillStyle = rayGrad;
+    ctx.beginPath();
+    ctx.moveTo(width/2 - 200, 0);
+    ctx.lineTo(width/2 + 200, 0);
+    ctx.lineTo(width/2 + Math.sin(globalTime)*100 + 400, height);
+    ctx.lineTo(width/2 + Math.sin(globalTime)*100 - 400, height);
+    ctx.fill();
+
+    // 2. Ambient Bloom / Glow
+    if (bio.alive) {
+        const bloom = ctx.createRadialGradient(width/2, height/2, 0, width/2, height/2, height*0.6);
+        bloom.addColorStop(0, 'rgba(56, 189, 248, 0.15)');
+        bloom.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = bloom;
+        ctx.fillRect(0,0,width,height);
+    }
+
+    // Reset Transformation & Blend Mode
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+// --- 9. MAIN GAME LOOP ---
+let lastFrameTime = performance.now();
+
+function loop() {
+    const now = performance.now();
+    const dt = (now - lastFrameTime) / 1000;
+    lastFrameTime = now;
+    globalTime += dt;
+
+    // Logik
+    bio.update(dt);
+    if(Math.random() < 0.1) updateUI(); // UI nicht jeden Frame aktualisieren (Performance)
+
+    // Rendering Pipeline
+    drawPixelArtScene(); // Rendere tiefe Pixel
+    renderHighResEffects(); // Rendere PS5 Post-Processing
+
+    requestAnimationFrame(loop);
+}
+
+// Start
+updateThought();
+loop();
+
+</script>
 </body>
 </html>
 
