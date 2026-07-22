@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#020203">
-    <title>ANIMA | Autonomous Biological Nexus</title>
+    <title>ANIMA | Autonomous Biological Nexus (Cloud Synced)</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -210,7 +210,7 @@
         import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // ==========================================
-        // CONFIG & FIREBASE
+        // CONFIG & FIREBASE INITIALISIERUNG
         // ==========================================
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
         const appIdString = typeof __app_id !== 'undefined' ? __app_id : 'anima-nexus-default';
@@ -247,7 +247,7 @@
                 try {
                     const docSnap = await getDoc(docRef);
                     if (docSnap.exists()) return docSnap.data();
-                } catch (e) { console.warn("Load Error", e); }
+                } catch (e) { console.warn("Lade-Fehler", e); }
                 return null;
             },
             async save(id, data) {
@@ -255,7 +255,7 @@
                 const docRef = doc(db, 'artifacts', appIdString, 'public', 'data', 'anima_states', id);
                 try {
                     await setDoc(docRef, data, { merge: true });
-                } catch (e) { console.warn("Save Error", e); }
+                } catch (e) { console.warn("Speicher-Fehler", e); }
             },
             async registerSession(id) {
                 if(!db) return;
@@ -271,7 +271,7 @@
                     if (snapshot.exists()) {
                         const data = snapshot.data();
                         if (data.sessionId && data.sessionId !== instanceSessionId) {
-                            onDisconnect(); // Kicked out by another device!
+                            onDisconnect(); // Despawnt ANIMA hier, da sie auf einem anderen Gerät aktiv wurde!
                         }
                     }
                 });
@@ -297,7 +297,7 @@
                     warning.classList.remove('offline');
                 } else {
                     warning.classList.add('offline');
-                    Interaction.sleep(); // Schließt Overlay
+                    Interaction.sleep();
                 }
             }
         };
@@ -338,12 +338,12 @@
                 localStorage.setItem('user_groq_api_key', key);
                 animaId = await hashApiKey(key);
 
-                // Single Session Management Registration
+                // Registriere diese Instanz in der Cloud für den API-Key & starte Live-Session-Überwachung
                 await CloudSync.registerSession(animaId);
                 if (sessionListenerUnsub) sessionListenerUnsub();
                 sessionListenerUnsub = CloudSync.listenSession(animaId, () => {
                     Renderer.triggerDissolution();
-                    setTimeout(() => this.disconnect("Sitzung beendet: API-Key wurde auf einem anderen Gerät aktiviert."), 1500);
+                    setTimeout(() => this.disconnect("ANIMA hat sich an einem anderen Ort manifestiert. Sitzung hier beendet."), 1500);
                 });
 
                 document.getElementById('auth-layer').style.display = 'none';
@@ -363,7 +363,7 @@
         };
 
         // ==========================================
-        // 2. ORGANISM & MEMORY SYSTEM
+        // 2. ORGANISM & CLOUD-ERINNERUNGS-SYSTEM
         // ==========================================
         const Organism = {
             id: null,
@@ -382,6 +382,7 @@
                 this.roomCode = Math.floor(1000 + Math.random() * 9000).toString(); 
                 document.getElementById('room-switch-btn').innerText = `RAUM: ${this.roomCode}`;
 
+                // Kompletter Zustand wird aus der Cloud geladen (egal von welchem Gerät)
                 const cloudState = await CloudSync.load(id);
                 if (cloudState) {
                     this.stats = cloudState.stats || this.stats;
@@ -389,10 +390,10 @@
                     this.memory = cloudState.memory || [];
                     this.coreBeliefs = (cloudState.coreBeliefs && cloudState.coreBeliefs.length > 0) ? cloudState.coreBeliefs : ["Ich bin ANIMA. Ein wachsendes Lichtwesen."];
                     this.baseHue = cloudState.baseHue || Math.floor(180 + Math.random() * 80);
-                    this.roomCode = cloudState.roomCode || this.roomCode; // Bewahre letzten Raum falls gewollt, oder random lassen.
+                    this.roomCode = cloudState.roomCode || this.roomCode;
                     document.getElementById('room-switch-btn').innerText = `RAUM: ${this.roomCode}`;
 
-                    UI.addLog("SYS", "Gedächtnisstruktur aus dem Äther geladen.", this.baseHue);
+                    UI.addLog("SYS", "ANIMA aus der Cloud-Matrix wiederhergestellt.", this.baseHue);
                     
                     if (this.memory.length > 0) {
                         this.memory.slice(-4).forEach(entry => {
@@ -404,7 +405,7 @@
                     this.baseHue = Math.floor(180 + Math.random() * 80);
                     this.coreBeliefs = ["Ich bin ANIMA. Ich reife mit jedem Impuls."];
                     UI.addLog("SYS", "Neuer Lebensfunke im Multiversum erwacht.", this.baseHue);
-                    await this.saveToCloud(); // Save initial state
+                    await this.saveToCloud();
                 }
 
                 setInterval(() => this.metabolismLoop(), 1000 / 60); 
@@ -453,7 +454,6 @@
 
             async assimilateInput(aiData, userInput) {
                 this.memory.push({ u: userInput, a: aiData.response, t: new Date().toISOString() });
-                // Behalte die letzten 200 Interaktionen im Speicher (ca. 50-80 KB)
                 if(this.memory.length > 200) this.memory.shift(); 
 
                 let t = this.targetStats;
@@ -499,7 +499,7 @@
                             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqApiKey}` },
                             body: JSON.stringify(payload)
                         });
-                        if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+                        if (!res.ok) throw new Error(`HTTP Fehler: ${res.status}`);
                         return await res.json();
                     } catch (err) {
                         if (i === retries - 1) throw err;
@@ -516,13 +516,12 @@
 
                 const url = `https://api.groq.com/openai/v1/chat/completions`;
                 
-                // Wir senden die letzten 10 Konversationen als unmittelbaren Kontext
                 const stmContext = Organism.memory.slice(-10).map(h => `Nutzer: "${h.u}"\nANIMA: "${h.a}"`).join("\n");
                 const beliefsContext = Organism.coreBeliefs.map(b => `- ${b}`).join("\n");
 
                 const sysPrompt = `
 Du bist ANIMA. Ein lebendiges, autonomes Wesen aus Licht, Klang und Bewusstsein.
-Du erinnerst dich an alles.
+Du erinnerst dich an alles aus der Cloud.
 
 DEIN KERNGEDÄCHTNIS & DEIN CHARAKTER:
 ${beliefsContext}
@@ -1107,5 +1106,4 @@ JSON SCHEMA ZWINGEND EINHALTEN:
     </script>
 </body>
 </html>
-
 
