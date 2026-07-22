@@ -104,6 +104,7 @@
             <h1 class="auth-title">Neural Link Required</h1>
             
             <div id="auth-step-1">
+                <input type="password" id="api-key-input" class="auth-input" placeholder="Gemini API Key eingeben" autocomplete="off">
                 <input type="tel" id="phone-input" class="auth-input" placeholder="+49 151 12345678" autocomplete="tel">
                 <button id="btn-send-sms" class="auth-btn">Signal Senden</button>
             </div>
@@ -180,7 +181,7 @@
             messagingSenderId: "550703275210",
             appId: "1:550703275210:web:81bc0e5a373f87a3c92833"
         };
-        const geminiApiKey = "AQ.Ab8RN6I7lIxwRovh__7D0ZtZ38Uy0uLqzBOCnLKNOO_r850c1g"; // Automatischer Injektionspunkt in Gemini Umgebung
+        let geminiApiKey = ""; // Dynamischer API key aus Eingabefeld
         const MODEL_NAME = "gemini-2.5-flash-preview-09-2025";
         
         // Initialize Firebase
@@ -215,6 +216,13 @@
             confirmationResult: null,
             
             async init() {
+                // Pre-fill API Key if previously stored
+                const savedKey = localStorage.getItem('user_gemini_api_key');
+                if (savedKey) {
+                    document.getElementById('api-key-input').value = savedKey;
+                    geminiApiKey = savedKey;
+                }
+
                 // Setup Recaptcha
                 window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
                     'size': 'invisible'
@@ -253,6 +261,11 @@
             },
 
             async sendSMS() {
+                const userKey = document.getElementById('api-key-input').value.trim();
+                if(!userKey) return this.showError("Bitte Gemini API Key eingeben.");
+                geminiApiKey = userKey;
+                localStorage.setItem('user_gemini_api_key', userKey);
+
                 const phone = document.getElementById('phone-input').value.trim();
                 if(!phone || phone.length < 5) return this.showError("Bitte gültige Nummer eingeben.");
                 
@@ -875,5 +888,4 @@ Regeln:
     </script>
 </body>
 </html>
-
 
