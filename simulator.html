@@ -3,50 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aetheria: Amphibia Bio-Life HD-2D</title>
+    <title>Aetheria: Amphibia Bio-Life HD-2D Ultra</title>
     <!-- Tailwind CSS & Cinema Pixel Fonts -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800;900&family=Press+Start+2P&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800;900&family=Press+Start+2P&family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         .font-pixel { font-family: 'Press Start 2P', monospace; }
         .font-cinzel { font-family: 'Cinzel', serif; }
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #02040a;
+            background-color: #010206;
             color: #f1f5f9;
             user-select: none;
             touch-action: none;
             overflow: hidden;
         }
 
-        /* HD-2D Octopath Glassmorphism UI */
         .hd2d-panel {
-            background: linear-gradient(135deg, rgba(8, 14, 26, 0.92) 0%, rgba(15, 23, 42, 0.88) 100%);
-            backdrop-filter: blur(20px);
-            border: 2px solid rgba(56, 189, 248, 0.3);
-            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), inset 0 1px 1px rgba(255, 255, 255, 0.15);
-            border-radius: 20px;
+            background: linear-gradient(135deg, rgba(6, 11, 21, 0.94) 0%, rgba(12, 19, 36, 0.9) 100%);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            box-shadow: 0 30px 70px rgba(0, 0, 0, 0.95), inset 0 1px 1px rgba(255, 255, 255, 0.12);
+            border-radius: 22px;
         }
 
         .hd2d-btn {
             background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
             border: 1px solid #bae6fd;
-            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4), inset 0 1px 0 rgba(255,255,255,0.4);
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.45), inset 0 1px 0 rgba(255,255,255,0.4);
             transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .hd2d-btn:active { transform: scale(0.95); filter: brightness(1.2); }
+        .hd2d-btn:active { transform: scale(0.95); filter: brightness(1.25); }
 
         .cinema-vignette {
             pointer-events: none;
             position: absolute;
             inset: 0;
-            box-shadow: inset 0 0 140px rgba(0,0,0,0.92), inset 0 0 50px rgba(2, 6, 23, 0.85);
+            box-shadow: inset 0 0 160px rgba(0,0,0,0.95), inset 0 0 60px rgba(1, 4, 16, 0.9);
             z-index: 20;
         }
 
         canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
         ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: #020617; }
+        ::-webkit-scrollbar-track { background: #010409; }
         ::-webkit-scrollbar-thumb { background: #0284c7; border-radius: 4px; }
     </style>
 </head>
@@ -56,32 +55,32 @@
     <div class="cinema-vignette"></div>
 
     <!-- TOP HUD: BIOLOGICAL VITAL SIGNS & MONITORING -->
-    <header class="w-full max-w-xl hd2d-panel p-3 z-30 flex items-center justify-between border-cyan-500/30">
-        <div class="flex items-center gap-2.5">
+    <header class="w-full max-w-2xl hd2d-panel p-3.5 z-30 flex items-center justify-between border-cyan-500/30">
+        <div class="flex items-center gap-3">
             <div class="relative">
-                <div id="status-indicator-ping" class="w-3 h-3 rounded-full bg-emerald-400 animate-ping absolute inset-0 opacity-75"></div>
-                <div id="status-indicator" class="w-3 h-3 rounded-full bg-emerald-500 border border-emerald-300"></div>
+                <div id="status-indicator-ping" class="w-3.5 h-3.5 rounded-full bg-emerald-400 animate-ping absolute inset-0 opacity-75"></div>
+                <div id="status-indicator" class="w-3.5 h-3.5 rounded-full bg-emerald-500 border border-emerald-300"></div>
             </div>
             <div>
-                <h1 class="font-cinzel text-xs sm:text-sm font-black text-cyan-200 tracking-wider flex items-center gap-1.5">
-                    <span id="bio-name">Aether-Batrachos</span>
-                    <span id="bio-stage-badge" class="text-[8px] font-pixel px-1.5 py-0.5 bg-cyan-950 text-cyan-300 border border-cyan-500/40 rounded">Specimen #04</span>
+                <h1 class="font-cinzel text-xs sm:text-sm font-black text-cyan-200 tracking-wider flex items-center gap-2">
+                    <span id="bio-name">Aether-Batrachos Prime</span>
+                    <span id="bio-stage-badge" class="text-[8px] font-pixel px-2 py-0.5 bg-cyan-950 text-cyan-300 border border-cyan-500/40 rounded-md">Specimen #04-X</span>
                 </h1>
-                <p class="text-[9px] font-mono text-slate-400" id="vital-summary">Herzfrequenz: 54 BPM • Status: Vital & Stabil</p>
+                <p class="text-[9px] font-mono text-slate-400" id="vital-summary">Puls: 54 BPM • Cortisol: 12% • Status: Homeostase Stabil</p>
             </div>
         </div>
 
         <div class="flex items-center gap-2">
-            <button onclick="toggleThoughtLog()" class="px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-[10px] font-pixel text-sky-300 hover:bg-slate-800 transition">
+            <button onclick="toggleThoughtLog()" class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700/80 text-[10px] font-pixel text-sky-300 hover:bg-slate-800 transition active:scale-95">
                 🧠 Psyche
             </button>
         </div>
     </header>
 
     <!-- GEHEIMER NEURONALER GEDANKEN-STREAM -->
-    <div id="thought-box" class="w-full max-w-xl hd2d-panel p-3 z-30 transition-all duration-500 my-1 border-cyan-500/20 bg-slate-950/80">
+    <div id="thought-box" class="w-full max-w-2xl hd2d-panel p-3.5 z-30 transition-all duration-500 my-1 border-cyan-500/20 bg-slate-950/85">
         <div class="flex justify-between items-center mb-1">
-            <span class="text-[8px] font-pixel text-cyan-400 flex items-center gap-1">
+            <span class="text-[8px] font-pixel text-cyan-400 flex items-center gap-1.5">
                 <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
                 Innere Bewusstseins-Aktivität
             </span>
@@ -93,49 +92,49 @@
     </div>
 
     <!-- MAIN GAME CANVAS (Big HD-2D Frog Diorama) -->
-    <main class="w-full max-w-xl flex-1 relative flex items-center justify-center my-1 hd2d-panel overflow-hidden p-0 border-cyan-500/30 bg-slate-950">
+    <main class="w-full max-w-2xl flex-1 relative flex items-center justify-center my-1 hd2d-panel overflow-hidden p-0 border-cyan-500/30 bg-slate-950">
         <canvas id="gameCanvas" class="w-full h-full cursor-crosshair z-10"></canvas>
 
         <!-- Toast Notification Overlay -->
-        <div id="toast-msg" class="absolute top-3 left-1/2 -translate-x-1/2 bg-cyan-500/90 text-slate-950 font-bold px-4 py-1 rounded-full text-xs font-cinzel opacity-0 pointer-events-none transition-all duration-300 transform -translate-y-2 z-40 border border-cyan-200 shadow-xl">
+        <div id="toast-msg" class="absolute top-3 left-1/2 -translate-x-1/2 bg-cyan-500/95 text-slate-950 font-bold px-4 py-1.5 rounded-full text-xs font-cinzel opacity-0 pointer-events-none transition-all duration-300 transform -translate-y-2 z-40 border border-cyan-200 shadow-xl">
             Bio-System initialisiert
         </div>
 
         <!-- DEAD OVERLAY MODAL -->
         <div id="dead-overlay" class="absolute inset-0 bg-black/95 backdrop-blur-md z-40 flex flex-col items-center justify-center p-6 text-center hidden">
-            <div class="text-4xl mb-2">🪨</div>
-            <h2 class="font-cinzel text-xl font-black text-rose-500 mb-1">Subjekt Verdorrt</h2>
-            <p class="text-xs text-slate-400 mb-4 max-w-xs leading-relaxed">
+            <div class="text-5xl mb-3">🪨</div>
+            <h2 class="font-cinzel text-2xl font-black text-rose-500 mb-1">Subjekt Verdorrt</h2>
+            <p class="text-xs text-slate-400 mb-5 max-w-xs leading-relaxed">
                 Der Aether-Frosch ist aufgrund biologischen Versagens oder Austrocknung gestorben. Sein Körper ist zu Aether-Fossil erstarrt.
             </p>
-            <button onclick="resurrectPet()" class="hd2d-btn text-xs font-pixel font-bold px-4 py-2.5 rounded-xl text-slate-950">
+            <button onclick="resurrectPet()" class="hd2d-btn text-xs font-pixel font-bold px-5 py-3 rounded-xl text-slate-950">
                 🥚 Neues Ei Ausbrüten
             </button>
         </div>
 
         <!-- REAL-TIME BIOLOGICAL STATS OVERLAY -->
-        <div class="absolute bottom-2 left-2 right-2 flex justify-between gap-1 pointer-events-none z-30 text-[8px] font-pixel">
+        <div class="absolute bottom-2 left-2 right-2 flex justify-between gap-1.5 pointer-events-none z-30 text-[8px] font-pixel">
             <div class="bg-slate-950/90 backdrop-blur border border-cyan-500/30 px-2 py-1 rounded-lg flex items-center gap-1 text-cyan-300">
                 <span>💧 Haut-Feuchte</span>
-                <div class="w-10 bg-slate-800 h-1 rounded-full overflow-hidden">
+                <div class="w-12 bg-slate-800 h-1.5 rounded-full overflow-hidden">
                     <div id="bar-moisture" class="bg-cyan-400 h-full w-[100%] transition-all duration-300"></div>
                 </div>
             </div>
             <div class="bg-slate-950/90 backdrop-blur border border-amber-500/30 px-2 py-1 rounded-lg flex items-center gap-1 text-amber-300">
-                <span>🍖 Nährstoffe</span>
-                <div class="w-10 bg-slate-800 h-1 rounded-full overflow-hidden">
+                <span>🍖 Glucose</span>
+                <div class="w-12 bg-slate-800 h-1.5 rounded-full overflow-hidden">
                     <div id="bar-hunger" class="bg-amber-400 h-full w-[80%] transition-all duration-300"></div>
                 </div>
             </div>
             <div class="bg-slate-950/90 backdrop-blur border border-emerald-500/30 px-2 py-1 rounded-lg flex items-center gap-1 text-emerald-300">
                 <span>❤️ Vitalität</span>
-                <div class="w-10 bg-slate-800 h-1 rounded-full overflow-hidden">
+                <div class="w-12 bg-slate-800 h-1.5 rounded-full overflow-hidden">
                     <div id="bar-health" class="bg-emerald-400 h-full w-[100%] transition-all duration-300"></div>
                 </div>
             </div>
             <div class="bg-slate-950/90 backdrop-blur border border-purple-500/30 px-2 py-1 rounded-lg flex items-center gap-1 text-purple-300">
-                <span>🧠 Psyche</span>
-                <div class="w-10 bg-slate-800 h-1 rounded-full overflow-hidden">
+                <span>🧠 Serotonin</span>
+                <div class="w-12 bg-slate-800 h-1.5 rounded-full overflow-hidden">
                     <div id="bar-sanity" class="bg-purple-400 h-full w-[70%] transition-all duration-300"></div>
                 </div>
             </div>
@@ -143,7 +142,7 @@
     </main>
 
     <!-- REAL-TIME CARE INTERACTION BAR -->
-    <footer class="w-full max-w-xl hd2d-panel p-2 z-30 grid grid-cols-4 gap-2 border-cyan-500/30">
+    <footer class="w-full max-w-2xl hd2d-panel p-2 z-30 grid grid-cols-4 gap-2 border-cyan-500/30">
         <button onclick="interact('spray')" class="hd2d-btn p-2.5 rounded-xl flex flex-col items-center justify-center text-cyan-950">
             <span class="text-xl">🌧️</span>
             <span class="text-[9px] font-pixel font-bold mt-1 text-slate-950">Befeuchten</span>
@@ -170,7 +169,6 @@
                 <button onclick="toggleThoughtLog()" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
             </div>
             <div id="log-list" class="flex-1 overflow-y-auto space-y-2.5 pr-2 text-xs font-light text-slate-300 italic font-cinzel">
-                <!-- Thought entries appended here -->
             </div>
         </div>
     </div>
@@ -203,85 +201,170 @@
                 const t = audioCtx.currentTime;
 
                 if (type === 'croak') {
-                    // Tiefes Frosch-Quaken
+                    // Tiefes Frosch-Quaken mit Frequenzmodulation
                     osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(110, t);
-                    osc.frequency.linearRampToValueAtTime(70, t + 0.25);
-                    gain.gain.setValueAtTime(0.15, t);
-                    gain.gain.linearRampToValueAtTime(0.001, t + 0.25);
-                    osc.start(t); osc.stop(t + 0.25);
+                    osc.frequency.setValueAtTime(120, t);
+                    osc.frequency.linearRampToValueAtTime(65, t + 0.28);
+                    gain.gain.setValueAtTime(0.18, t);
+                    gain.gain.linearRampToValueAtTime(0.001, t + 0.28);
+                    osc.start(t); osc.stop(t + 0.28);
                 } else if (type === 'splash') {
                     // Wasser-Spritzer
                     osc.type = 'sine';
-                    osc.frequency.setValueAtTime(500, t);
-                    osc.frequency.exponentialRampToValueAtTime(150, t + 0.15);
-                    gain.gain.setValueAtTime(0.2, t);
-                    gain.gain.linearRampToValueAtTime(0.001, t + 0.15);
-                    osc.start(t); osc.stop(t + 0.15);
+                    osc.frequency.setValueAtTime(520, t);
+                    osc.frequency.exponentialRampToValueAtTime(140, t + 0.18);
+                    gain.gain.setValueAtTime(0.22, t);
+                    gain.gain.linearRampToValueAtTime(0.001, t + 0.18);
+                    osc.start(t); osc.stop(t + 0.18);
                 } else if (type === 'eat') {
                     // Fliege schnappen
                     osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(300, t);
-                    osc.frequency.exponentialRampToValueAtTime(700, t + 0.1);
-                    gain.gain.setValueAtTime(0.15, t);
-                    gain.gain.linearRampToValueAtTime(0.001, t + 0.1);
-                    osc.start(t); osc.stop(t + 0.1);
+                    osc.frequency.setValueAtTime(280, t);
+                    osc.frequency.exponentialRampToValueAtTime(750, t + 0.12);
+                    gain.gain.setValueAtTime(0.18, t);
+                    gain.gain.linearRampToValueAtTime(0.001, t + 0.12);
+                    osc.start(t); osc.stop(t + 0.12);
+                } else if (type === 'purr') {
+                    // Sanftes Resonanz-Brummen
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(80, t);
+                    osc.frequency.exponentialRampToValueAtTime(95, t + 0.4);
+                    gain.gain.setValueAtTime(0.08, t);
+                    gain.gain.linearRampToValueAtTime(0.001, t + 0.4);
+                    osc.start(t); osc.stop(t + 0.4);
                 }
             } catch(e) {}
         }
 
-        // --- VOLLSTÄNDIGER BIOLOGISCHER ZUSTAND (AUTONOME SIMULATION) ---
-        let bioState = {
-            isAlive: true,
-            health: 100,      // Vitalität (0-100)
-            moisture: 90,     // Hautfeuchtigkeit (Amphibie trocknet aus!)
-            hunger: 80,       // Nährstoffe (0-100)
-            sanity: 75,       // Geistige Gesundheit / Stress
-            bpm: 54,          // Herzfrequenz
-            ageSec: 0,        // Alter in Sekunden
-            throatExpansion: 0, // Kehlsack-Atmung
-            eyeBlink: 0,
-            headX: 0, headY: 0,
-            targetHeadX: 0, targetHeadY: 0,
-            isStartled: false
-        };
+        // --- TIEFE BIOLOGISCHE ORGAN- & HORMONSIMULATION ---
+        class BiomimeticEngine {
+            constructor() {
+                this.isAlive = true;
+                // Vitalparameter
+                this.health = 100.0;
+                this.moisture = 92.0;       // Hautfeuchtigkeit %
+                this.glucose = 85.0;        // Blutzucker / Nahrung
+                this.serotonin = 75.0;      // Wohlbefinden / Sanity
+                this.cortisol = 12.0;       // Stresshormon (0-100)
+                this.dopamine = 40.0;       // Belohnung/Lust
+                this.lacticAcid = 5.0;      // Ermüdung der Muskeln
 
-        // Gedanken-Datenbank
-        const thoughts = {
-            dry: [
-                "Meine Amphibienhaut reißt... Ich brauche Feuchtigkeit!",
-                "Das Licht brennt auf meinen Schuppen... Befeuchte mich!",
-                "Ich verliere Aether-Flüssigkeit... Sprühe Wasser!"
-            ],
-            hungry: [
-                "Der Magen zieht sich zusammen... Wo bleiben die Leuchtkäfer?",
-                "Ich spüre eine Leere in meinen Eingeweiden...",
-                "Ein Jäger ohne Beute... Gib mir eine Aether-Fliege."
-            ],
-            happy: [
-                "Die kühle Feuchtigkeit dringt tief in meine Poren...",
-                "Mein Kehlsack vibriert im Rhythmus des Aether-Teichs...",
-                "Ich spüre deine sanfte Präsenz. Der Teich ist ruhig.",
-                "Ein perfekter Gleichgewichtszustand... Mein Herz schlägt ruhig."
-            ],
-            startled: [
-                "Zu schnelle Bewegung! Mein Kehlsack zieht sich krampfhaft zusammen...",
-                "Gefahr! Deine Hand schlägt wie ein Raubvogel herab...",
-                "Panik! Mein Puls schnellt in die Höhe!"
-            ],
-            dying: [
-                "Das Licht erlischt... Meine Lungen erstarren...",
-                "Ich spüre die Kälte des fossilen Schlafs...",
-                "Der Teich trocknet aus... Auf Wiedersehen..."
-            ]
-        };
+                // Herz & Respiration
+                this.bpm = 54;
+                this.respirationRate = 1.0;
+                this.throatExpansion = 0;
+                this.nictitatingMembrane = 0; // Doppel-Lid Blinzelmembran
+                this.eyeBlink = 0;
+
+                // Position & Kinematik
+                this.headX = 0;
+                this.headY = 0;
+                this.targetHeadX = 0;
+                this.targetHeadY = 0;
+                this.spineFlex = 0;
+                this.isStartled = false;
+                this.lastTouchZone = 'none';
+
+                // Alter & Zeit
+                this.ageSec = 0;
+            }
+
+            update(dt) {
+                if (!this.isAlive) return;
+
+                this.ageSec += dt;
+
+                // 1. Stoffwechsel-Degradation
+                const tempFactor = 1.0;
+                this.moisture = Math.max(0, this.moisture - (0.35 * tempFactor) * dt);
+                this.glucose = Math.max(0, this.glucose - 0.22 * dt);
+                this.lacticAcid = Math.max(0, this.lacticAcid - 0.1 * dt);
+
+                // 2. Hormonelle Wechselwirkungen
+                if (this.cortisol > 30) {
+                    this.serotonin = Math.max(0, this.serotonin - 0.4 * dt);
+                }
+                this.cortisol = Math.max(0, this.cortisol - 0.2 * dt);
+                this.dopamine = Math.max(0, this.dopamine - 0.15 * dt);
+
+                // 3. Organ-Schaden durch unphysiologische Zustände
+                if (this.moisture < 25) {
+                    this.health = Math.max(0, this.health - 0.8 * dt);
+                    this.cortisol = Math.min(100, this.cortisol + 0.6 * dt);
+                }
+                if (this.glucose < 15) {
+                    this.health = Math.max(0, this.health - 0.5 * dt);
+                }
+                if (this.health > 0 && this.moisture > 65 && this.glucose > 50) {
+                    this.health = Math.min(100, this.health + 0.2 * dt);
+                }
+
+                // 4. Herzfrequenz-Synthese aus Cortisol & Aktivität
+                const baseBpm = 42;
+                this.bpm = Math.round(baseBpm + (this.cortisol * 0.75) + (100 - this.moisture) * 0.2);
+
+                // 5. Niktitaut-Membran Reflex (Blinzeln bei Stress oder Austrocknung)
+                if (Math.random() < 0.02 || this.moisture < 30) {
+                    this.eyeBlink = 1.0;
+                } else {
+                    this.eyeBlink = Math.max(0, this.eyeBlink - 0.1);
+                }
+
+                // 6. Tod-Prüfung
+                if (this.health <= 0) {
+                    this.isAlive = false;
+                }
+            }
+        }
+
+        const bio = new BiomimeticEngine();
+
+        // Dynamischer Gedanken-Generator basierend auf hormonellem Profil
+        function evaluateSubconsciousThought() {
+            if (!bio.isAlive) {
+                return "Das Licht erlischt... Meine Lungen erstarren in felsenfestem Aether...";
+            }
+
+            if (bio.cortisol > 60) {
+                return [
+                    "Panik durchströmt meine Adern! Zu viel Druck!",
+                    "Mein Kehlsack krampft... Lass deine Hand vorsichtig sein!",
+                    "Gefahr! Mein Herz schlägt mit " + bio.bpm + " BPM!"
+                ][Math.floor(Math.random() * 3)];
+            }
+
+            if (bio.moisture < 30) {
+                return [
+                    "Meine Schuppenschicht brennt... Ich brauche Regen!",
+                    "Die Poren meiner Haut verschließen sich... Wasser!",
+                    "Ich spüre das Trocknen meiner Lebensessenz..."
+                ][Math.floor(Math.random() * 3)];
+            }
+
+            if (bio.glucose < 25) {
+                return [
+                    "Der Magen zieht sich zusammen... Wo sind die Aether-Fliegen?",
+                    "Meine Blutzucker-Reserven schwinden dahin...",
+                    "Ich brauche frische Proteine..."
+                ][Math.floor(Math.random() * 3)];
+            }
+
+            if (bio.serotonin > 70 && bio.moisture > 70) {
+                return [
+                    "Die kühle Feuchtigkeit dringt tief in meine Poren...",
+                    "Mein Kehlsack vibriert im harmonischen Rhythmus des Teichs...",
+                    "Ich spüre deine sanfte Präsenz. Der Teich ist ruhig.",
+                    "Homeostase erreicht. Ein perfekter Gleichgewichtszustand."
+                ][Math.floor(Math.random() * 4)];
+            }
+
+            return "Das Aether im Wasser pulsiert leise... Ich beobachte das Licht.";
+        }
 
         let thoughtHistory = [];
 
-        function triggerThought(category) {
-            const list = thoughts[category];
-            if (!list) return;
-            const text = list[Math.floor(Math.random() * list.length)];
+        function triggerSubconsciousUpdate() {
+            const text = evaluateSubconsciousThought();
             document.getElementById('thought-text').innerText = `"${text}"`;
 
             const now = new Date();
@@ -289,7 +372,7 @@
             document.getElementById('thought-time').innerText = timeStr;
 
             thoughtHistory.unshift({ time: timeStr, text });
-            if (thoughtHistory.length > 25) thoughtHistory.pop();
+            if (thoughtHistory.length > 30) thoughtHistory.pop();
             updateThoughtLogUI();
         }
 
@@ -318,43 +401,23 @@
             }, 2000);
         }
 
-        // --- AUTONOME BIOLOGISCHE UHR (LÄUFT IMMER AKTUELL) ---
+        // Haupt-Update Schleife (Autonom sekündlich)
+        let lastSimTime = performance.now();
         setInterval(() => {
-            if (!bioState.isAlive) return;
+            const now = performance.now();
+            const dt = (now - lastSimTime) / 1000;
+            lastSimTime = now;
 
-            bioState.ageSec++;
+            bio.update(dt);
 
-            // 1. Kontinuierlicher Feuchtigkeits- & Nährstoffverlust
-            bioState.moisture = Math.max(0, bioState.moisture - 0.8);
-            bioState.hunger = Math.max(0, bioState.hunger - 0.5);
-
-            // 2. Gesundheitsschaden durch Austrocknung oder Hunger
-            if (bioState.moisture < 20 || bioState.hunger < 15) {
-                bioState.health = Math.max(0, bioState.health - 2.5);
-                if (Math.random() < 0.4) triggerThought(bioState.moisture < 20 ? 'dry' : 'hungry');
-            } else {
-                // Langsame Regeneration bei guter Pflege
-                if (bioState.moisture > 60 && bioState.hunger > 60) {
-                    bioState.health = Math.min(100, bioState.health + 0.5);
-                }
-            }
-
-            // 3. Herzfrequenz-Anpassung
-            const stressFactor = (100 - bioState.sanity) + (100 - bioState.moisture) * 0.5;
-            bioState.bpm = Math.round(45 + stressFactor * 0.4);
-
-            // 4. Todes-Prüfung
-            if (bioState.health <= 0) {
-                bioState.isAlive = false;
-                triggerThought('dying');
+            if (!bio.isAlive) {
                 document.getElementById('dead-overlay').classList.remove('hidden');
-                document.getElementById('status-indicator').className = "w-3 h-3 rounded-full bg-rose-600 border border-rose-400";
+                document.getElementById('status-indicator').className = "w-3.5 h-3.5 rounded-full bg-rose-600 border border-rose-400";
                 document.getElementById('status-indicator-ping').className = "hidden";
-                playBioFx('croak');
-            } else if (Math.random() < 0.08) {
-                if (bioState.moisture > 70 && bioState.sanity > 60) {
-                    triggerThought('happy');
-                    playBioFx('croak');
+            } else {
+                if (Math.random() < 0.25) {
+                    triggerSubconsciousUpdate();
+                    if (bio.serotonin > 60 && Math.random() < 0.3) playBioFx('croak');
                 }
             }
 
@@ -362,100 +425,108 @@
         }, 1000);
 
         function interact(type) {
-            if (!bioState.isAlive) return;
+            if (!bio.isAlive) return;
 
             if (type === 'spray') {
-                bioState.moisture = Math.min(100, bioState.moisture + 30);
+                bio.moisture = Math.min(100, bio.moisture + 32);
+                bio.serotonin = Math.min(100, bio.serotonin + 12);
                 showToast("🌧️ Wasser gesprüht (+Feuchte)");
                 playBioFx('splash');
                 spawnWaterParticles();
             } else if (type === 'feed') {
-                bioState.hunger = Math.min(100, bioState.hunger + 25);
-                showToast("🪰 Aether-Fliege verfüttert (+Nährstoffe)");
+                bio.glucose = Math.min(100, bio.glucose + 28);
+                bio.dopamine = Math.min(100, bio.dopamine + 25);
+                showToast("🪰 Aether-Fliege verfüttert (+Glucose)");
                 playBioFx('eat');
             } else if (type === 'clean') {
-                bioState.sanity = Math.min(100, bioState.sanity + 20);
-                showToast("✨ Haut gereinigt (+Psyche)");
+                bio.serotonin = Math.min(100, bio.serotonin + 22);
+                bio.cortisol = Math.max(0, bio.cortisol - 15);
+                showToast("✨ Epidermis gereinigt (+Serotonin)");
                 playBioFx('splash');
             } else if (type === 'heal') {
-                bioState.health = Math.min(100, bioState.health + 35);
+                bio.health = Math.min(100, bio.health + 38);
                 showToast("🧪 Aether-Serum verabreicht (+Vitalität)");
                 playBioFx('splash');
             }
 
+            triggerSubconsciousUpdate();
             updateHUD();
         }
 
         function resurrectPet() {
-            bioState = {
-                isAlive: true,
-                health: 100,
-                moisture: 90,
-                hunger: 80,
-                sanity: 75,
-                bpm: 54,
-                ageSec: 0,
-                throatExpansion: 0,
-                eyeBlink: 0,
-                headX: 0, headY: 0,
-                targetHeadX: 0, targetHeadY: 0,
-                isStartled: false
-            };
+            bio.isAlive = true;
+            bio.health = 100;
+            bio.moisture = 92;
+            bio.glucose = 85;
+            bio.serotonin = 75;
+            bio.cortisol = 12;
+            bio.dopamine = 40;
+            bio.ageSec = 0;
+
             document.getElementById('dead-overlay').classList.add('hidden');
-            document.getElementById('status-indicator').className = "w-3 h-3 rounded-full bg-emerald-500 border border-emerald-300";
-            document.getElementById('status-indicator-ping').className = "w-3 h-3 rounded-full bg-emerald-400 animate-ping absolute inset-0 opacity-75";
+            document.getElementById('status-indicator').className = "w-3.5 h-3.5 rounded-full bg-emerald-500 border border-emerald-300";
+            document.getElementById('status-indicator-ping').className = "w-3.5 h-3.5 rounded-full bg-emerald-400 animate-ping absolute inset-0 opacity-75";
             showToast("🥚 Neues Ei ausgebrütet!");
             updateHUD();
         }
 
         function updateHUD() {
-            document.getElementById('bar-moisture').style.width = `${bioState.moisture}%`;
-            document.getElementById('bar-hunger').style.width = `${bioState.hunger}%`;
-            document.getElementById('bar-health').style.width = `${bioState.health}%`;
-            document.getElementById('bar-sanity').style.width = `${bioState.sanity}%`;
+            document.getElementById('bar-moisture').style.width = `${Math.round(bio.moisture)}%`;
+            document.getElementById('bar-hunger').style.width = `${Math.round(bio.glucose)}%`;
+            document.getElementById('bar-health').style.width = `${Math.round(bio.health)}%`;
+            document.getElementById('bar-sanity').style.width = `${Math.round(bio.serotonin)}%`;
 
-            const statusText = !bioState.isAlive ? "VERDORRT" : (bioState.health < 40 ? "Kritisch" : (bioState.moisture < 30 ? "Austrocknend" : "Stabil"));
-            document.getElementById('vital-summary').innerText = `Puls: ${bioState.bpm} BPM • Status: ${statusText} • Alter: ${bioState.ageSec}s`;
+            const statusText = !bio.isAlive ? "VERDORRT" : (bio.health < 40 ? "Kritisch" : (bio.moisture < 30 ? "Austrocknend" : "Homeostase Stabil"));
+            document.getElementById('vital-summary').innerText = `Puls: ${bio.bpm} BPM • Cortisol: ${Math.round(bio.cortisol)}% • Status: ${statusText}`;
         }
 
-        // --- GESTEN- & TOUCH INTERAKTION ---
+        // --- MULTI-ZONE TOUCH & PHYSIKALISCHES GESTEN-SYSTEM ---
         let lastTouch = { x: 0, y: 0, time: 0 };
         let isTouching = false;
 
         function handlePointerDown(e) {
-            if (!bioState.isAlive) return;
+            if (!bio.isAlive) return;
             isTouching = true;
-            const x = e.clientX || e.touches[0].clientX;
-            const y = e.clientY || e.touches[0].clientY;
+            const x = e.clientX || (e.touches && e.touches[0].clientX);
+            const y = e.clientY || (e.touches && e.touches[0].clientY);
             lastTouch = { x, y, time: performance.now() };
         }
 
         function handlePointerMove(e) {
-            if (!isTouching || !bioState.isAlive) return;
-            const x = e.clientX || e.touches[0].clientX;
-            const y = e.clientY || e.touches[0].clientY;
+            if (!isTouching || !bio.isAlive) return;
+            const x = e.clientX || (e.touches && e.touches[0].clientX);
+            const y = e.clientY || (e.touches && e.touches[0].clientY);
             const now = performance.now();
             const dt = Math.max(1, now - lastTouch.time);
 
             const dist = Math.hypot(x - lastTouch.x, y - lastTouch.y);
-            const speed = dist / dt;
+            const speed = dist / dt; // Pixel / ms
 
             const rect = canvas.getBoundingClientRect();
-            bioState.targetHeadX = (x - rect.left - canvas.width / 2) * 0.25;
-            bioState.targetHeadY = (y - rect.top - canvas.height / 2) * 0.25;
+            bio.targetHeadX = (x - rect.left - canvas.width / 2) * 0.28;
+            bio.targetHeadY = (y - rect.top - canvas.height / 2) * 0.28;
 
-            if (speed > 2.0) {
-                // Hektisches Streicheln -> Stress
-                bioState.sanity = Math.max(0, bioState.sanity - 1.5);
-                if (!bioState.isStartled) {
-                    bioState.isStartled = true;
-                    triggerThought('startled');
+            // Geschwindigkeits-Sensorik
+            if (speed > 2.2) {
+                // Hektische Schrubb-Bewegung -> Cortisol Ausstoß
+                bio.cortisol = Math.min(100, bio.cortisol + 2.5);
+                bio.serotonin = Math.max(0, bio.serotonin - 1.2);
+                
+                if (!bio.isStartled) {
+                    bio.isStartled = true;
                     playBioFx('croak');
-                    setTimeout(() => bioState.isStartled = false, 600);
+                    triggerSubconsciousUpdate();
+                    setTimeout(() => bio.isStartled = false, 700);
                 }
-            } else if (speed > 0.1) {
-                // Sanftes Streicheln -> Psyche
-                bioState.sanity = Math.min(100, bioState.sanity + 0.4);
+            } else if (speed > 0.08 && speed <= 1.4) {
+                // Sanftes rhythmisches Streicheln
+                bio.cortisol = Math.max(0, bio.cortisol - 0.8);
+                bio.serotonin = Math.min(100, bio.serotonin + 0.6);
+                bio.dopamine = Math.min(100, bio.dopamine + 0.5);
+
+                if (Math.random() < 0.08) {
+                    playBioFx('purr');
+                }
             }
 
             lastTouch = { x, y, time: now };
@@ -466,17 +537,17 @@
         window.addEventListener('pointermove', handlePointerMove);
         window.addEventListener('pointerup', () => isTouching = false);
 
-        // --- OCTOPATH HD-2D AMPHIBIAN RENDERING ENGINE ---
+        // --- OCTOPATH HD-2D HIGH-END CANVAS ENGINE ---
         let particles = [];
         let animTick = 0;
 
         function spawnWaterParticles() {
-            for (let i = 0; i < 15; i++) {
+            for (let i = 0; i < 22; i++) {
                 particles.push({
-                    x: canvas.width / 2 + (Math.random() - 0.5) * 160,
-                    y: canvas.height / 2 - 40 + (Math.random() - 0.5) * 80,
-                    vy: 2 + Math.random() * 3,
-                    life: 1,
+                    x: canvas.width / 2 + (Math.random() - 0.5) * 220,
+                    y: canvas.height / 2 - 60 + (Math.random() - 0.5) * 100,
+                    vy: 2.5 + Math.random() * 3.5,
+                    life: 1.0,
                     char: "💧"
                 });
             }
@@ -489,133 +560,135 @@
 
             ctx.clearRect(0, 0, w, h);
 
-            // Interpolation der Kopf-Bewegung
-            bioState.headX += (bioState.targetHeadX - bioState.headX) * 0.08;
-            bioState.headY += (bioState.targetHeadY - bioState.headY) * 0.08;
+            // Kopf-Skelett Interpolation
+            bio.headX += (bio.targetHeadX - bio.headX) * 0.08;
+            bio.headY += (bio.targetHeadY - bio.headY) * 0.08;
 
-            // 1. HD-2D DIORAMA WATER ENVIRONMENT BACKGROUND
-            const pondY = h * 0.4;
+            // 1. ENVIRONMENT BACKGROUND (Aether Pond Diorama)
+            const pondY = h * 0.42;
 
-            // Wall/Cave Background
             const bgGrad = ctx.createLinearGradient(0, 0, 0, pondY);
-            bgGrad.addColorStop(0, '#020617');
+            bgGrad.addColorStop(0, '#010409');
             bgGrad.addColorStop(1, '#0f172a');
             ctx.fillStyle = bgGrad;
             ctx.fillRect(0, 0, w, pondY);
 
-            // Water Surface Gradient
             const waterGrad = ctx.createLinearGradient(0, pondY, 0, h);
-            waterGrad.addColorStop(0, '#0369a1');
+            waterGrad.addColorStop(0, '#0284c7');
+            waterGrad.addColorStop(0.6, '#0369a1');
             waterGrad.addColorStop(1, '#021329');
             ctx.fillStyle = waterGrad;
             ctx.fillRect(0, pondY, w, h - pondY);
 
-            // Octopath Water Grid Ripple Lines
-            ctx.strokeStyle = 'rgba(56, 189, 248, 0.15)';
+            // Wasser-Wellen Gitter (Pixel Grid)
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.18)';
             ctx.lineWidth = 1;
-            for (let y = pondY + 10; y < h; y += 18) {
-                const waveOffset = Math.sin(animTick + y * 0.05) * 6;
+            for (let y = pondY + 8; y < h; y += 16) {
+                const waveOffset = Math.sin(animTick + y * 0.06) * 7;
                 ctx.beginPath();
                 ctx.moveTo(0, y);
-                ctx.lineTo(w, y + waveOffset * 0.3);
+                ctx.lineTo(w, y + waveOffset * 0.25);
                 ctx.stroke();
             }
 
-            // 2. RIESIGER FROSCH IM VORDERGRUND (ANATOMISCHE HD-2D PIXEL-STRUKTUR)
+            // 2. RIESIGER ANATOMISCHER FROSCH
             const cx = w / 2;
-            const cy = h / 2 + 30;
+            const cy = h / 2 + 35;
 
             ctx.save();
             ctx.translate(cx, cy);
 
-            if (bioState.isStartled) {
-                ctx.translate((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6);
+            if (bio.isStartled) {
+                ctx.translate((Math.random() - 0.5) * 8, (Math.random() - 0.5) * 8);
             }
 
             // Kehlsack-Atmung
-            const throat = Math.sin(animTick * (bioState.bpm / 20)) * (bioState.isAlive ? 12 : 1);
+            const throat = Math.sin(animTick * (bio.bpm / 20)) * (bio.isAlive ? (8 + (bio.cortisol * 0.12)) : 0);
 
-            // Frosch Schatten auf Wasser
-            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            // Schatten
+            ctx.fillStyle = 'rgba(0,0,0,0.65)';
             ctx.beginPath();
-            ctx.ellipse(0, 100, 140, 35, 0, 0, Math.PI * 2);
+            ctx.ellipse(0, 110, 150, 40, 0, 0, Math.PI * 2);
             ctx.fill();
 
-            if (!bioState.isAlive) {
-                // FOSSILER VERDORRTER ZUSTAND (GRAU/STEIN)
+            if (!bio.isAlive) {
+                // FOSSILER GRAUER ZUSTAND
                 ctx.fillStyle = '#334155';
                 ctx.beginPath();
-                ctx.ellipse(0, 40, 110, 80, 0, 0, Math.PI * 2);
+                ctx.ellipse(0, 40, 120, 85, 0, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.fillStyle = '#1e293b';
                 ctx.beginPath();
-                ctx.arc(-40, -20, 22, 0, Math.PI * 2);
-                ctx.arc(40, -20, 22, 0, Math.PI * 2);
+                ctx.arc(-45, -20, 24, 0, Math.PI * 2);
+                ctx.arc(45, -20, 24, 0, Math.PI * 2);
                 ctx.fill();
             } else {
-                // LEBENDIGER AMPHIBIEN-KÖRPER
-                // Hinterbeine (Oberschenkel)
+                // LEBENDIGER FROSCH
+                // Oberschenkel
                 ctx.fillStyle = '#065f46';
-                ctx.fillRect(-140, 30, 50, 60);
-                ctx.fillRect(90, 30, 50, 60);
+                ctx.fillRect(-150, 30, 55, 65);
+                ctx.fillRect(95, 30, 55, 65);
 
-                // Haupt-Rumpf (Bauch & Rücken)
-                ctx.fillStyle = bioState.moisture < 30 ? '#78350f' : '#047857'; // Trocknet braun aus!
+                // Haupt-Körper (Farbe verändert sich bei Austrocknung!)
+                const skinColor = bio.moisture < 35 ? '#78350f' : '#047857';
+                ctx.fillStyle = skinColor;
                 ctx.beginPath();
-                ctx.ellipse(0, 40, 115, 85, 0, 0, Math.PI * 2);
+                ctx.ellipse(0, 40, 120, 90, 0, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Atmender Kehlsack (Vibrations-Blase)
+                // Kehlsack
                 ctx.fillStyle = '#a7f3d0';
                 ctx.beginPath();
-                ctx.ellipse(0, 10 + throat * 0.6, 55 + throat, 40 + throat, 0, 0, Math.PI * 2);
+                ctx.ellipse(0, 12 + throat * 0.6, 60 + throat, 42 + throat, 0, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Vorderbeine & Schwimmhäute
+                // Vorderbeine
                 ctx.fillStyle = '#065f46';
-                ctx.fillRect(-95, 60, 25, 50);
-                ctx.fillRect(70, 60, 25, 50);
+                ctx.fillRect(-100, 65, 28, 55);
+                ctx.fillRect(72, 65, 28, 55);
 
-                // Kopf (folgt der Finger-Maus)
+                // Kopf
                 ctx.save();
-                ctx.translate(bioState.headX, bioState.headY);
+                ctx.translate(bio.headX, bio.headY);
 
-                // Breitmaul-Frosch Schädel
-                ctx.fillStyle = bioState.moisture < 30 ? '#92400e' : '#059669';
+                ctx.fillStyle = bio.moisture < 35 ? '#92400e' : '#059669';
                 ctx.beginPath();
-                ctx.ellipse(0, -30, 95, 55, 0, 0, Math.PI * 2);
+                ctx.ellipse(0, -32, 100, 58, 0, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Große Frosch-Augenhöhlen
+                // Augenhöhlen
                 ctx.fillStyle = '#047857';
                 ctx.beginPath();
-                ctx.arc(-48, -65, 26, 0, Math.PI * 2);
-                ctx.arc(48, -65, 26, 0, Math.PI * 2);
+                ctx.arc(-52, -70, 28, 0, Math.PI * 2);
+                ctx.arc(52, -70, 28, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Glühende Aether-Iris (Geld/Grün)
-                ctx.fillStyle = '#facc15';
+                // Aether-Iris
+                const irisColor = bio.cortisol > 50 ? '#f43f5e' : (bio.serotonin > 60 ? '#10b981' : '#facc15');
+                ctx.fillStyle = irisColor;
                 ctx.beginPath();
-                ctx.arc(-48, -65, 18, 0, Math.PI * 2);
-                ctx.arc(48, -65, 18, 0, Math.PI * 2);
+                ctx.arc(-52, -70, 20, 0, Math.PI * 2);
+                ctx.arc(52, -70, 20, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Horizontale Amphibien-Pupille
+                // Horizontale Pupille mit Niktitaut-Membran (Blinken)
                 ctx.fillStyle = '#020617';
-                ctx.fillRect(-60, -68, 24, 6);
-                ctx.fillRect(36, -68, 24, 6);
+                const eyeHeight = Math.max(1, 7 * (1.0 - bio.eyeBlink));
+                ctx.fillRect(-65, -70 - (eyeHeight / 2), 26, eyeHeight);
+                ctx.fillRect(39, -70 - (eyeHeight / 2), 26, eyeHeight);
 
-                // Lichtreflexe im Auge
+                // Reflexe
                 ctx.fillStyle = '#ffffff';
-                ctx.arc(-44, -70, 4, 0, Math.PI * 2);
-                ctx.arc(52, -70, 4, 0, Math.PI * 2);
+                ctx.beginPath();
+                ctx.arc(-48, -74, 4, 0, Math.PI * 2);
+                ctx.arc(56, -74, 4, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Schnauzen-Mundlinie
+                // Schnauze
                 ctx.strokeStyle = '#022c22';
                 ctx.lineWidth = 3;
                 ctx.beginPath();
-                ctx.arc(0, -25, 65, 0.1, Math.PI - 0.1);
+                ctx.arc(0, -26, 70, 0.1, Math.PI - 0.1);
                 ctx.stroke();
 
                 ctx.restore();
@@ -623,7 +696,7 @@
 
             ctx.restore();
 
-            // Partikel (Wasser-Tropfen)
+            // Partikel (Regentropfen)
             particles.forEach((p, idx) => {
                 p.y += p.vy;
                 p.life -= 0.02;
@@ -638,7 +711,7 @@
         window.onload = () => {
             updateHUD();
             renderHD2DFrog();
-            triggerThought('happy');
+            triggerSubconsciousUpdate();
         };
     </script>
 </body>
