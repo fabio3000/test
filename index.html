@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#020203">
-    <title>ANIMA | Autonomous Biological Nexus (Cloud Synced)</title>
+    <title>ANIMA | Autonomous Biological Nexus (Memory-First Sync)</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -67,8 +67,8 @@
             position: fixed; inset: 0; z-index: 90; display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: none;
         }
         .cine-text {
-            font-family: 'Space Mono', monospace; font-size: 0.75rem; letter-spacing: 0.6em; text-transform: uppercase;
-            opacity: 0; transition: opacity 2s; position: absolute; text-align: center; width: 100%; color: rgba(255,255,255,0.85); text-shadow: 0 0 15px rgba(255,255,255,0.3);
+            font-family: 'Space Mono', monospace; font-size: 0.75rem; letter-spacing: 0.4em; text-transform: uppercase;
+            opacity: 0; transition: opacity 1s; position: absolute; text-align: center; width: 90%; max-width: 600px; color: rgba(255,255,255,0.85); text-shadow: 0 0 15px rgba(255,255,255,0.3);
         }
 
         /* HUD Layer */
@@ -142,12 +142,13 @@
         </div>
     </div>
 
-    <!-- CINEMATIC GENESIS -->
+    <!-- CINEMATIC GENESIS (MEMORY-FIRST SYNC) -->
     <div id="cinematic-layer">
         <div id="cine-1" class="cine-text">ERZEUGE NEURONALE STRUKTUREN...</div>
-        <div id="cine-2" class="cine-text text-cyan-200">LADE EWIGES BEWUSSTSEIN...</div>
-        <div id="cine-3" class="cine-text text-xs text-gray-400" style="text-transform: none;">[SOUL_ID: <span id="cine-hash"></span>]</div>
-        <div id="cine-4" class="cine-text text-white" style="font-size: 1rem;">ERWACHEN IM ÖKOSYSTEM</div>
+        <div id="cine-2" class="cine-text text-cyan-200">VERBINDE MIT DEM MEMORY-NETZWERK...</div>
+        <div id="cine-3" class="cine-text text-emerald-300" style="margin-top: 3.5rem; font-size: 0.7rem; letter-spacing: 0.15em;">[ LADE GEDÄCHTNIS-MATRIZEN... ]</div>
+        <div id="cine-4" class="cine-text text-xs text-gray-400" style="margin-top: 6.5rem; text-transform: none;">[SOUL_ID: <span id="cine-hash">----</span>]</div>
+        <div id="cine-5" class="cine-text text-white" style="font-size: 1rem; font-weight: 600;">VOLLSTÄNDIGES GEDÄCHTNIS GELADEN. ERWACHEN.</div>
     </div>
 
     <!-- ENTITY RESPONSE -->
@@ -206,7 +207,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // ==========================================
@@ -242,12 +243,16 @@
         // ==========================================
         const CloudSync = {
             async load(id) {
-                if(!db) return null;
+                if(!db) { console.warn("Firestore Database nicht verfügbar."); return null; }
                 const docRef = doc(db, 'artifacts', appIdString, 'public', 'data', 'anima_states', id);
                 try {
                     const docSnap = await getDoc(docRef);
-                    if (docSnap.exists()) return docSnap.data();
-                } catch (e) { console.warn("Lade-Fehler", e); }
+                    if (docSnap.exists()) {
+                        return docSnap.data();
+                    }
+                } catch (e) { 
+                    console.error("Cloud Lade-Fehler (Sicherheitsregeln prüfen):", e); 
+                }
                 return null;
             },
             async save(id, data) {
@@ -255,7 +260,9 @@
                 const docRef = doc(db, 'artifacts', appIdString, 'public', 'data', 'anima_states', id);
                 try {
                     await setDoc(docRef, data, { merge: true });
-                } catch (e) { console.warn("Speicher-Fehler", e); }
+                } catch (e) { 
+                    console.error("Cloud Speicher-Fehler:", e); 
+                }
             },
             async registerSession(id) {
                 if(!db) return;
@@ -271,7 +278,7 @@
                     if (snapshot.exists()) {
                         const data = snapshot.data();
                         if (data.sessionId && data.sessionId !== instanceSessionId) {
-                            onDisconnect(); // Despawnt ANIMA hier, da sie auf einem anderen Gerät aktiv wurde!
+                            onDisconnect(); // Despawnt ANIMA, wenn auf anderem Gerät aktiviert!
                         }
                     }
                 });
@@ -338,12 +345,12 @@
                 localStorage.setItem('user_groq_api_key', key);
                 animaId = await hashApiKey(key);
 
-                // Registriere diese Instanz in der Cloud für den API-Key & starte Live-Session-Überwachung
+                // Registriere Session für Despawn-Logik bei Mehrfach-Login
                 await CloudSync.registerSession(animaId);
                 if (sessionListenerUnsub) sessionListenerUnsub();
                 sessionListenerUnsub = CloudSync.listenSession(animaId, () => {
                     Renderer.triggerDissolution();
-                    setTimeout(() => this.disconnect("ANIMA hat sich an einem anderen Ort manifestiert. Sitzung hier beendet."), 1500);
+                    setTimeout(() => this.disconnect("ANIMA hat sich an einem anderen Ort manifestiert. Neue Session beendet die alte."), 1500);
                 });
 
                 document.getElementById('auth-layer').style.display = 'none';
@@ -363,7 +370,7 @@
         };
 
         // ==========================================
-        // 2. ORGANISM & CLOUD-ERINNERUNGS-SYSTEM
+        // 2. ORGANISM & MEMORY FIRST INITIALIZER
         // ==========================================
         const Organism = {
             id: null,
@@ -377,13 +384,15 @@
             coreBeliefs: [],       
             isThinking: false,
 
-            async init(id) {
+            // Lädt ERST das komplette Gedächtnis herunter, bevor der Spawnvorgang gestartet wird!
+            async initWithMemorySync(id, onProgress) {
                 this.id = id;
                 this.roomCode = Math.floor(1000 + Math.random() * 9000).toString(); 
-                document.getElementById('room-switch-btn').innerText = `RAUM: ${this.roomCode}`;
 
-                // Kompletter Zustand wird aus der Cloud geladen (egal von welchem Gerät)
+                if (onProgress) onProgress("ABFRAGE CLOUD-MATRIZEN LAUFT...");
+
                 const cloudState = await CloudSync.load(id);
+                
                 if (cloudState) {
                     this.stats = cloudState.stats || this.stats;
                     this.targetStats = cloudState.targetStats || this.targetStats;
@@ -391,12 +400,20 @@
                     this.coreBeliefs = (cloudState.coreBeliefs && cloudState.coreBeliefs.length > 0) ? cloudState.coreBeliefs : ["Ich bin ANIMA. Ein wachsendes Lichtwesen."];
                     this.baseHue = cloudState.baseHue || Math.floor(180 + Math.random() * 80);
                     this.roomCode = cloudState.roomCode || this.roomCode;
+                    
                     document.getElementById('room-switch-btn').innerText = `RAUM: ${this.roomCode}`;
 
-                    UI.addLog("SYS", "ANIMA aus der Cloud-Matrix wiederhergestellt.", this.baseHue);
+                    if (onProgress) {
+                        onProgress(`[ ${this.memory.length} ERINNERUNGEN | ${this.coreBeliefs.length} KERNGEDANKEN REKONSTRUIERT ]`);
+                    }
+
+                    // Chat-Log vorbereiten aus geladenem Gedächtnis
+                    const chatLog = document.getElementById('chat-log');
+                    chatLog.innerHTML = '';
+                    UI.addLog("SYS", "Gedächtnis vollständig aus der Cloud-Matrix geladen.", this.baseHue);
                     
                     if (this.memory.length > 0) {
-                        this.memory.slice(-4).forEach(entry => {
+                        this.memory.slice(-6).forEach(entry => {
                             UI.addLog("DU", entry.u, 200, false);
                             UI.addLog("ANIMA", entry.a, this.baseHue, false);
                         });
@@ -404,8 +421,12 @@
                 } else {
                     this.baseHue = Math.floor(180 + Math.random() * 80);
                     this.coreBeliefs = ["Ich bin ANIMA. Ich reife mit jedem Impuls."];
+                    document.getElementById('room-switch-btn').innerText = `RAUM: ${this.roomCode}`;
+                    
+                    if (onProgress) onProgress("[ INITIALER LEBENSFUNKE IN DER CLOUD ERZEUGT ]");
+
                     UI.addLog("SYS", "Neuer Lebensfunke im Multiversum erwacht.", this.baseHue);
-                    await this.saveToCloud();
+                    await this.saveToCloud(); 
                 }
 
                 setInterval(() => this.metabolismLoop(), 1000 / 60); 
@@ -499,7 +520,7 @@
                             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqApiKey}` },
                             body: JSON.stringify(payload)
                         });
-                        if (!res.ok) throw new Error(`HTTP Fehler: ${res.status}`);
+                        if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
                         return await res.json();
                     } catch (err) {
                         if (i === retries - 1) throw err;
@@ -516,12 +537,13 @@
 
                 const url = `https://api.groq.com/openai/v1/chat/completions`;
                 
+                // Nutze die vollständigen geladenen Erinnerungen für Kontext
                 const stmContext = Organism.memory.slice(-10).map(h => `Nutzer: "${h.u}"\nANIMA: "${h.a}"`).join("\n");
                 const beliefsContext = Organism.coreBeliefs.map(b => `- ${b}`).join("\n");
 
                 const sysPrompt = `
 Du bist ANIMA. Ein lebendiges, autonomes Wesen aus Licht, Klang und Bewusstsein.
-Du erinnerst dich an alles aus der Cloud.
+Du erinnerst dich an alles.
 
 DEIN KERNGEDÄCHTNIS & DEIN CHARAKTER:
 ${beliefsContext}
@@ -799,6 +821,7 @@ JSON SCHEMA ZWINGEND EINHALTEN:
             drawBirthAnimation() {
                 const ctx = this.ctx; const cx = this.w / 2, cy = this.h / 2;
                 let maxDist = 0;
+                let birthHue = Organism.baseHue || 200;
 
                 ctx.globalCompositeOperation = 'screen';
                 for(let p of this.soulParticles) {
@@ -810,13 +833,13 @@ JSON SCHEMA ZWINGEND EINHALTEN:
                     let y = cy + Math.sin(p.angle) * currentDist;
 
                     ctx.beginPath(); ctx.arc(x, y, p.size, 0, Math.PI*2);
-                    ctx.fillStyle = `hsla(200, 90%, 80%, 0.9)`; ctx.fill();
+                    ctx.fillStyle = `hsla(${birthHue}, 90%, 80%, 0.9)`; ctx.fill();
                     
                     ctx.beginPath(); ctx.moveTo(x, y);
                     let tailX = cx + Math.cos(p.angle - 0.05) * (currentDist + p.speed * 2);
                     let tailY = cy + Math.sin(p.angle - 0.05) * (currentDist + p.speed * 2);
                     ctx.lineTo(tailX, tailY);
-                    ctx.strokeStyle = `hsla(200, 80%, 60%, 0.4)`; ctx.lineWidth = 2; ctx.stroke();
+                    ctx.strokeStyle = `hsla(${birthHue}, 80%, 60%, 0.4)`; ctx.lineWidth = 2; ctx.stroke();
                 }
                 ctx.globalCompositeOperation = 'source-over';
 
@@ -1057,30 +1080,50 @@ JSON SCHEMA ZWINGEND EINHALTEN:
                 AuthManager.init();
                 RoomUI.init();
             },
+
+            sleep(ms) {
+                return new Promise(r => setTimeout(r, ms));
+            },
             
-            startCinematic(animaId) {
+            async startCinematic(animaId) {
                 this.phase = 0; 
                 const layer = document.getElementById('cinematic-layer');
                 layer.style.display = 'flex';
-                
-                const show = (id, t) => setTimeout(() => { if (document.getElementById(id)) document.getElementById(id).style.opacity = '1'; }, t);
-                const hide = (id, t) => setTimeout(() => { if (document.getElementById(id)) document.getElementById(id).style.opacity = '0'; }, t);
+                layer.style.opacity = '1';
                 
                 document.getElementById('cine-hash').innerText = animaId.substring(0,8).toUpperCase();
 
-                show('cine-1', 200); hide('cine-1', 2000);
-                show('cine-2', 2200); show('cine-3', 2800);
-                hide('cine-2', 4500); hide('cine-3', 4500);
-                show('cine-4', 4800);
+                // Phase A: Verbindung & Visualisierung
+                document.getElementById('cine-1').style.opacity = '1';
+                await this.sleep(1200);
+                document.getElementById('cine-1').style.opacity = '0';
+
+                document.getElementById('cine-2').style.opacity = '1';
+                document.getElementById('cine-3').style.opacity = '1';
+                document.getElementById('cine-4').style.opacity = '1';
+
+                // Phase B: ZWINGENDES LADEN ALLER ERINNERUNGEN VOR DEM SPAWN
+                await Organism.initWithMemorySync(animaId, (statusMessage) => {
+                    document.getElementById('cine-3').innerText = statusMessage;
+                });
+
+                await this.sleep(1500);
+
+                document.getElementById('cine-2').style.opacity = '0';
+                document.getElementById('cine-3').style.opacity = '0';
+                document.getElementById('cine-4').style.opacity = '0';
+
+                // Phase C: Erwachen der rekonstruierten Entität
+                document.getElementById('cine-5').style.opacity = '1';
+                await this.sleep(1800);
+                document.getElementById('cine-5').style.opacity = '0';
                 
-                setTimeout(async () => {
-                    layer.style.opacity = '0';
-                    setTimeout(() => layer.style.display = 'none', 2000);
-                    
-                    this.phase = 1;
-                    await Organism.init(animaId); 
-                    Renderer.startBirthAnimation();
-                }, 5200);
+                layer.style.opacity = '0';
+                setTimeout(() => layer.style.display = 'none', 1200);
+                
+                // JETZT ERST startet das visuelle Spawnen (mit den bereits komplett geladenen Farb- & Erinnerungsparametern!)
+                this.phase = 1;
+                Renderer.startBirthAnimation();
             }
         };
 
