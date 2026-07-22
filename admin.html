@@ -27,7 +27,7 @@
 
     <main>
         <section class="mb-8">
-            <h2 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-4">Vorschläge & Code-Mutationen der Animas</h2>
+            <h2 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-4">Evolutions-Logbuch & Code-Mutationen</h2>
             <div id="snippets-container" class="space-y-4">
                 <div class="text-gray-600 text-xs italic">Lausche auf evolutionäre Code-Snippets aus dem Multiversum...</div>
             </div>
@@ -40,7 +40,6 @@
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase Config - Fallback for local testing or Immersive environment
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
             apiKey: "AIzaSyDtwsvmYSONjFufhbJ5I8G_RAMffnh7re0",
             authDomain: "theplot-app.firebaseapp.com",
@@ -85,7 +84,6 @@
 
                 docs.forEach((data) => {
                     const dateStr = new Date(data.timestamp).toLocaleString('de-DE');
-
                     const card = document.createElement('div');
                     card.className = "code-box p-4 rounded text-xs space-y-3 relative";
                     
@@ -96,9 +94,16 @@
                         </div>
                         <pre class="overflow-x-auto p-3 bg-black/55 text-cyan-200 rounded font-mono"><code>${escapeHtml(data.snippet)}</code></pre>
                         <div class="flex gap-3 justify-end pt-1">
-                            <button onclick="navigator.clipboard.writeText(\`${escapeHtmlForJs(data.snippet)}\`); alert('Code kopiert!');" class="px-3 py-1.5 bg-white text-black font-bold uppercase tracking-wider rounded text-[10px] hover:bg-gray-200 transition">Snippet kopieren</button>
+                            <button class="copy-btn px-3 py-1.5 bg-white text-black font-bold uppercase tracking-wider rounded text-[10px] hover:bg-gray-200 transition">Code Kopieren</button>
                         </div>
                     `;
+                    
+                    card.querySelector('.copy-btn').addEventListener('click', (e) => {
+                        navigator.clipboard.writeText(data.snippet);
+                        e.target.innerText = "Kopiert!";
+                        setTimeout(() => e.target.innerText = "Code Kopieren", 2000);
+                    });
+                    
                     container.appendChild(card);
                 });
             }, (error) => {
@@ -110,12 +115,9 @@
             return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         }
         
-        function escapeHtmlForJs(text) {
-            return text.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
-        }
-
         window.onload = initAdmin;
     </script>
 </body>
 </html>
+
 
