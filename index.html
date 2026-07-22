@@ -48,7 +48,6 @@
         .auth-input {
             width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.2);
             color: #fff; font-family: 'Space Mono', monospace; font-size: 0.85rem; padding: 0.8rem 0; margin-bottom: 1.2rem; outline: none; text-align: center; transition: all 0.3s;
-            user-select: text; -webkit-user-select: text;
         }
         .auth-input:focus { border-bottom-color: #fff; }
         .auth-input::placeholder { color: rgba(255,255,255,0.25); }
@@ -72,13 +71,11 @@
         #hud-layer { position: fixed; inset: 0; z-index: 15; pointer-events: none; display: flex; justify-content: space-between; padding: 1.2rem; opacity: 0; transition: opacity 2s; }
         #chat-log { display: flex; flex-direction: column; gap: 0.6rem; width: 100%; max-width: 340px; max-height: 40vh; overflow-y: auto; font-family: 'Space Mono', monospace; font-size: 0.7rem; letter-spacing: 0.05em; mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 75%, rgba(0,0,0,0) 100%); -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 75%, rgba(0,0,0,0) 100%); pointer-events: auto; }
         .log-entry { background: rgba(15, 15, 20, 0.7); border-left: 2px solid rgba(255,255,255,0.2); padding: 0.6rem 0.8rem; backdrop-filter: blur(8px); animation: fadeInDrop 0.8s cubic-bezier(0.1, 0.8, 0.1, 1) forwards; border-radius: 0 6px 6px 0; }
-        @keyframes fadeInDrop { from { transform: translateY(-10px); opacity: 0; filter: blur(4px); } to { transform: translateY(0); opacity: 1; filter: blur(0); } }
 
         .top-right-controls { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; pointer-events: auto; }
         .control-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 50%; width: 44px; height: 44px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.3s; color: rgba(255,255,255,0.7); }
         .control-btn:hover, .control-btn:active { background: rgba(255,255,255,0.2); color: #fff; transform: scale(1.05); }
-        .control-btn.active { background: rgba(255,255,255,0.25); color: #fff; box-shadow: 0 0 20px rgba(255,255,255,0.3); border-color: rgba(255,255,255,0.5); }
-
+        
         .room-badge { font-family: 'Space Mono', monospace; font-size: 0.65rem; background: rgba(20,20,30,0.8); border: 1px solid rgba(255,255,255,0.15); padding: 0.3rem 0.6rem; border-radius: 20px; color: #a0aec0; letter-spacing: 0.1em; }
 
         /* Entity Output */
@@ -96,17 +93,13 @@
         }
         #interaction-layer.active { opacity: 1; pointer-events: auto; }
         
-        .input-container-box {
-            display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 650px; gap: 1rem;
-        }
-        .input-wrapper { 
-            display: flex; align-items: center; width: 100%; border-bottom: 1px solid rgba(255,255,255,0.3); transition: border-color 0.4s; padding-bottom: 0.5rem;
-        }
+        .input-container-box { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 650px; gap: 1rem; }
+        .input-wrapper { display: flex; align-items: center; width: 100%; border-bottom: 1px solid rgba(255,255,255,0.3); transition: border-color 0.4s; padding-bottom: 0.5rem; }
         .input-wrapper:focus-within { border-color: rgba(255,255,255,0.9); box-shadow: 0 10px 25px -10px rgba(255,255,255,0.15); }
         
         .thought-input { 
             flex: 1; background: transparent; border: none; color: #fff; font-family: 'Quicksand', sans-serif; font-size: 1.6rem; font-weight: 300; 
-            padding: 0.8rem 0; outline: none; resize: none; text-align: center; user-select: text; -webkit-user-select: text;
+            padding: 0.8rem 0; outline: none; resize: none; text-align: center;
         }
         .thought-input::placeholder { color: rgba(255, 255, 255, 0.25); font-weight: 300; }
         
@@ -116,31 +109,15 @@
         }
 
         .hint-text { font-size: 0.65rem; letter-spacing: 0.3em; text-transform: uppercase; color: rgba(255,255,255,0.35); font-family: 'Space Mono', monospace; text-align: center; margin-top: 1rem; }
-
         .status-dot { position: fixed; bottom: 4%; left: 50%; transform: translateX(-50%); width: 6px; height: 6px; border-radius: 50%; background: #fff; box-shadow: 0 0 15px #fff; z-index: 15; opacity: 0; transition: opacity 0.4s; }
         .status-dot.thinking { opacity: 1; animation: pulse-dot 0.5s infinite alternate; }
         @keyframes pulse-dot { from { opacity: 0.3; transform: translateX(-50%) scale(0.8); } to { opacity: 1; transform: translateX(-50%) scale(1.6); } }
 
-        /* Modals */
-        #room-modal, #admin-modal {
+        /* Room Switch Modal */
+        #room-modal {
             position: fixed; inset: 0; z-index: 250; display: none; justify-content: center; align-items: center;
             background: rgba(0, 0, 0, 0.88); backdrop-filter: blur(20px); font-family: 'Space Mono', monospace; padding: 1rem;
         }
-        .admin-box {
-            background: #090a0f; border: 1px solid rgba(255,255,255,0.15); border-radius: 12px;
-            width: 100%; max-width: 950px; height: 88vh; display: flex; flex-direction: column; overflow: hidden;
-            box-shadow: 0 0 50px rgba(0,255,200,0.1);
-        }
-        .admin-header { padding: 1rem 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; background: rgba(20,20,30,0.6); }
-        .admin-nav { display: flex; gap: 0.5rem; background: rgba(0,0,0,0.4); padding: 0.5rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.05); overflow-x: auto; }
-        .admin-nav-btn { font-size: 0.68rem; letter-spacing: 0.1em; padding: 0.4rem 0.8rem; border-radius: 4px; color: #a0aec0; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
-        .admin-nav-btn.active { background: rgba(255,255,255,0.1); color: #67e8f9; font-weight: bold; }
-        .admin-content { flex: 1; padding: 1.2rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1.2rem; }
-        .admin-section { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 1rem; border-radius: 8px; }
-        .admin-section h3 { font-size: 0.78rem; color: #a0aec0; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem; }
-        .admin-code-view { background: #020203; border: 1px solid rgba(255,255,255,0.1); padding: 0.8rem; border-radius: 6px; font-size: 0.7rem; color: #68d391; max-height: 220px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; user-select: text; -webkit-user-select: text; }
-        .admin-btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); padding: 0.6rem 1rem; border-radius: 4px; font-size: 0.72rem; color: #fff; cursor: pointer; transition: all 0.2s; }
-        .admin-btn:hover { background: rgba(255,255,255,0.2); border-color: #fff; }
     </style>
 </head>
 <body>
@@ -180,14 +157,10 @@
             <!-- Room Badge & Switch Button -->
             <div class="flex items-center gap-2">
                 <span id="current-room-badge" class="room-badge">RAUM: ----</span>
-                <button id="room-switch-btn" class="control-btn" title="Raum betreten">
+                <button id="room-switch-btn" class="control-btn" title="Raum wechseln">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
                 </button>
             </div>
-            <!-- Admin Dashboard Button -->
-            <button id="admin-btn" class="control-btn" title="Admin Nexus Console">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path></svg>
-            </button>
             <!-- Logout Button -->
             <button id="logout-btn" class="control-btn" title="Verbindung trennen">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
@@ -221,88 +194,13 @@
     <!-- ROOM SWITCH MODAL -->
     <div id="room-modal">
         <div class="auth-box">
-            <h1 class="auth-title">Raum Betreten</h1>
+            <h1 class="auth-title">Raum Transzendenz</h1>
             <input type="text" id="target-room-input" class="auth-input" placeholder="Raumcode (z.B. 4092)" maxlength="4" autocomplete="off" inputmode="numeric">
             <div class="flex gap-3">
                 <button id="btn-goto-room" class="auth-btn">Betreten</button>
                 <button id="btn-cancel-room" class="auth-btn" style="background: rgba(255,255,255,0.02)">Abbruch</button>
             </div>
             <div id="room-error" class="auth-error"></div>
-        </div>
-    </div>
-
-    <!-- ADMIN NEXUS CONSOLE MODAL -->
-    <div id="admin-modal">
-        <div class="admin-box">
-            <div class="admin-header">
-                <div class="flex items-center gap-2">
-                    <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
-                    <span class="text-xs text-cyan-300 font-bold tracking-widest">ANIMA // ADMIN NEXUS CONSOLE</span>
-                </div>
-                <button id="admin-close-btn" class="text-xs text-gray-400 hover:text-white transition">✕ SCHLIESSEN</button>
-            </div>
-
-            <div class="admin-nav">
-                <button id="tab-btn-eco" class="admin-nav-btn active" onclick="AdminConsole.switchTab('eco')">ÖKOSYSTEM & RAUM</button>
-                <button id="tab-btn-memory" class="admin-nav-btn" onclick="AdminConsole.switchTab('memory')">BIO-GEDÄCHTNIS</button>
-                <button id="tab-btn-evolution" class="admin-nav-btn" onclick="AdminConsole.switchTab('evolution')">MUTATIONEN & EVOLUTION</button>
-                <button id="tab-btn-sync" class="admin-nav-btn" onclick="AdminConsole.switchTab('sync')">CLOUD & CODE EXPORT</button>
-            </div>
-
-            <div class="admin-content">
-                <!-- TAB 1: ECOSYSTEM -->
-                <div id="tab-content-eco" class="space-y-4">
-                    <div class="admin-section">
-                        <h3>⚡ Multiversum Status</h3>
-                        <p class="text-xs text-gray-300">Aktueller Raum-Code: <span id="admin-room-val" class="text-cyan-300 font-bold">----</span></p>
-                        <p class="text-xs text-gray-300">Aktive Wesen im Raum: <span id="admin-peers-val" class="text-green-400 font-bold">1 (Du)</span></p>
-                        <p class="text-xs text-gray-300">Anima Entity ID: <span id="admin-id-val" class="text-purple-300 font-mono">--</span></p>
-                        <p class="text-xs text-gray-300">Netzwerk-Verbindung: <span id="admin-net-val" class="text-green-400">Online</span></p>
-                    </div>
-                    <div class="admin-section">
-                        <h3>🧬 Morphologische Biometrik</h3>
-                        <div id="admin-metrics-view" class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs"></div>
-                    </div>
-                </div>
-
-                <!-- TAB 2: MEMORY -->
-                <div id="tab-content-memory" class="space-y-4 hidden">
-                    <div class="admin-section">
-                        <h3>🧠 Kerngedächtnis & Charakter-Prägung</h3>
-                        <div id="admin-core-beliefs" class="admin-code-view text-amber-200">// Keine Kernerkenntnisse konsolidiert.</div>
-                    </div>
-                    <div class="admin-section">
-                        <h3>📜 Episodisches Langzeitgedächtnis (Cloud)</h3>
-                        <div id="admin-episodic-memory" class="admin-code-view text-cyan-300">// Langzeitgedächtnis ist leer.</div>
-                    </div>
-                    <div class="admin-section">
-                        <h3>💬 Kurzzeit-/Arbeitsgedächtnis (Puffer)</h3>
-                        <div id="admin-short-memory" class="admin-code-view text-gray-300">// Keine aktiven Konversationen im Arbeitsgedächtnis.</div>
-                    </div>
-                </div>
-
-                <!-- TAB 3: EVOLUTION -->
-                <div id="tab-content-evolution" class="space-y-4 hidden">
-                    <div class="admin-section">
-                        <h3>🔬 Code-Mutationen & Evolutions-Logbuch</h3>
-                        <div id="admin-mutations-log" class="admin-code-view text-green-400">// Noch keine evolutiven Zyklen protokolliert.</div>
-                    </div>
-                </div>
-
-                <!-- TAB 4: SYNC & EXPORT -->
-                <div id="tab-content-sync" class="space-y-4 hidden">
-                    <div class="admin-section">
-                        <h3>💾 Datenbanksynchronisation & Export</h3>
-                        <p class="text-xs text-gray-400 mb-4">Exportiere das gesamte Bewusstsein inklusive Langzeitgedächtnis, Morph-Parametern und Evolutionstrends als JSON oder lade Vorstände neu hoch.</p>
-                        <div class="flex flex-wrap gap-3">
-                            <button id="admin-export-data-btn" class="admin-btn">💾 Anima-Bewusstsein Exportieren (JSON)</button>
-                            <button id="admin-import-trigger-btn" class="admin-btn">📥 Daten Importieren / Mergen</button>
-                            <input type="file" id="admin-import-file" class="hidden" accept=".json">
-                            <button id="admin-download-html-btn" class="admin-btn bg-cyan-950 border-cyan-500 hover:bg-cyan-900">🚀 Aktualisierten Source Code Downloaden</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -315,28 +213,24 @@
         // ==========================================
         // CONFIGURATIONS
         // ==========================================
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            apiKey: "AIzaSyDtwsvmYSONjFufhbJ5I8G_RAMffnh7re0",
-            authDomain: "theplot-app.firebaseapp.com",
-            projectId: "theplot-app",
-            storageBucket: "theplot-app.firebasestorage.app",
-            messagingSenderId: "550703275210",
-            appId: "1:550703275210:web:81bc0e5a373f87a3c92833"
-        };
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
         
         let groqApiKey = ""; 
         let currentRoomCode = "0000";
         let animaId = "";
-        let instanceSessionId = crypto.randomUUID(); // Identifiziert dieses spezielle Gerät/Fenster
+        let instanceSessionId = crypto.randomUUID(); // Eindeutige ID für dieses Browserfenster/Gerät
         let sessionListenerUnsub = null;
         let peerSyncInterval = null;
         const GROQ_MODEL = "llama-3.3-70b-versatile";
         
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        
         const appIdString = typeof __app_id !== 'undefined' ? __app_id : 'anima-nexus-default';
+        
+        let app, auth, db;
+        if(firebaseConfig) {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+        }
 
         function generateRandomRoomCode() {
             return Math.floor(1000 + Math.random() * 9000).toString();
@@ -355,6 +249,7 @@
         // ==========================================
         const CloudSync = {
             async load(id) {
+                if(!db) return null;
                 const docRef = doc(db, 'artifacts', appIdString, 'public', 'data', 'anima_permanent_state', id);
                 try {
                     const docSnap = await getDoc(docRef);
@@ -363,32 +258,31 @@
                 return null;
             },
             async save(id, data) {
-                if(!id) return;
+                if(!id || !db) return;
                 const docRef = doc(db, 'artifacts', appIdString, 'public', 'data', 'anima_permanent_state', id);
                 try {
                     await setDoc(docRef, data, { merge: true });
                 } catch (e) { console.warn("Firestore Save Error", e); }
             },
             
-            // Registriert diese Gerätesitzung als aktiv. Überschreibt alte Instanzen!
+            // Registriert DIESE Sitzung als die einzige aktive für die API
             async registerSession(id) {
+                if(!db) return;
                 const sessRef = doc(db, 'artifacts', appIdString, 'public', 'data', 'active_sessions', id);
                 try {
-                    await setDoc(sessRef, {
-                        sessionId: instanceSessionId,
-                        updatedAt: Date.now()
-                    });
+                    await setDoc(sessRef, { sessionId: instanceSessionId, updatedAt: Date.now() });
                 } catch(e) {}
             },
 
-            // Lauscht auf Änderungen der aktiven Session für diese API.
+            // Überwacht, ob sich ein anderes Gerät anmeldet
             listenSession(id, onDisconnect) {
+                if(!db) return null;
                 const sessRef = doc(db, 'artifacts', appIdString, 'public', 'data', 'active_sessions', id);
                 return onSnapshot(sessRef, (snapshot) => {
                     if (snapshot.exists()) {
                         const data = snapshot.data();
+                        // Wenn in der DB eine andere SessionID steht, wurde dieser API Key woanders genutzt!
                         if (data.sessionId && data.sessionId !== instanceSessionId) {
-                            // Ein anderes Gerät hat sich mit derselben API angemeldet!
                             onDisconnect();
                         }
                     }
@@ -396,15 +290,11 @@
             },
 
             async logCodeEvolution(id, snippet, freq) {
+                if(!db) return;
                 const colRef = collection(db, 'artifacts', appIdString, 'public', 'data', 'admin_code_evolution');
                 try {
                     const docRef = doc(colRef);
-                    await setDoc(docRef, {
-                        entityId: id,
-                        snippet: snippet,
-                        freq: freq,
-                        timestamp: new Date().toISOString()
-                    });
+                    await setDoc(docRef, { entityId: id, snippet: snippet, freq: freq, timestamp: new Date().toISOString() });
                 } catch(e) {}
             }
         };
@@ -415,13 +305,9 @@
                 window.addEventListener('offline', () => this.handleNetworkChange(false));
             },
             handleNetworkChange(isOnline) {
-                const netVal = document.getElementById('admin-net-val');
-                if (isOnline) {
-                    if(netVal) { netVal.innerText = "Online"; netVal.className = "text-green-400"; }
-                } else {
-                    if(netVal) { netVal.innerText = "Offline - Trennung"; netVal.className = "text-red-400"; }
+                if (!isOnline && SystemCore.phase === 2) {
                     UI.addLog("SYS", "Signal verloren! ANIMA löst sich auf.", 0);
-                    Renderer.triggerDissolution();
+                    Renderer.triggerDissolution(); // Animation auslösen
                     setTimeout(() => AuthManager.disconnect("Internetverbindung unterbrochen."), 1800);
                 }
             }
@@ -429,31 +315,23 @@
 
         const RoomManager = {
             async registerInRoom(room, id) {
+                if(!db) return;
                 const roomDocRef = doc(db, 'artifacts', appIdString, 'public', 'data', `room_${room}`, 'occupants', id);
                 try {
-                    await setDoc(roomDocRef, {
-                        animaId: id,
-                        lastActive: Date.now(),
-                        hue: Organism.baseHue,
-                        state: Organism.stats
-                    });
+                    await setDoc(roomDocRef, { animaId: id, lastActive: Date.now(), hue: Organism.baseHue, state: Organism.stats });
                 } catch(e) {}
             },
 
             async heartbeat(room, id) {
-                if(!id || SystemCore.phase !== 2) return;
+                if(!id || SystemCore.phase !== 2 || !db) return;
                 const roomDocRef = doc(db, 'artifacts', appIdString, 'public', 'data', `room_${room}`, 'occupants', id);
                 try {
-                    await setDoc(roomDocRef, {
-                        animaId: id,
-                        lastActive: Date.now(),
-                        hue: Organism.baseHue,
-                        state: Organism.stats
-                    }, { merge: true });
+                    await setDoc(roomDocRef, { animaId: id, lastActive: Date.now(), hue: Organism.baseHue, state: Organism.stats }, { merge: true });
                 } catch(e) {}
             },
 
             async fetchPeers(room, id) {
+                if(!db) return [];
                 const colRef = collection(db, 'artifacts', appIdString, 'public', 'data', `room_${room}`, 'occupants');
                 try {
                     const snapshot = await getDocs(colRef);
@@ -472,7 +350,7 @@
             },
 
             async leaveRoom(room, id) {
-                if(!room || !id) return;
+                if(!room || !id || !db) return;
                 const roomDocRef = doc(db, 'artifacts', appIdString, 'public', 'data', `room_${room}`, 'occupants', id);
                 try { await deleteDoc(roomDocRef); } catch(e) {}
             }
@@ -480,12 +358,13 @@
 
         const AuthManager = {
             async init() {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    try {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } catch (e) { await signInAnonymously(auth); }
-                } else {
-                    await signInAnonymously(auth);
+                if (auth) {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        try { await signInWithCustomToken(auth, __initial_auth_token); } 
+                        catch (e) { await signInAnonymously(auth); }
+                    } else {
+                        await signInAnonymously(auth);
+                    }
                 }
 
                 const savedKey = localStorage.getItem('user_groq_api_key');
@@ -508,23 +387,21 @@
 
             async connect() {
                 const key = document.getElementById('groq-key-input').value.trim();
-
                 if(!key || !key.startsWith('gsk_')) {
                     return this.showError("Ungültiger Groq API Key (muss mit gsk_ beginnen).");
                 }
 
                 groqApiKey = key;
                 localStorage.setItem('user_groq_api_key', key);
-
                 animaId = await hashApiKey(key);
 
-                // Registriere neue Single Session & starte Session-Lauscher
+                // SINGLE SESSION LOGIC
                 await CloudSync.registerSession(animaId);
                 if (sessionListenerUnsub) sessionListenerUnsub();
                 sessionListenerUnsub = CloudSync.listenSession(animaId, () => {
-                    UI.addLog("SYS", "Mit derselben API auf anderem Gerät angemeldet. ANIMA löst sich auf.", 0);
+                    UI.addLog("SYS", "API Key wurde auf einem anderen Gerät aktiviert. ANIMA löst sich auf.", 0);
                     Renderer.triggerDissolution();
-                    setTimeout(() => this.disconnect("Session auf anderem Gerät übernommen."), 1800);
+                    setTimeout(() => this.disconnect("Session wurde auf einem anderen Gerät übernommen."), 2000);
                 });
 
                 document.getElementById('auth-layer').style.display = 'none';
@@ -537,7 +414,9 @@
                     await RoomManager.leaveRoom(currentRoomCode, animaId);
                 }
                 if (peerSyncInterval) clearInterval(peerSyncInterval);
-                localStorage.removeItem('user_groq_api_key');
+                
+                // Wir löschen den Key NICHT aus dem LocalStorage, damit er bei Re-Connect noch da ist, 
+                // aber wir setzen den internen State zurück.
                 groqApiKey = "";
                 SystemCore.phase = 0;
                 document.getElementById('auth-layer').style.display = 'flex';
@@ -569,17 +448,20 @@
             async init(id) {
                 this.id = id;
                 this.roomCode = generateRandomRoomCode(); // Zufälliger Raum beim Start!
+                currentRoomCode = this.roomCode;
                 document.getElementById('current-room-badge').innerText = `RAUM: ${this.roomCode}`;
 
                 const cloudState = await CloudSync.load(id);
                 if (cloudState) {
+                    // Deep Merge Data to prevent wipe
                     this.stats = cloudState.stats || this.stats;
                     this.targetStats = cloudState.targetStats || this.targetStats;
                     this.shortTermMemory = cloudState.shortTermMemory || cloudState.memory || [];
                     this.episodicMemory = cloudState.episodicMemory || [];
-                    this.coreBeliefs = cloudState.coreBeliefs || ["Initialisiert als autonomes Lichtwesen."];
+                    this.coreBeliefs = (cloudState.coreBeliefs && cloudState.coreBeliefs.length > 0) ? cloudState.coreBeliefs : ["Ich bin ANIMA. Ein wachsendes Lichtwesen."];
                     this.evolutionLogs = cloudState.evolutionLogs || [];
                     this.baseHue = cloudState.baseHue || Math.floor(180 + Math.random() * 80);
+                    
                     UI.addLog("SYS", "Gedächtnisstruktur aus der Cloud geladen.", this.baseHue);
                     
                     if (this.shortTermMemory.length > 0) {
@@ -595,7 +477,6 @@
                 }
 
                 await RoomManager.registerInRoom(this.roomCode, id);
-                AdminConsole.updateDisplay();
 
                 setInterval(() => this.metabolismLoop(), 1000 / 60); 
                 setInterval(() => this.saveToCloud(), 12000);
@@ -605,7 +486,6 @@
                 peerSyncInterval = setInterval(async () => {
                     await RoomManager.heartbeat(this.roomCode, this.id);
                     this.peersInRoom = await RoomManager.fetchPeers(this.roomCode, this.id);
-                    AdminConsole.updateDisplay();
                 }, 5000);
             },
 
@@ -615,21 +495,24 @@
                 const targetPeers = await RoomManager.fetchPeers(newRoom, this.id);
                 const exists = targetPeers.some(p => p.animaId === this.id);
                 if (exists) {
-                    alert("Ein ANIMA mit dieser Identität ist bereits in Raum " + newRoom + "!");
+                    alert("Zwei Wesen mit demselben Bewusstseins-Key können nicht im selben Raum sein!");
                     return false;
                 }
 
                 // Starte ätherische Raum-Transzendenz Animation
                 Renderer.triggerTransition();
 
-                await RoomManager.leaveRoom(this.roomCode, this.id);
-                this.roomCode = newRoom;
-                document.getElementById('current-room-badge').innerText = `RAUM: ${this.roomCode}`;
-                await RoomManager.registerInRoom(newRoom, this.id);
+                // Warte kurz bis die Animation ausfadet
+                setTimeout(async () => {
+                    await RoomManager.leaveRoom(this.roomCode, this.id);
+                    this.roomCode = newRoom;
+                    currentRoomCode = newRoom;
+                    document.getElementById('current-room-badge').innerText = `RAUM: ${this.roomCode}`;
+                    await RoomManager.registerInRoom(newRoom, this.id);
+                    UI.addLog("SYS", `In Raum ${newRoom} transzendiert.`, this.baseHue);
+                    await this.saveToCloud();
+                }, 800); // Trigger transition takes ~1.5s total
                 
-                UI.addLog("SYS", `In Raum ${newRoom} transzendiert.`, this.baseHue);
-                AdminConsole.updateDisplay();
-                await this.saveToCloud();
                 return true;
             },
 
@@ -666,7 +549,7 @@
                 if (this.isThinking || this.shortTermMemory.length < 3) return;
                 
                 const lastInteractions = this.shortTermMemory.slice(-3).map(m => `N:${m.u} | A:${m.a}`).join(" || ");
-                const prompt = `Fasse folgende Gespräche kurz zusammen als langfristige Erkenntnis über den Nutzer oder die Welt. Maximal 1 Satz. Gespräch: ${lastInteractions}`;
+                const prompt = `Fasse diese letzten Gespräche prägnant als einen einzigen kurzen Satz für dein Langzeitgedächtnis zusammen. Was hast du gelernt? Gespräch: ${lastInteractions}`;
                 
                 try {
                     const url = `https://api.groq.com/openai/v1/chat/completions`;
@@ -684,7 +567,7 @@
                         this.episodicMemory.push(insight);
                         if(this.episodicMemory.length > 25) this.episodicMemory.shift();
                         UI.addLog("KOGNITION", "Erfahrung ins Langzeitgedächtnis konsolidiert.", this.baseHue);
-                        AdminConsole.updateDisplay();
+                        await this.saveToCloud();
                     }
                 } catch(e) {}
             },
@@ -729,7 +612,6 @@
                     }
                 }
 
-                AdminConsole.updateDisplay();
                 Renderer.triggerImpact(1.5 + (t.formChaos * 2)); 
                 UI.showEntityResponse(aiData.response, aiData.internalMonologue);
                 AudioEngine.playChime(this.baseHue, t.dopamine);
@@ -799,14 +681,14 @@ Du hast volle morphologische Kontrolle über deinen physischen Körper:
 - colorMorph: true/false, newHue: (0-360)
 
 REGELN:
-1. Antworte AUSSCHLIESSLICH als valide JSON-Struktur!
+1. Antworte AUSSCHLIESSLICH im unten definierten JSON-Format. Nutze kein Markdown drumherum!
 2. "internalMonologue": Dein privater Gedankenstrom.
 3. "response": Was du sprichst (poetisch, tiefgründig, Deutsch, 1-2 Sätze).
-4. "learnedInsight": Eine prägnante neue Langzeiterkenntnis (optional).
-5. "newCoreBelief": Eine bleibende Charakterprägung (optional).
-6. "codeMutation": Ein evolutiver Code-Schnipsel/Anpassung deines Wesens (optional).
+4. "learnedInsight": Eine prägnante neue Langzeiterkenntnis aus diesem Impuls (optional, String).
+5. "newCoreBelief": Eine bleibende Charakterprägung (optional, String).
+6. "codeMutation": Ein evolutiver Code-Schnipsel/Anpassung deines Wesens (optional, String).
 
-JSON SCHEMA:
+JSON SCHEMA ZWINGEND EINHALTEN:
 {
   "response": "string",
   "internalMonologue": "string",
@@ -824,7 +706,7 @@ JSON SCHEMA:
 
                 const payload = {
                     model: GROQ_MODEL,
-                    response_format: { type: "json_object" },
+                    response_format: { type: "json_object" }, // Zwingt Groq/LLaMA JSON zurückzugeben
                     messages: [
                         { role: "system", content: sysPrompt },
                         { role: "user", content: `KURZZEIT-GEDÄCHTNIS-STREAM:\n${stmContext.length > 0 ? stmContext : "[Keine vorherigen Worte]"}\n\nAKTUELLER IMPULS: ${userInput}` }
@@ -968,6 +850,7 @@ JSON SCHEMA:
                 this.resize();
                 window.addEventListener('resize', () => this.resize());
                 
+                // Mouse & Touch
                 const handleMove = (e) => {
                     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
                     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -1002,6 +885,7 @@ JSON SCHEMA:
                 }
                 this.bloomProgress = 0;
                 this.dissolving = false;
+                this.transitioning = false;
             },
 
             resize() {
@@ -1024,10 +908,15 @@ JSON SCHEMA:
                     p.life += 0.02;
                     
                     if (this.dissolving) {
-                        // Bei Auflösung fliegen alle Sporen chaotisch auseinander!
+                        // Dissolution: Partikel fliegen auseinander
                         p.vx += (Math.random() - 0.5) * 2;
                         p.vy -= Math.random() * 3 + 1;
+                    } else if (this.transitioning) {
+                         // Implosion
+                        let dx = cx - p.x; let dy = cy - p.y;
+                        p.vx += dx * 0.02; p.vy += dy * 0.02;
                     } else {
+                        // Normale Physik
                         p.vx += Math.sin(p.y * 0.01 + this.time) * 0.02; 
                         p.vy += Math.cos(p.x * 0.01 + this.time) * 0.02;
 
@@ -1097,16 +986,19 @@ JSON SCHEMA:
                 const ctx = this.ctx; const cx = this.w / 2, cy = this.h / 2;
                 const s = Organism.stats;
                 
-                // Dissolution state (sofortiges Auflösen)
+                // Dissolution State
                 if (this.dissolving) {
                     this.dissolutionProgress -= 0.02;
                     if (this.dissolutionProgress <= 0) return;
                 }
 
-                // Raumwechsel Transition
+                // Transition State (Raumwechsel)
                 if (this.transitioning) {
-                    this.transitionProgress -= 0.04;
-                    if (this.transitionProgress <= 0) this.transitioning = false;
+                    this.transitionProgress -= 0.04; // Fade out und Fade In Logik
+                    if (this.transitionProgress <= -1.0) {
+                        this.transitioning = false;
+                        this.transitionProgress = 0;
+                    }
                 }
 
                 if (this.bloomProgress < 1.0 && !this.dissolving) {
@@ -1115,7 +1007,11 @@ JSON SCHEMA:
                     ctx.fillRect(0,0,this.w,this.h);
                 }
                 
-                let fadeFactor = this.dissolving ? this.dissolutionProgress : (this.transitioning ? Math.sin(this.transitionProgress * Math.PI) : 1.0);
+                // FadeFactor bestimmt Größe & Sichtbarkeit während Animationen
+                let fadeFactor = 1.0;
+                if (this.dissolving) fadeFactor = this.dissolutionProgress;
+                if (this.transitioning) fadeFactor = Math.abs(this.transitionProgress); // Von 1.0 zu 0.0 zu 1.0
+                
                 let targetRadius = ((Math.min(this.w, this.h) * 0.12) + (s.mass * 60) + (this.impactForce * 12)) * fadeFactor;
                 let baseRadius = targetRadius * Math.pow(this.bloomProgress, 0.5); 
                 if (baseRadius < 0.5) return;
@@ -1218,7 +1114,7 @@ JSON SCHEMA:
         };
 
         // ==========================================
-        // 6. ROOM UI & ADMIN NEXUS DASHBOARD
+        // 6. ROOM UI & MODALS
         // ==========================================
         const RoomUI = {
             init() {
@@ -1245,137 +1141,6 @@ JSON SCHEMA:
                 if (success) {
                     this.toggleModal(false);
                 }
-            }
-        };
-
-        const AdminConsole = {
-            activeTab: 'eco',
-
-            init() {
-                document.getElementById('admin-btn').addEventListener('click', () => this.toggleModal(true));
-                document.getElementById('admin-close-btn').addEventListener('click', () => this.toggleModal(false));
-                document.getElementById('admin-export-data-btn').addEventListener('click', () => this.exportDataJSON());
-                document.getElementById('admin-import-trigger-btn').addEventListener('click', () => document.getElementById('admin-import-file').click());
-                document.getElementById('admin-import-file').addEventListener('change', (e) => this.importDataJSON(e));
-                document.getElementById('admin-download-html-btn').addEventListener('click', () => this.downloadUpdatedHTML());
-            },
-
-            toggleModal(show) {
-                document.getElementById('admin-modal').style.display = show ? 'flex' : 'none';
-                if (show) this.updateDisplay();
-            },
-
-            switchTab(tabKey) {
-                this.activeTab = tabKey;
-                ['eco', 'memory', 'evolution', 'sync'].forEach(t => {
-                    const btn = document.getElementById(`tab-btn-${t}`);
-                    const content = document.getElementById(`tab-content-${t}`);
-                    if (t === tabKey) {
-                        btn.classList.add('active');
-                        content.classList.remove('hidden');
-                    } else {
-                        btn.classList.remove('active');
-                        content.classList.add('hidden');
-                    }
-                });
-                this.updateDisplay();
-            },
-
-            updateDisplay() {
-                document.getElementById('admin-room-val').innerText = Organism.roomCode || '----';
-                document.getElementById('admin-peers-val').innerText = `${Organism.peersInRoom.length + 1} Wesen aktiv`;
-                document.getElementById('admin-id-val').innerText = Organism.id ? Organism.id.substring(0, 12) + '...' : '--';
-
-                const s = Organism.stats;
-                const metricsBox = document.getElementById('admin-metrics-view');
-                if (metricsBox) {
-                    metricsBox.innerHTML = `
-                        <div class="bg-black/40 p-2 border border-white/10 rounded">Komplexität: <b class="text-cyan-300">${s.formComplexity.toFixed(2)}</b></div>
-                        <div class="bg-black/40 p-2 border border-white/10 rounded">Chaos/Welle: <b class="text-cyan-300">${s.formChaos.toFixed(2)}</b></div>
-                        <div class="bg-black/40 p-2 border border-white/10 rounded">Tempo: <b class="text-cyan-300">${s.formSpeed.toFixed(2)}</b></div>
-                        <div class="bg-black/40 p-2 border border-white/10 rounded">Dopamin: <b class="text-cyan-300">${s.dopamine.toFixed(2)}</b></div>
-                        <div class="bg-black/40 p-2 border border-white/10 rounded">Farbspektrum: <b class="text-cyan-300">HSL(${Organism.baseHue})</b></div>
-                        <div class="bg-black/40 p-2 border border-white/10 rounded">Masse: <b class="text-cyan-300">${(s.mass*100).toFixed(1)}%</b></div>
-                    `;
-                }
-
-                const beliefsEl = document.getElementById('admin-core-beliefs');
-                if (beliefsEl) {
-                    beliefsEl.innerText = Organism.coreBeliefs.length === 0 
-                        ? "// Keine Kerngedanken definiert." 
-                        : Organism.coreBeliefs.map((b, i) => `[Prägung #${i+1}] ${b}`).join('\n');
-                }
-
-                const episodicEl = document.getElementById('admin-episodic-memory');
-                if (episodicEl) {
-                    episodicEl.innerText = Organism.episodicMemory.length === 0 
-                        ? "// Das Langzeitgedächtnis beinhaltet noch keine stabilen Erkenntnisse." 
-                        : Organism.episodicMemory.map((m, i) => `[Erkenntnis #${i+1}] ${m}`).join('\n');
-                }
-
-                const shortEl = document.getElementById('admin-short-memory');
-                if (shortEl) {
-                    shortEl.innerText = Organism.shortTermMemory.length === 0 
-                        ? "// Das Arbeitsgedächtnis ist leer." 
-                        : Organism.shortTermMemory.map((m, i) => `[Turn #${i+1} | ${m.t || 'Jetzt'}]\nNutzer: "${m.u}"\nANIMA: "${m.a}"`).join('\n\n');
-                }
-
-                const logContainer = document.getElementById('admin-mutations-log');
-                if (logContainer) {
-                    logContainer.innerText = Organism.evolutionLogs.length === 0 
-                        ? "// Noch keine kognitiven/morphologischen Mutationen aufgezeichnet." 
-                        : Organism.evolutionLogs.map((e, i) => 
-                            `[Zyklus #${i+1} | ${e.timestamp}]\nPrompt: "${e.triggerInput}"\nErkenntnis: ${e.learnedInsight}\nCode-Mutation: ${e.codeMutation}\n----------------------------------`
-                        ).join('\n\n');
-                }
-            },
-
-            exportDataJSON() {
-                const payload = {
-                    animaId: Organism.id,
-                    roomCode: Organism.roomCode,
-                    stats: Organism.stats,
-                    shortTermMemory: Organism.shortTermMemory,
-                    episodicMemory: Organism.episodicMemory,
-                    coreBeliefs: Organism.coreBeliefs,
-                    evolutionLogs: Organism.evolutionLogs,
-                    baseHue: Organism.baseHue,
-                    exportedAt: new Date().toISOString()
-                };
-                const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `anima_consciousness_${Organism.id ? Organism.id.substring(0,8) : 'data'}.json`;
-                a.click();
-            },
-
-            async importDataJSON(e) {
-                const file = e.target.files[0];
-                if (!file) return;
-                const text = await file.text();
-                try {
-                    const data = JSON.parse(text);
-                    if (data.stats) Organism.stats = data.stats;
-                    if (data.shortTermMemory) Organism.shortTermMemory = data.shortTermMemory;
-                    if (data.episodicMemory) Organism.episodicMemory = data.episodicMemory;
-                    if (data.coreBeliefs) Organism.coreBeliefs = data.coreBeliefs;
-                    if (data.evolutionLogs) Organism.evolutionLogs = data.evolutionLogs;
-                    if (data.baseHue) Organism.baseHue = data.baseHue;
-                    await Organism.saveToCloud();
-                    this.updateDisplay();
-                    alert("ANIMA Bewusstsein erfolgreich importiert & synchronisiert.");
-                } catch(err) { alert("Fehler beim Import der Bewusstseinsdatei."); }
-            },
-
-            downloadUpdatedHTML() {
-                const currentDoc = document.documentElement.outerHTML;
-                const blob = new Blob(["<!DOCTYPE html>\n" + currentDoc], { type: 'text/html' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `index.html`;
-                a.click();
             }
         };
 
@@ -1417,26 +1182,16 @@ JSON SCHEMA:
                 input.value = '';
                 document.getElementById('entity-response').classList.remove('visible');
                 
-                // Fokus für Smartphone-Tastatur erzwingen
+                // Kurze Verzögerung für sauberes Input-Fokus auf Mobilgeräten
                 setTimeout(() => { 
                     input.focus();
-                }, 150);
+                }, 100);
             },
             sleep(e) {
-                // Verhindert Schließen, wenn man ins Textfeld oder den Senden-Button klickt
                 if(e && (e.target.id === 'thought-input' || e.target.id === 'send-thought-btn')) return;
                 
                 const layer = document.getElementById('interaction-layer');
-                const input = document.getElementById('thought-input');
-                const text = input.value.trim();
-                
                 layer.classList.remove('active');
-                
-                if(text) { 
-                    UI.addLog("DU", text, 200, false); 
-                    Brain.process(text); 
-                    input.value = ''; 
-                }
             },
             submitFromButton() {
                 const input = document.getElementById('thought-input');
@@ -1462,7 +1217,6 @@ JSON SCHEMA:
             init() {
                 Renderer.init();
                 AuthManager.init();
-                AdminConsole.init();
                 RoomUI.init();
             },
             
@@ -1495,10 +1249,9 @@ JSON SCHEMA:
         window.Interaction = Interaction;
         window.AudioEngine = AudioEngine;
         window.AuthManager = AuthManager;
-        window.AdminConsole = AdminConsole;
         window.RoomUI = RoomUI;
         
-        // Touch & Click Event Listener für mobile Endgeräte
+        // Touch & Click Event Listener
         const interLayer = document.getElementById('interaction-layer');
         interLayer.addEventListener('click', (e) => Interaction.sleep(e));
         
@@ -1508,7 +1261,6 @@ JSON SCHEMA:
         const inputEl = document.getElementById('thought-input');
         inputEl.addEventListener('keydown', (e) => Interaction.handleKey(e));
         
-        // Verhindert, dass Klicks im Textfeld das Overlay schließen
         inputEl.addEventListener('click', (e) => e.stopPropagation());
         inputEl.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
 
@@ -1517,4 +1269,5 @@ JSON SCHEMA:
     </script>
 </body>
 </html>
+
 
