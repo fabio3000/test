@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#020203">
-    <title>ANIMA | Autonomous Biological Nexus (Strict Cloud Sync)</title>
+    <title>ANIMA | Autonomous Biological Nexus (Connected)</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -215,13 +215,20 @@
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // ==========================================
-        // CONFIG & FIREBASE (STRICT PATHS)
-        // ==========================================
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        // =========================================================================
+        // HIER IST JETZT DEINE ECHTE FIREBASE-KONFIGURATION VERANKERT
+        // =========================================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyDtwsvmYSONjFufhbJ5I8G_RAMffnh7re0",
+            authDomain: "theplot-app.firebaseapp.com",
+            projectId: "theplot-app",
+            storageBucket: "theplot-app.firebasestorage.app",
+            messagingSenderId: "550703275210",
+            appId: "1:550703275210:web:81bc0e5a373f87a3c92833"
+        };
         
         // ZWINGEND: Statische App-ID für Cross-Browser Kompatibilität
-        const appIdString = (typeof __app_id !== 'undefined' && __app_id) ? __app_id : 'anima-global-nexus'; 
+        const appIdString = 'anima-global-nexus'; 
         
         let app = null;
         let auth = null;
@@ -240,9 +247,6 @@
                 document.getElementById('dbg-db').innerText = 'DB: ERROR ' + e.message;
                 document.getElementById('dbg-db').style.color = '#ff4444';
             }
-        } else {
-            document.getElementById('dbg-db').innerText = 'DB: OFFLINE (NO CONFIG)';
-            document.getElementById('dbg-db').style.color = '#ff4444';
         }
 
         let groqApiKey = ""; 
@@ -253,7 +257,6 @@
 
         const GROQ_MODEL = "llama-3.3-70b-versatile";
 
-        // Fehler-resistenter Hashing-Algorithmus (funktioniert auch lokal!)
         async function hashApiKey(key) {
             const cleanKey = String(key || '').trim();
             if (window.crypto && crypto.subtle) {
@@ -263,7 +266,6 @@
                 const hashArray = Array.from(new Uint8Array(hashBuffer));
                 return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
             } else {
-                // Fallback für Browser, die crypto.subtle blockieren (z.B. non-https)
                 let hash = 0;
                 for (let i = 0; i < cleanKey.length; i++) {
                     const char = cleanKey.charCodeAt(i);
@@ -274,7 +276,6 @@
             }
         }
 
-        // Auth Garantie
         async function ensureAuth() {
             if (currentUser) return currentUser;
             if (authPromise) return authPromise;
@@ -285,28 +286,15 @@
                     return;
                 }
                 try {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        const res = await signInWithCustomToken(auth, __initial_auth_token);
-                        currentUser = res.user;
-                    } else {
-                        const res = await signInAnonymously(auth);
-                        currentUser = res.user;
-                    }
-                    document.getElementById('dbg-auth').innerText = 'AUTH: ' + currentUser.uid.substring(0,8);
+                    const res = await signInAnonymously(auth);
+                    currentUser = res.user;
+                    document.getElementById('dbg-auth').innerText = 'AUTH (ANON): ' + currentUser.uid.substring(0,8);
                     document.getElementById('dbg-auth').style.color = '#00ff88';
                     resolve(currentUser);
                 } catch (e) {
-                    try {
-                        const res = await signInAnonymously(auth);
-                        currentUser = res.user;
-                        document.getElementById('dbg-auth').innerText = 'AUTH (ANON): ' + currentUser.uid.substring(0,8);
-                        document.getElementById('dbg-auth').style.color = '#00ff88';
-                        resolve(currentUser);
-                    } catch (e2) {
-                        document.getElementById('dbg-auth').innerText = 'AUTH: BLOCKED';
-                        document.getElementById('dbg-auth').style.color = '#ff4444';
-                        reject(new Error("Anmeldung fehlgeschlagen: " + e2.message));
-                    }
+                    document.getElementById('dbg-auth').innerText = 'AUTH: BLOCKED';
+                    document.getElementById('dbg-auth').style.color = '#ff4444';
+                    reject(new Error("Anmeldung fehlgeschlagen. Bitte aktiviere Anonyme Authentifizierung in Firebase. (" + e.message + ")"));
                 }
             });
 
@@ -319,12 +307,11 @@
         const CloudSync = {
             async load(id) {
                 if (!db) {
-                    throw new Error("Keine Datenbankverbindung! App läuft offline/lokal.");
+                    throw new Error("Keine Datenbankverbindung möglich. Bitte prüfe deine Firebase Config.");
                 }
                 
                 await ensureAuth();
 
-                // Fester, garantierter Pfad: /artifacts/{appIdString}/public/data/anima_states/{id}
                 const docRef = doc(db, 'artifacts', appIdString, 'public', 'data', 'anima_states', id);
                 
                 try {
@@ -334,13 +321,11 @@
                         return docSnap.data();
                     } else {
                         console.log("[STRICT SYNC] Kein Dokument gefunden - legitimer neuer Nutzer.");
-                        return null; // Explizit null, bedeutet: Existiert WIRKLICH nicht.
+                        return null; 
                     }
                 } catch (e) {
-                    // EXTREM WICHTIG: Wir werfen den Fehler weiter!
-                    // Wenn es hier crasht, verhindern wir so, dass die App eine "neue" Anima erstellt und speichert!
                     console.error("[STRICT SYNC] Firestore Abfrage fehlgeschlagen:", e);
-                    throw new Error("Zugriff auf Firebase verweigert oder fehlgeschlagen. (" + e.message + ")");
+                    throw new Error("Zugriff auf Firebase verweigert! Hast du in Firebase unter 'Firestore Database -> Rules' die Leserechte erlaubt? Fehler: " + e.message);
                 }
             },
 
@@ -360,7 +345,7 @@
                     console.log("[STRICT SYNC] Erfolgreich in Firestore gespeichert.");
                 } catch (e) {
                     console.error("[STRICT SYNC] FEHLER beim Speichern in Firestore:", e);
-                    throw e; // Auch hier Fehler werfen!
+                    throw e; 
                 }
             },
 
@@ -405,18 +390,15 @@
                 let cloudState = null;
 
                 try {
-                    // HIER PASSIERT DIE MAGIE: Wir erzwingen das Laden!
                     cloudState = await CloudSync.load(id);
                 } catch (error) {
-                    // WENN ES FEHLSCHLÄGT, ABBRUCH! KEINE NEUE ANIMA ERSTELLEN!
                     if (onProgress) {
-                        onProgress(`<span style="color:#ff4444;">[ FEHLER: CLOUD LÄSST ZUGRIFF NICHT ZU ]</span><br><br><span style="font-size:0.5rem; text-transform:none;">Ladevorgang gestoppt, um Überschreiben deiner alten Erinnerungen zu verhindern.<br>Grund: ${error.message}</span>`);
+                        onProgress(`<span style="color:#ff4444;">[ FEHLER: ZUGRIFF VERWEIGERT ]</span><br><br><span style="font-size:0.5rem; text-transform:none;">Ladevorgang gestoppt, um Überschreiben deiner alten Erinnerungen zu verhindern.<br>Grund: ${error.message}</span>`);
                     }
                     throw error; // System stoppt hier.
                 }
                 
                 if (cloudState) {
-                    // ALTE DATEN WIEDERHERSTELLEN
                     this.stats = cloudState.stats || this.stats;
                     this.targetStats = cloudState.targetStats || this.targetStats;
                     this.memory = Array.isArray(cloudState.memory) ? cloudState.memory : [];
@@ -439,7 +421,6 @@
                         });
                     }
                 } else {
-                    // NEUE DATEN NUR ERSTELLEN, WENN CLOUD EXAKT "NULL" (EXISTIERT NICHT) ZURÜCKGIBT
                     this.baseHue = Math.floor(180 + Math.random() * 80);
                     this.coreBeliefs = ["Ich bin ANIMA. Ich reife mit jedem Impuls."];
                     document.getElementById('room-switch-btn').innerText = `RAUM: ${this.roomCode}`;
@@ -468,7 +449,6 @@
             async saveToCloud() {
                 if(!this.id) return;
                 
-                // Absolute Bereinigung der Daten, damit Firebase nicht wegen 'undefined' abstürzt
                 const cleanMemory = (this.memory || []).map(m => ({ u: String(m.u || ''), a: String(m.a || ''), t: String(m.t || new Date().toISOString()) }));
                 const cleanBeliefs = (this.coreBeliefs || []).map(b => String(b || ''));
 
@@ -1047,13 +1027,11 @@ JSON ANTWORT ZWINGEND:
                 document.getElementById('cine-4').style.opacity = '1';
 
                 try {
-                    // STRIKTER ABBRUCH BEI FEHLER - Keine neue Anima wird generiert!
                     await Organism.initWithMemorySync(animaId, (statusMessage) => {
                         document.getElementById('cine-3').innerHTML = statusMessage;
                     });
                 } catch (error) {
-                    // WENN FIREBASE BLOCKIERT, ZEIGEN WIR DAS DEM USER UND STOPPEN.
-                    return; // HALT EXECUTION
+                    return; 
                 }
 
                 await this.sleep(1500);
@@ -1088,4 +1066,5 @@ JSON ANTWORT ZWINGEND:
     </script>
 </body>
 </html>
+
 
