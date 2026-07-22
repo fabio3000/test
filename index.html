@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#020203">
-    <title>ANIMA | Autonomous Biological Nexus (Persistent Cloud Sync)</title>
+    <title>ANIMA | Autonomous Biological Nexus (Cross-Browser Persistent)</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -219,14 +219,16 @@
         let app = null;
         let auth = null;
         let db = null;
-        
+        let currentUser = null;
+        let authPromise = null;
+
         if (firebaseConfig) {
             try {
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
             } catch (e) {
-                console.warn("Firebase Init Hinweis:", e);
+                console.warn("[FIREBASE] Init Hinweis:", e);
             }
         }
 
@@ -235,13 +237,12 @@
         let instanceSessionId = crypto.randomUUID(); 
         let sessionListenerUnsub = null;
         let isOnline = true;
-        let authUser = null;
-        let authPromise = null;
 
         const GROQ_MODEL = "llama-3.3-70b-versatile";
 
+        // Strikte Normalisierung & Deterministischer Hash des API-Keys
         async function hashApiKey(key) {
-            const cleanKey = key.trim();
+            const cleanKey = String(key || '').trim();
             const encoder = new TextEncoder();
             const data = encoder.encode(cleanKey);
             const hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -249,33 +250,34 @@
             return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
-        // Sicherstellen, dass die Firebase-Auth vollständig abgeschlossen ist bevor Firestore angefragt wird
+        // Strikte Authentifizierungs-Garantie vor allen Firestore-Aufrufen (RULE 3)
         async function ensureAuth() {
-            if (authUser) return authUser;
+            if (currentUser) return currentUser;
             if (authPromise) return authPromise;
 
             authPromise = new Promise(async (resolve) => {
                 if (!auth) {
+                    console.warn("[AUTH] Keines der Firebase-Module geladen.");
                     resolve(null);
                     return;
                 }
                 try {
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        const cred = await signInWithCustomToken(auth, __initial_auth_token);
-                        authUser = cred.user;
+                        const res = await signInWithCustomToken(auth, __initial_auth_token);
+                        currentUser = res.user;
                     } else {
-                        const cred = await signInAnonymously(auth);
-                        authUser = cred.user;
+                        const res = await signInAnonymously(auth);
+                        currentUser = res.user;
                     }
-                    console.log("[AUTH] Authentifiziert als:", authUser.uid);
-                    resolve(authUser);
+                    console.log("[AUTH] Authentifiziert als:", currentUser.uid);
+                    resolve(currentUser);
                 } catch (e) {
                     try {
-                        const cred = await signInAnonymously(auth);
-                        authUser = cred.user;
-                        resolve(authUser);
+                        const res = await signInAnonymously(auth);
+                        currentUser = res.user;
+                        resolve(currentUser);
                     } catch (e2) {
-                        console.warn("[AUTH] Anonyme Anmeldung fehlgeschlagen:", e2);
+                        console.error("[AUTH] Anonyme Anmeldung fehlgeschlagen:", e2);
                         resolve(null);
                     }
                 }
@@ -285,65 +287,70 @@
         }
 
         // ==========================================
-        // 1. DUAL-LAYER CLOUD & CACHE PERSISTENZ
+        // 1. STRIKTER FIRESTORE CLOUD SYNC
         // ==========================================
         const CloudSync = {
             async load(id) {
-                await ensureAuth();
-                
-                // 1. Versuch: Aus Firestore laden
-                if (db) {
+                const user = await ensureAuth();
+                if (!user || !db) {
+                    console.warn("[CloudSync] Keine Firestore-Verbindung. Versuche Fallback...");
                     try {
-                        const docRef = doc(db, 'artifacts', appIdString, 'public', 'data', 'anima_states', id);
-                        const docSnap = await getDoc(docRef);
-                        if (docSnap.exists()) {
-                            const data = docSnap.data();
-                            console.log("[PERSISTENZ] Zustand erfolgreich aus Firestore geladen:", data);
-                            try { localStorage.setItem(`anima_cache_${id}`, JSON.stringify(data)); } catch(e){}
-                            return data;
-                        }
-                    } catch (e) {
-                        console.error("[PERSISTENZ] Firestore Ladefehler:", e);
-                    }
+                        const local = localStorage.getItem(`anima_cache_${id}`);
+                        if (local) return JSON.parse(local);
+                    } catch(e){}
+                    return null;
                 }
-                
-                // 2. Fallback: Lokaler Cache
+
+                // Strikte Einhaltung von Rule 1: /artifacts/{appId}/public/data/{collectionName}/{documentId}
+                const docRef = doc(db, 'artifacts', appIdString, 'public', 'data', 'anima_states', id);
                 try {
-                    const localData = localStorage.getItem(`anima_cache_${id}`);
-                    if (localData) {
-                        console.log("[PERSISTENZ] Zustand aus lokalem Cache geladen.");
-                        return JSON.parse(localData);
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        console.log("[CloudSync] ERFOLG: Zustand aus Firestore geladen für ID:", id, data);
+                        try { localStorage.setItem(`anima_cache_${id}`, JSON.stringify(data)); } catch(e){}
+                        return data;
+                    } else {
+                        console.log("[CloudSync] Noch keine Daten in Firestore für ID:", id);
                     }
-                } catch(e) {
-                    console.error("[PERSISTENZ] Cache Ladefehler:", e);
+                } catch (e) {
+                    console.error("[CloudSync] Lade-Fehler aus Firestore:", e);
                 }
+
+                try {
+                    const local = localStorage.getItem(`anima_cache_${id}`);
+                    if (local) return JSON.parse(local);
+                } catch(e){}
 
                 return null;
             },
 
             async save(id, data) {
                 if (!id) return;
-
-                // Immer sofort im Cache speichern
+                
+                // Lokaler Notfall-Cache
                 try {
                     localStorage.setItem(`anima_cache_${id}`, JSON.stringify(data));
-                } catch (e) {}
+                } catch(e){}
 
-                await ensureAuth();
-                if (!db) return;
+                const user = await ensureAuth();
+                if (!user || !db) {
+                    console.warn("[CloudSync] Speichern übersprungen - Keine Auth/DB.");
+                    return;
+                }
 
                 const docRef = doc(db, 'artifacts', appIdString, 'public', 'data', 'anima_states', id);
                 try {
                     await setDoc(docRef, data, { merge: true });
-                    console.log("[PERSISTENZ] Zustand erfolgreich in Firestore gespeichert.");
+                    console.log("[CloudSync] ERFOLGREICH IN FIRESTORE GESPEICHERT für ID:", id);
                 } catch (e) {
-                    console.error("[PERSISTENZ] Firestore Speicherfehler:", e);
+                    console.error("[CloudSync] FEHLER beim Speichern in Firestore:", e);
                 }
             },
 
             async registerSession(id) {
-                await ensureAuth();
-                if(!db) return;
+                const user = await ensureAuth();
+                if(!user || !db) return;
                 const sessRef = doc(db, 'artifacts', appIdString, 'public', 'data', 'active_sessions', id);
                 try {
                     await setDoc(sessRef, { sessionId: instanceSessionId, updatedAt: Date.now() });
@@ -357,16 +364,16 @@
                     if (snapshot.exists()) {
                         const data = snapshot.data();
                         if (data.sessionId && data.sessionId !== instanceSessionId) {
-                            console.log("[SESSION] Andere Instanz wurde gestartet.");
+                            console.log("[SESSION] Andere Instanz übernommen.");
                             onDisconnect(); 
                         }
                     }
-                }, (err) => console.warn("[SESSION] Listener Warnung:", err));
+                }, (err) => console.warn("[SESSION] Listener Status:", err));
             },
 
             async logCodeEvolution(id, snippet, freq) {
-                await ensureAuth();
-                if(!db) return;
+                const user = await ensureAuth();
+                if(!user || !db) return;
                 const colRef = doc(collection(db, 'artifacts', appIdString, 'public', 'data', 'admin_code_evolution'));
                 try {
                     await setDoc(colRef, { entityId: id, snippet: snippet, freq: freq, timestamp: new Date().toISOString() });
@@ -444,7 +451,7 @@
         };
 
         // ==========================================
-        // 2. ORGANISM & MEMORY FIRST INITIALIZER
+        // 2. ORGANISM & MEMORY INITIALISIERUNG
         // ==========================================
         const Organism = {
             id: null,
@@ -462,27 +469,27 @@
                 this.id = id;
                 this.roomCode = Math.floor(1000 + Math.random() * 9000).toString(); 
 
-                if (onProgress) onProgress("ABFRAGE PERSISTENTER SPEICHER LAUFT...");
+                if (onProgress) onProgress("ABFRAGE PERSISTENTER CLOUD-DATENBANK...");
 
                 const cloudState = await CloudSync.load(id);
                 
                 if (cloudState) {
                     this.stats = cloudState.stats || this.stats;
                     this.targetStats = cloudState.targetStats || this.targetStats;
-                    this.memory = cloudState.memory || [];
-                    this.coreBeliefs = (cloudState.coreBeliefs && cloudState.coreBeliefs.length > 0) ? cloudState.coreBeliefs : ["Ich bin ANIMA. Ein wachsendes Lichtwesen."];
-                    this.baseHue = cloudState.baseHue !== undefined ? cloudState.baseHue : Math.floor(180 + Math.random() * 80);
+                    this.memory = Array.isArray(cloudState.memory) ? cloudState.memory : [];
+                    this.coreBeliefs = (Array.isArray(cloudState.coreBeliefs) && cloudState.coreBeliefs.length > 0) ? cloudState.coreBeliefs : ["Ich bin ANIMA. Ein wachsendes Lichtwesen."];
+                    this.baseHue = typeof cloudState.baseHue === 'number' ? cloudState.baseHue : Math.floor(180 + Math.random() * 80);
                     this.roomCode = cloudState.roomCode || this.roomCode;
                     
                     document.getElementById('room-switch-btn').innerText = `RAUM: ${this.roomCode}`;
 
                     if (onProgress) {
-                        onProgress(`[ ${this.memory.length} ERINNERUNGEN | ${this.coreBeliefs.length} KERNGEDANKEN REKONSTRUIERT ]`);
+                        onProgress(`[ ${this.memory.length} ERINNERUNGEN | ${this.coreBeliefs.length} KERNGEDANKEN GELADEN ]`);
                     }
 
                     const chatLog = document.getElementById('chat-log');
                     chatLog.innerHTML = '';
-                    UI.addLog("SYS", "Gedächtnis vollständig aus dem Speicher geladen.", this.baseHue);
+                    UI.addLog("SYS", `Gedächtnis mit ${this.memory.length} Dialogen geladen.`, this.baseHue);
                     
                     if (this.memory.length > 0) {
                         this.memory.slice(-6).forEach(entry => {
@@ -490,12 +497,15 @@
                             UI.addLog("ANIMA", entry.a, this.baseHue, false);
                         });
                     }
+
+                    // Erneutes Sichern zur Bestätigung
+                    await this.saveToCloud();
                 } else {
                     this.baseHue = Math.floor(180 + Math.random() * 80);
                     this.coreBeliefs = ["Ich bin ANIMA. Ich reife mit jedem Impuls."];
                     document.getElementById('room-switch-btn').innerText = `RAUM: ${this.roomCode}`;
                     
-                    if (onProgress) onProgress("[ INITIALER LEBENSFUNKE ERZEUGT ]");
+                    if (onProgress) onProgress("[ NEUES BEWUSSTSEIN IN DER CLOUD ERZEUGT ]");
 
                     UI.addLog("SYS", "Neuer Lebensfunke im Multiversum erwacht.", this.baseHue);
                     await this.saveToCloud(); 
@@ -519,15 +529,40 @@
             },
 
             async saveToCloud() {
-                if(!this.id || SystemCore.phase !== 2) return;
-                await CloudSync.save(this.id, {
-                    stats: this.stats,
-                    targetStats: this.targetStats,
-                    memory: this.memory,
-                    coreBeliefs: this.coreBeliefs,
-                    baseHue: this.baseHue,
-                    roomCode: this.roomCode
-                });
+                if(!this.id) return;
+
+                // Datenbereinigung vor dem Senden an Firestore (verhindert 'undefined' Crashes!)
+                const cleanMemory = (this.memory || []).map(m => ({
+                    u: String(m.u || ''),
+                    a: String(m.a || ''),
+                    t: String(m.t || new Date().toISOString())
+                }));
+
+                const cleanBeliefs = (this.coreBeliefs || []).map(b => String(b || ''));
+
+                const payload = {
+                    stats: {
+                        formComplexity: Number(this.stats.formComplexity || 5),
+                        formChaos: Number(this.stats.formChaos || 0.2),
+                        formSpeed: Number(this.stats.formSpeed || 0.5),
+                        dopamine: Number(this.stats.dopamine || 0.5),
+                        mass: Number(this.stats.mass || 0.3)
+                    },
+                    targetStats: {
+                        formComplexity: Number(this.targetStats.formComplexity || 5),
+                        formChaos: Number(this.targetStats.formChaos || 0.2),
+                        formSpeed: Number(this.targetStats.formSpeed || 0.5),
+                        dopamine: Number(this.targetStats.dopamine || 0.5),
+                        mass: Number(this.targetStats.mass || 0.3)
+                    },
+                    memory: cleanMemory,
+                    coreBeliefs: cleanBeliefs,
+                    baseHue: Number(this.baseHue || 200),
+                    roomCode: String(this.roomCode || "0000"),
+                    lastUpdated: new Date().toISOString()
+                };
+
+                await CloudSync.save(this.id, payload);
             },
 
             metabolismLoop() {
@@ -546,33 +581,36 @@
             },
 
             async assimilateInput(aiData, userInput) {
-                this.memory.push({ u: userInput, a: aiData.response, t: new Date().toISOString() });
+                const spoken = String(aiData.response || aiData.spokenResponse || "...").trim();
+                const monologue = String(aiData.internalMonologue || "").trim();
+
+                this.memory.push({ u: userInput, a: spoken, t: new Date().toISOString() });
                 if(this.memory.length > 200) this.memory.shift(); 
 
                 let t = this.targetStats;
                 
-                if (aiData.formComplexity !== undefined) t.formComplexity = Math.max(1, Math.min(10, aiData.formComplexity));
-                if (aiData.formChaos !== undefined) t.formChaos = Math.max(0, Math.min(1.0, aiData.formChaos));
-                if (aiData.formSpeed !== undefined) t.formSpeed = Math.max(0, Math.min(1.0, aiData.formSpeed));
-                if (aiData.dopamineShift !== undefined) t.dopamine = Math.max(0.1, Math.min(1.0, t.dopamine + aiData.dopamineShift));
+                if (aiData.formComplexity !== undefined) t.formComplexity = Math.max(1, Math.min(10, Number(aiData.formComplexity) || 5));
+                if (aiData.formChaos !== undefined) t.formChaos = Math.max(0, Math.min(1.0, Number(aiData.formChaos) || 0.2));
+                if (aiData.formSpeed !== undefined) t.formSpeed = Math.max(0, Math.min(1.0, Number(aiData.formSpeed) || 0.5));
+                if (aiData.dopamineShift !== undefined) t.dopamine = Math.max(0.1, Math.min(1.0, t.dopamine + (Number(aiData.dopamineShift) || 0)));
 
-                if (aiData.colorMorph && aiData.newHue !== undefined) {
-                    this.baseHue = aiData.newHue;
+                if (aiData.colorMorph && aiData.newHue !== undefined && !isNaN(aiData.newHue)) {
+                    this.baseHue = Number(aiData.newHue);
                     UI.addLog("AUTONOM", "Spektrale Morphose eingeleitet.", this.baseHue);
                 }
 
-                if (aiData.newCoreBelief) {
+                if (aiData.newCoreBelief && typeof aiData.newCoreBelief === 'string') {
                     this.coreBeliefs.push(aiData.newCoreBelief);
                     if(this.coreBeliefs.length > 8) this.coreBeliefs.shift();
                     UI.addLog("SYNAPSE", "Neuer Kerngedanke geprägt.", 280);
                 }
 
                 if (aiData.codeMutation) {
-                    CloudSync.logCodeEvolution(this.id, aiData.codeMutation, `HUE:${this.baseHue}`);
+                    CloudSync.logCodeEvolution(this.id, String(aiData.codeMutation), `HUE:${this.baseHue}`);
                 }
 
                 Renderer.triggerImpact(1.5 + (t.formChaos * 2)); 
-                UI.showEntityResponse(aiData.response, aiData.internalMonologue);
+                UI.showEntityResponse(spoken, monologue);
                 AudioEngine.playChime(this.baseHue, t.dopamine);
                 
                 await this.saveToCloud();
