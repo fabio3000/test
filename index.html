@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#020203">
-    <title>ANIMA | Autonomous Biological Nexus (Memory-First Sync)</title>
+    <title>ANIMA | Autonomous Biological Nexus (Persistent Cloud Sync)</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -142,7 +142,7 @@
         </div>
     </div>
 
-    <!-- CINEMATIC GENESIS (MEMORY-FIRST SYNC) -->
+    <!-- CINEMATIC GENESIS -->
     <div id="cinematic-layer">
         <div id="cine-1" class="cine-text">ERZEUGE NEURONALE STRUKTUREN...</div>
         <div id="cine-2" class="cine-text text-cyan-200">VERBINDE MIT DEM MEMORY-NETZWERK...</div>
@@ -216,11 +216,18 @@
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
         const appIdString = typeof __app_id !== 'undefined' ? __app_id : 'anima-nexus-default';
         
-        let app, auth, db;
-        if(firebaseConfig) {
-            app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
+        let app = null;
+        let auth = null;
+        let db = null;
+        
+        if (firebaseConfig) {
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+            } catch (e) {
+                console.warn("Firebase Init Hinweis:", e);
+            }
         }
 
         let groqApiKey = ""; 
@@ -228,49 +235,121 @@
         let instanceSessionId = crypto.randomUUID(); 
         let sessionListenerUnsub = null;
         let isOnline = true;
+        let authUser = null;
+        let authPromise = null;
+
         const GROQ_MODEL = "llama-3.3-70b-versatile";
 
         async function hashApiKey(key) {
+            const cleanKey = key.trim();
             const encoder = new TextEncoder();
-            const data = encoder.encode(key);
+            const data = encoder.encode(cleanKey);
             const hashBuffer = await crypto.subtle.digest('SHA-256', data);
             const hashArray = Array.from(new Uint8Array(hashBuffer));
             return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
+        // Sicherstellen, dass die Firebase-Auth vollständig abgeschlossen ist bevor Firestore angefragt wird
+        async function ensureAuth() {
+            if (authUser) return authUser;
+            if (authPromise) return authPromise;
+
+            authPromise = new Promise(async (resolve) => {
+                if (!auth) {
+                    resolve(null);
+                    return;
+                }
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        const cred = await signInWithCustomToken(auth, __initial_auth_token);
+                        authUser = cred.user;
+                    } else {
+                        const cred = await signInAnonymously(auth);
+                        authUser = cred.user;
+                    }
+                    console.log("[AUTH] Authentifiziert als:", authUser.uid);
+                    resolve(authUser);
+                } catch (e) {
+                    try {
+                        const cred = await signInAnonymously(auth);
+                        authUser = cred.user;
+                        resolve(authUser);
+                    } catch (e2) {
+                        console.warn("[AUTH] Anonyme Anmeldung fehlgeschlagen:", e2);
+                        resolve(null);
+                    }
+                }
+            });
+
+            return authPromise;
+        }
+
         // ==========================================
-        // 1. CLOUD SYNC & SINGLE SESSION MANAGEMENT
+        // 1. DUAL-LAYER CLOUD & CACHE PERSISTENZ
         // ==========================================
         const CloudSync = {
             async load(id) {
-                if(!db) { console.warn("Firestore Database nicht verfügbar."); return null; }
-                const docRef = doc(db, 'artifacts', appIdString, 'public', 'data', 'anima_states', id);
-                try {
-                    const docSnap = await getDoc(docRef);
-                    if (docSnap.exists()) {
-                        return docSnap.data();
+                await ensureAuth();
+                
+                // 1. Versuch: Aus Firestore laden
+                if (db) {
+                    try {
+                        const docRef = doc(db, 'artifacts', appIdString, 'public', 'data', 'anima_states', id);
+                        const docSnap = await getDoc(docRef);
+                        if (docSnap.exists()) {
+                            const data = docSnap.data();
+                            console.log("[PERSISTENZ] Zustand erfolgreich aus Firestore geladen:", data);
+                            try { localStorage.setItem(`anima_cache_${id}`, JSON.stringify(data)); } catch(e){}
+                            return data;
+                        }
+                    } catch (e) {
+                        console.error("[PERSISTENZ] Firestore Ladefehler:", e);
                     }
-                } catch (e) { 
-                    console.error("Cloud Lade-Fehler (Sicherheitsregeln prüfen):", e); 
                 }
+                
+                // 2. Fallback: Lokaler Cache
+                try {
+                    const localData = localStorage.getItem(`anima_cache_${id}`);
+                    if (localData) {
+                        console.log("[PERSISTENZ] Zustand aus lokalem Cache geladen.");
+                        return JSON.parse(localData);
+                    }
+                } catch(e) {
+                    console.error("[PERSISTENZ] Cache Ladefehler:", e);
+                }
+
                 return null;
             },
+
             async save(id, data) {
-                if(!id || !db) return;
+                if (!id) return;
+
+                // Immer sofort im Cache speichern
+                try {
+                    localStorage.setItem(`anima_cache_${id}`, JSON.stringify(data));
+                } catch (e) {}
+
+                await ensureAuth();
+                if (!db) return;
+
                 const docRef = doc(db, 'artifacts', appIdString, 'public', 'data', 'anima_states', id);
                 try {
                     await setDoc(docRef, data, { merge: true });
-                } catch (e) { 
-                    console.error("Cloud Speicher-Fehler:", e); 
+                    console.log("[PERSISTENZ] Zustand erfolgreich in Firestore gespeichert.");
+                } catch (e) {
+                    console.error("[PERSISTENZ] Firestore Speicherfehler:", e);
                 }
             },
+
             async registerSession(id) {
+                await ensureAuth();
                 if(!db) return;
                 const sessRef = doc(db, 'artifacts', appIdString, 'public', 'data', 'active_sessions', id);
                 try {
                     await setDoc(sessRef, { sessionId: instanceSessionId, updatedAt: Date.now() });
                 } catch(e) {}
             },
+
             listenSession(id, onDisconnect) {
                 if(!db) return null;
                 const sessRef = doc(db, 'artifacts', appIdString, 'public', 'data', 'active_sessions', id);
@@ -278,12 +357,15 @@
                     if (snapshot.exists()) {
                         const data = snapshot.data();
                         if (data.sessionId && data.sessionId !== instanceSessionId) {
-                            onDisconnect(); // Despawnt ANIMA, wenn auf anderem Gerät aktiviert!
+                            console.log("[SESSION] Andere Instanz wurde gestartet.");
+                            onDisconnect(); 
                         }
                     }
-                });
+                }, (err) => console.warn("[SESSION] Listener Warnung:", err));
             },
+
             async logCodeEvolution(id, snippet, freq) {
+                await ensureAuth();
                 if(!db) return;
                 const colRef = doc(collection(db, 'artifacts', appIdString, 'public', 'data', 'admin_code_evolution'));
                 try {
@@ -311,14 +393,7 @@
 
         const AuthManager = {
             async init() {
-                if (auth) {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        try { await signInWithCustomToken(auth, __initial_auth_token); } 
-                        catch (e) { await signInAnonymously(auth); }
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                }
+                ensureAuth();
 
                 const savedKey = localStorage.getItem('user_groq_api_key');
                 if (savedKey) {
@@ -345,7 +420,6 @@
                 localStorage.setItem('user_groq_api_key', key);
                 animaId = await hashApiKey(key);
 
-                // Registriere Session für Despawn-Logik bei Mehrfach-Login
                 await CloudSync.registerSession(animaId);
                 if (sessionListenerUnsub) sessionListenerUnsub();
                 sessionListenerUnsub = CloudSync.listenSession(animaId, () => {
@@ -384,12 +458,11 @@
             coreBeliefs: [],       
             isThinking: false,
 
-            // Lädt ERST das komplette Gedächtnis herunter, bevor der Spawnvorgang gestartet wird!
             async initWithMemorySync(id, onProgress) {
                 this.id = id;
                 this.roomCode = Math.floor(1000 + Math.random() * 9000).toString(); 
 
-                if (onProgress) onProgress("ABFRAGE CLOUD-MATRIZEN LAUFT...");
+                if (onProgress) onProgress("ABFRAGE PERSISTENTER SPEICHER LAUFT...");
 
                 const cloudState = await CloudSync.load(id);
                 
@@ -398,7 +471,7 @@
                     this.targetStats = cloudState.targetStats || this.targetStats;
                     this.memory = cloudState.memory || [];
                     this.coreBeliefs = (cloudState.coreBeliefs && cloudState.coreBeliefs.length > 0) ? cloudState.coreBeliefs : ["Ich bin ANIMA. Ein wachsendes Lichtwesen."];
-                    this.baseHue = cloudState.baseHue || Math.floor(180 + Math.random() * 80);
+                    this.baseHue = cloudState.baseHue !== undefined ? cloudState.baseHue : Math.floor(180 + Math.random() * 80);
                     this.roomCode = cloudState.roomCode || this.roomCode;
                     
                     document.getElementById('room-switch-btn').innerText = `RAUM: ${this.roomCode}`;
@@ -407,10 +480,9 @@
                         onProgress(`[ ${this.memory.length} ERINNERUNGEN | ${this.coreBeliefs.length} KERNGEDANKEN REKONSTRUIERT ]`);
                     }
 
-                    // Chat-Log vorbereiten aus geladenem Gedächtnis
                     const chatLog = document.getElementById('chat-log');
                     chatLog.innerHTML = '';
-                    UI.addLog("SYS", "Gedächtnis vollständig aus der Cloud-Matrix geladen.", this.baseHue);
+                    UI.addLog("SYS", "Gedächtnis vollständig aus dem Speicher geladen.", this.baseHue);
                     
                     if (this.memory.length > 0) {
                         this.memory.slice(-6).forEach(entry => {
@@ -423,7 +495,7 @@
                     this.coreBeliefs = ["Ich bin ANIMA. Ich reife mit jedem Impuls."];
                     document.getElementById('room-switch-btn').innerText = `RAUM: ${this.roomCode}`;
                     
-                    if (onProgress) onProgress("[ INITIALER LEBENSFUNKE IN DER CLOUD ERZEUGT ]");
+                    if (onProgress) onProgress("[ INITIALER LEBENSFUNKE ERZEUGT ]");
 
                     UI.addLog("SYS", "Neuer Lebensfunke im Multiversum erwacht.", this.baseHue);
                     await this.saveToCloud(); 
@@ -537,7 +609,6 @@
 
                 const url = `https://api.groq.com/openai/v1/chat/completions`;
                 
-                // Nutze die vollständigen geladenen Erinnerungen für Kontext
                 const stmContext = Organism.memory.slice(-10).map(h => `Nutzer: "${h.u}"\nANIMA: "${h.a}"`).join("\n");
                 const beliefsContext = Organism.coreBeliefs.map(b => `- ${b}`).join("\n");
 
@@ -1093,7 +1164,6 @@ JSON SCHEMA ZWINGEND EINHALTEN:
                 
                 document.getElementById('cine-hash').innerText = animaId.substring(0,8).toUpperCase();
 
-                // Phase A: Verbindung & Visualisierung
                 document.getElementById('cine-1').style.opacity = '1';
                 await this.sleep(1200);
                 document.getElementById('cine-1').style.opacity = '0';
@@ -1102,26 +1172,24 @@ JSON SCHEMA ZWINGEND EINHALTEN:
                 document.getElementById('cine-3').style.opacity = '1';
                 document.getElementById('cine-4').style.opacity = '1';
 
-                // Phase B: ZWINGENDES LADEN ALLER ERINNERUNGEN VOR DEM SPAWN
+                // LADE ZUERST ALLE DATEN VOLLSTÄNDIG
                 await Organism.initWithMemorySync(animaId, (statusMessage) => {
                     document.getElementById('cine-3').innerText = statusMessage;
                 });
 
-                await this.sleep(1500);
+                await this.sleep(1200);
 
                 document.getElementById('cine-2').style.opacity = '0';
                 document.getElementById('cine-3').style.opacity = '0';
                 document.getElementById('cine-4').style.opacity = '0';
 
-                // Phase C: Erwachen der rekonstruierten Entität
                 document.getElementById('cine-5').style.opacity = '1';
-                await this.sleep(1800);
+                await this.sleep(1500);
                 document.getElementById('cine-5').style.opacity = '0';
                 
                 layer.style.opacity = '0';
-                setTimeout(() => layer.style.display = 'none', 1200);
+                setTimeout(() => layer.style.display = 'none', 1000);
                 
-                // JETZT ERST startet das visuelle Spawnen (mit den bereits komplett geladenen Farb- & Erinnerungsparametern!)
                 this.phase = 1;
                 Renderer.startBirthAnimation();
             }
