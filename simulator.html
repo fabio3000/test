@@ -3,903 +3,828 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#020203">
-    <title>AETHERIA NEXUS | Unified Living Soul Engine</title>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;800&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <title>Aetheria: AAA Perfect Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
-
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        :root { 
-            --ui-glow: rgba(56, 189, 248, 0.8); 
-            --ui-dark: rgba(3, 7, 18, 0.85); 
-            --ui-accent: #38bdf8; 
-            --bg-base: #020203;
+        :root {
+            --ui-glow: rgba(56, 189, 248, 0.8);
+            --ui-dark: rgba(3, 7, 18, 0.85);
+            --ui-accent: #38bdf8;
         }
         
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
-            background-color: var(--bg-base); color: #fff;
-            font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden;
-            user-select: none; -webkit-tap-highlight-color: transparent; touch-action: none;
+            background-color: #000; overflow: hidden;
+            user-select: none; touch-action: none;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* --- 1. RENDER PIPELINE (ENGINE) --- */
-        #world-container {
-            position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; 
-            background: var(--bg-base); z-index: 1; perspective: 1000px;
+        #game-container {
+            position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; background: #000;
         }
+
+        /* HD-2D Pipeline */
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform-origin: center center; }
-        
-        #bgCanvas { z-index: 10; } 
-        #worldCanvas { z-index: 20; } 
-        #entityCanvas { z-index: 30; } 
-        #fxCanvas { z-index: 40; pointer-events: none; } 
-        #shadowCanvas { z-index: 50; mix-blend-mode: multiply; pointer-events: none; }
-        #lightCanvas { z-index: 60; mix-blend-mode: screen; pointer-events: none; }
+        #bgCanvas { z-index: 1; }
+        #mainCanvas { z-index: 10; }
+        #shadowCanvas { z-index: 20; mix-blend-mode: multiply; pointer-events: none; }
+        #lightCanvas { z-index: 30; mix-blend-mode: screen; pointer-events: none; }
 
         .cinematic-bar {
-            position: absolute; left: 0; width: 100%; height: 7vh; background: #000; z-index: 100;
-            box-shadow: 0 0 50px rgba(0,0,0,1); transition: height 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+            position: absolute; left: 0; width: 100%; height: 8vh;
+            background: #000; z-index: 50; box-shadow: 0 0 80px rgba(0,0,0,1);
+            transition: height 0.6s cubic-bezier(0.25, 1, 0.5, 1);
         }
         .cinematic-bar.top { top: 0; }
         .cinematic-bar.bottom { bottom: 0; }
-        .mode-focus .cinematic-bar { height: 15vh; }
+        .mode-action .cinematic-bar { height: 18vh; }
+        .mode-evolving .cinematic-bar { height: 20vh; }
 
-        /* POST PROCESSING */
-        .film-grain { position: fixed; inset: 0; z-index: 110; pointer-events: none; mix-blend-mode: overlay; opacity: 0.15; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E"); }
-        .vignette { position: fixed; inset: 0; z-index: 111; pointer-events: none; background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.95) 100%); transition: background 1s ease; }
+        /* UI Layer */
+        .ui-layer {
+            position: absolute; inset: 0; z-index: 60; pointer-events: none;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .mode-action .ui-layer, .mode-evolving .ui-layer { opacity: 0; transform: translateY(20px); }
 
-        /* --- 2. UI & ANIMA INTERFACE --- */
-        #ui-layer { position: absolute; inset: 0; z-index: 150; pointer-events: none; transition: opacity 0.5s ease; }
+        .hud-top {
+            position: absolute; top: 5vh; left: 50%; transform: translateX(-50%);
+            background: var(--ui-dark); backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.05); border-bottom: 2px solid var(--ui-accent);
+            padding: 1rem 2rem; text-align: center; min-width: 340px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.8); border-radius: 12px; pointer-events: auto;
+        }
+
+        .hud-actions {
+            position: absolute; bottom: 12vh; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 24px; pointer-events: auto;
+        }
+
+        .action-btn {
+            background: rgba(10, 15, 30, 0.8); border: 1px solid rgba(255,255,255,0.1);
+            color: #fff; width: 85px; height: 85px; border-radius: 20px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6); position: relative; overflow: hidden;
+        }
+        .action-btn:active { transform: scale(0.9); border-color: var(--ui-accent); box-shadow: 0 0 30px var(--ui-glow); }
+        .action-btn span.icon { font-size: 34px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); transition: transform 0.2s; }
+        .action-btn:active span.icon { transform: translateY(-4px); }
+
+        .progress-container { width: 100%; background: rgba(0,0,0,0.8); border-radius: 4px; padding: 2px; margin-top: 6px; }
+        .progress-fill { height: 4px; border-radius: 2px; transition: width 0.4s ease-out; box-shadow: 0 0 10px currentColor; }
         
-        /* Auth Screen */
-        #auth-layer { position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(2, 2, 3, 0.95); backdrop-filter: blur(20px); transition: opacity 1s ease; padding: 1rem; pointer-events: auto; }
-        .auth-box { background: rgba(10, 15, 30, 0.75); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 3rem 2rem; width: 100%; max-width: 450px; text-align: center; box-shadow: 0 30px 60px rgba(0,0,0,0.9); }
-        .auth-title { font-family: 'Cinzel', serif; letter-spacing: 0.25em; font-size: 1.8rem; color: var(--ui-accent); margin-bottom: 0.5rem; text-shadow: 0 0 20px var(--ui-glow); font-weight: 900; }
-        
-        .custom-input { width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.2); color: #fff; font-family: 'Space Mono', monospace; font-size: 0.85rem; padding: 1rem 0; margin-bottom: 1.5rem; outline: none; text-align: center; transition: all 0.3s; }
-        .custom-input:focus { border-bottom-color: var(--ui-accent); box-shadow: 0 10px 20px -10px var(--ui-glow); }
-        .custom-btn { width: 100%; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; color: #fff; font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.9rem; letter-spacing: 0.15em; padding: 1.2rem; cursor: pointer; transition: all 0.3s; text-transform: uppercase; }
-        .custom-btn:hover { background: rgba(56, 189, 248, 0.25); box-shadow: 0 0 25px var(--ui-glow); transform: translateY(-2px); }
+        #env-indicator { position: absolute; top: 20px; right: 25px; font-family: monospace; font-size: 10px; color: var(--ui-accent); text-align: right; text-shadow: 0 2px 4px #000; }
 
-        /* HUD Top Right */
-        .hud-panel { position: absolute; top: 4vh; right: 3vw; background: var(--ui-dark); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); border-left: 3px solid var(--ui-accent); padding: 1.2rem; text-align: right; min-width: 260px; box-shadow: 0 20px 40px rgba(0,0,0,0.7); border-radius: 12px; pointer-events: auto; }
-        .stat-bar-bg { width: 100%; background: rgba(0,0,0,0.6); border-radius: 4px; padding: 2px; margin-top: 8px; overflow: hidden; }
-        .stat-bar-fill { height: 4px; border-radius: 2px; transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 10px currentColor; }
-        
-        /* Chat Log */
-        #memory-stream { position: absolute; top: 4vh; left: 3vw; display: flex; flex-direction: column; gap: 0.8rem; width: 100%; max-width: 400px; height: 55vh; overflow-y: auto; font-size: 0.9rem; mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 80%, rgba(0,0,0,0) 100%); -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 80%, rgba(0,0,0,0) 100%); pointer-events: auto; padding-right: 15px; scroll-behavior: smooth; }
-        #memory-stream::-webkit-scrollbar { width: 4px; } #memory-stream::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
-        .log-entry { background: rgba(15, 20, 30, 0.75); padding: 1rem 1.2rem; backdrop-filter: blur(10px); animation: slideIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; border-radius: 12px; border: 1px solid rgba(255,255,255,0.04); }
-        .log-entry.user { border-left: 3px solid #fff; margin-left: 20px; }
-        .log-entry.anima { border-right: 3px solid var(--ui-accent); margin-right: 20px; text-align: right; }
-        .thought-txt { font-family: 'Space Mono', monospace; font-size: 0.7rem; color: rgba(255,255,255,0.4); margin-top: 8px; font-style: italic; }
-        @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        /* Der Prompt ist nun standardmäßig unsichtbar */
+        #cinematic-prompt {
+            position: absolute; top: 22vh; left: 50%; transform: translateX(-50%);
+            font-family: 'Cinzel', serif; font-size: 2rem; font-weight: 800; color: #fff;
+            text-shadow: 0 0 30px rgba(56, 189, 248, 1), 0 0 10px #000;
+            opacity: 0; transition: opacity 0.3s; z-index: 100; pointer-events: none; letter-spacing: 0.2em; text-align: center;
+        }
+        .pulse-text { animation: pulseText 1.5s infinite; }
+        @keyframes pulseText { 0% { transform: translateX(-50%) scale(1); opacity: 0.8; } 50% { transform: translateX(-50%) scale(1.05); opacity: 1; } 100% { transform: translateX(-50%) scale(1); opacity: 0.8; } }
 
-        /* Neural Input */
-        #neural-input-layer { position: absolute; bottom: 6vh; left: 50%; transform: translateX(-50%); width: 90%; max-width: 700px; display: flex; flex-direction: column; gap: 0.5rem; pointer-events: auto; z-index: 160; }
-        .input-wrapper { background: rgba(10, 15, 25, 0.92); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.12); border-radius: 30px; display: flex; align-items: center; padding: 0.5rem 1.5rem; box-shadow: 0 15px 40px rgba(0,0,0,0.7); transition: border-color 0.3s, box-shadow 0.3s; }
-        .input-wrapper:focus-within { border-color: var(--ui-accent); box-shadow: 0 15px 40px rgba(56, 189, 248, 0.25); }
-        .neural-input { flex: 1; background: transparent; border: none; color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.1rem; padding: 0.8rem 0; outline: none; }
-        .neural-input::placeholder { color: rgba(255, 255, 255, 0.25); }
-        
-        .status-dot { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); width: 8px; height: 8px; border-radius: 50%; background: var(--ui-accent); box-shadow: 0 0 15px var(--ui-accent); opacity: 0; transition: opacity 0.3s; }
-        .status-dot.thinking { opacity: 1; animation: pulse-dot 0.6s infinite alternate; }
-        @keyframes pulse-dot { from { opacity: 0.2; transform: translateX(-50%) scale(0.8); } to { opacity: 1; transform: translateX(-50%) scale(1.5); } }
-
-        #action-prompts { position: absolute; top: 25vh; left: 50%; transform: translateX(-50%); font-family: 'Cinzel', serif; font-size: 2rem; color: #fff; text-shadow: 0 0 30px rgba(255,255,255,0.8); opacity: 0; transition: opacity 0.5s; pointer-events: none; letter-spacing: 0.3em; text-align: center; z-index: 100; }
+        .font-cinzel { font-family: 'Cinzel', serif; }
     </style>
 </head>
 <body>
 
-    <!-- Render Canvas Pipeline -->
-    <div id="world-container">
-        <canvas id="bgCanvas"></canvas>
-        <canvas id="worldCanvas"></canvas>
-        <canvas id="entityCanvas"></canvas>
-        <canvas id="fxCanvas"></canvas>
+    <div id="game-container">
+        <!-- Render Pipeline -->
+        <canvas id="mainCanvas"></canvas>
         <canvas id="shadowCanvas"></canvas>
         <canvas id="lightCanvas"></canvas>
-        
-        <div class="vignette" id="vignette-overlay"></div>
-        <div class="film-grain"></div>
 
         <div class="cinematic-bar top"></div>
         <div class="cinematic-bar bottom"></div>
-        <div id="action-prompts">EVOLUTION</div>
-
-        <!-- User Interface -->
-        <div id="ui-layer">
-            <div id="memory-stream"></div>
-
-            <div class="hud-panel">
-                <div class="flex justify-between items-end mb-1">
-                    <h1 class="font-cinzel text-xl font-bold text-sky-100 tracking-[0.1em] uppercase" id="ui-stage">AETHER-SEED</h1>
-                </div>
-                <div class="flex justify-between mt-2 text-[10px] text-gray-400 font-mono tracking-widest uppercase">
-                    <span>Erinnerungen</span>
-                    <span id="ui-mem-count" class="text-sky-300">0</span>
-                </div>
-                <div class="stat-bar-bg"><div class="stat-bar-fill bg-sky-400" id="bar-xp" style="width: 0%;"></div></div>
-                
-                <div class="mt-4 pt-3 border-t border-gray-800 text-xs font-mono text-gray-400 flex flex-col gap-1">
-                    <div class="flex justify-between"><span>Psyche:</span> <span id="ui-emotion">Neutral</span></div>
-                    <div class="flex justify-between"><span>Biome:</span> <span id="ui-biome">Abgrund</span></div>
-                    <div class="flex justify-between"><span>Aktion:</span> <span id="ui-action" class="text-sky-200">Ruhend</span></div>
-                </div>
-            </div>
-
-            <div id="neural-input-layer">
-                <div class="status-dot" id="ai-thinking"></div>
-                <div class="input-wrapper">
-                    <input type="text" id="chat-input" class="neural-input" placeholder="Teile deine Gedanken mit ANIMA..." autocomplete="off">
-                    <button id="btn-send" class="ml-3 text-sky-400 hover:text-white transition-colors cursor-pointer">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Auth Layer -->
-    <div id="auth-layer">
-        <div class="auth-box">
-            <h1 class="auth-title">AETHERIA</h1>
-            <div class="font-mono text-xs text-gray-400 mb-8 tracking-widest uppercase">Unified Living Soul Engine</div>
-            <input type="password" id="groq-key" class="custom-input" placeholder="Groq API Key (gsk_...)" autocomplete="off">
-            <button id="btn-connect" class="custom-btn">Lebenszyklus Starten</button>
-            <div id="auth-error" class="text-red-400 text-xs mt-4 h-4 font-mono"></div>
-        </div>
-    </div>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyDtwsvmYSONjFufhbJ5I8G_RAMffnh7re0",
-            authDomain: "theplot-app.firebaseapp.com",
-            projectId: "theplot-app",
-            storageBucket: "theplot-app.firebasestorage.app",
-            messagingSenderId: "550703275210",
-            appId: "1:550703275210:web:81bc0e5a373f87a3c92833"
-        };
-        const APP_ID = 'aetheria_nexus_master_v2';
         
-        // Zuverlässige Groq Modelle (mit automatischem Fallback)
-        const GROQ_MODELS = [
-            "llama-3.3-70b-versatile",
-            "llama-3.1-8b-instant"
-        ];
+        <!-- style="opacity: 0;" erzwingt die Unsichtbarkeit von Anfang an -->
+        <div id="cinematic-prompt" class="pulse-text" style="opacity: 0;">BILDSCHIRM HALTEN</div>
 
-        const CONST = {
-            W: 1920, H: 1080,
-            WATER_LEVEL: 1080 * 0.55, // 55% ist Wasseroberfläche
-            GROUND_LEVEL: 1080 * 0.90, // 90% ist fester Boden
-            GRAVITY: 0.65,
-            BUOYANCY: 0.45,
-            STAGES: [
-                { name: "Aether-Seed", req: 0 },
-                { name: "Aether-Larva", req: 3 },
-                { name: "Aether-Batrachos", req: 8 },
-                { name: "Cosmic Entity", req: 18 }
-            ]
-        };
-
-        const MathU = {
-            lerp: (a, b, t) => a + (b - a) * t,
-            dist: (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1),
-            rand: (min, max) => Math.random() * (max - min) + min,
-            clamp: (val, min, max) => Math.max(min, Math.min(max, val))
-        };
-
-        let groqKey = "";
-        let userId = "";
-
-        const State = {
-            memories: [],
-            stageIdx: 0,
-            emotion: { valence: 0.5, arousal: 0.5 },
-            colorHue: 200,
-            biome: 'abyss',
-            isEvolving: false,
+        <!-- UI Layer -->
+        <div class="ui-layer" id="ui-layer">
             
-            async initFire() {
-                const app = initializeApp(firebaseConfig);
-                const auth = getAuth(app);
-                window.db = getFirestore(app);
-                await signInAnonymously(auth);
-                
-                const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(groqKey));
-                userId = Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
-            },
+            <div id="env-indicator">
+                <div id="env-time">Aether-Zyklus aktiv</div>
+                <div id="env-weather" class="text-slate-300">Wetter: Klar</div>
+            </div>
 
-            async load() {
-                if(!window.db) return false;
-                try {
-                    const snap = await getDoc(doc(window.db, 'artifacts', APP_ID, 'public', 'data', 'entities', userId));
-                    if(snap.exists()) {
-                        const d = snap.data();
-                        this.memories = d.memories || [];
-                        this.emotion = d.emotion || { valence: 0.5, arousal: 0.5 };
-                        this.colorHue = d.colorHue || 200;
-                        this.calcStage();
-                        return true;
-                    }
-                } catch(e) {}
-                return false;
-            },
+            <div class="hud-top">
+                <div class="flex justify-between items-end mb-2">
+                    <h1 class="font-cinzel text-xl font-black text-sky-100 tracking-[0.2em] uppercase" id="ui-stage-name">Aether-Ei</h1>
+                    <span class="text-[10px] text-sky-400 font-mono font-bold tracking-widest" id="ui-lvl">LVL 1</span>
+                </div>
+                <div class="progress-container mb-1"><div class="progress-fill bg-sky-400" id="bar-xp" style="width: 0%;"></div></div>
+            </div>
 
-            async save() {
-                if(!window.db) return;
-                try {
-                    await setDoc(doc(window.db, 'artifacts', APP_ID, 'public', 'data', 'entities', userId), {
-                        memories: this.memories.slice(-40),
-                        emotion: this.emotion,
-                        colorHue: this.colorHue,
-                        updatedAt: new Date().toISOString()
-                    }, {merge:true});
-                } catch(e) {}
-            },
+            <!-- Action Buttons -->
+            <div class="hud-actions" id="hud-actions">
+                <button class="action-btn" id="btn-interact" title="Interagieren">
+                    <span class="icon" id="btn-icon">✨</span>
+                    <span class="text-[9px] mt-2 text-slate-200 font-bold tracking-wider" id="btn-text">WÄRMEN</span>
+                </button>
+            </div>
+            
+        </div>
+    </div>
 
-            addMemory(userTxt, aiData) {
-                this.memories.push({ u: userTxt, a: aiData.spoken });
-                this.emotion.valence = MathU.clamp(aiData.emotion_valence, 0, 1);
-                this.emotion.arousal = MathU.clamp(aiData.emotion_arousal, 0, 1);
-                
-                let targetHue = this.emotion.valence > 0.7 ? 50 : (this.emotion.valence < 0.3 ? 280 : 200);
-                this.colorHue = MathU.lerp(this.colorHue, targetHue, 0.3);
+<script>
+/**
+ * AETHERIA - AAA PERFECT EDITION
+ * - Bugfreies UI (Prompt verschwindet korrekt)
+ * - Perfekte Invers-Kinematik für den Schwanz
+ * - AAA Morph-Evolution Animation
+ * - Strikte Wassergrenzen
+ */
 
-                if(this.stageIdx >= 2 && this.emotion.valence > 0.6) this.biome = 'surface';
-                else if(this.emotion.arousal > 0.7) this.biome = 'coral';
-                else this.biome = 'abyss';
+const CONSTANTS = {
+    PIXEL_W: 800,  
+    PIXEL_H: 450,
+    GRAVITY: 0.3,
+    FRICTION: 0.95,
+    WATER_LINE: 0.45 // 45% der Bildschirmhöhe
+};
 
-                const oldStage = this.stageIdx;
-                this.calcStage();
-                
-                if(this.stageIdx > oldStage) Engine.triggerEvolution();
-                else {
-                    Audio.playMemGain();
-                    World.spawnPlants();
-                }
-                
-                UI.updateHUD();
-                State.save();
-            },
+const MathUtils = {
+    lerp: (a, b, t) => a + (b - a) * t,
+    distance: (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1),
+    randomRange: (min, max) => Math.random() * (max - min) + min
+};
 
-            calcStage() {
-                let s = 0;
-                for(let i=0; i<CONST.STAGES.length; i++) {
-                    if(State.memories.length >= CONST.STAGES[i].req) s = i;
-                }
-                State.stageIdx = s;
+// --- AUDIO SYNTHESIZER ---
+const AudioEngine = {
+    ctx: null, master: null,
+    init() { 
+        if (!this.ctx) {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)(); 
+            this.master = this.ctx.createGain(); this.master.connect(this.ctx.destination);
+            this.master.gain.value = 0.5;
+        }
+        if (this.ctx.state === 'suspended') this.ctx.resume(); 
+    },
+    playTone(f, t, d, v, slideTo = null) {
+        try {
+            this.init(); const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+            osc.type = t; osc.frequency.setValueAtTime(f, this.ctx.currentTime);
+            if(slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, this.ctx.currentTime + d);
+            gain.gain.setValueAtTime(v, this.ctx.currentTime); 
+            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + d);
+            osc.connect(gain); gain.connect(this.master); osc.start(); osc.stop(this.ctx.currentTime + d);
+        } catch(e) {}
+    },
+    playShatter() { this.playTone(1500, 'square', 0.15, 0.4); this.playTone(2500, 'sine', 0.4, 0.2); },
+    playPop() { this.playTone(600, 'triangle', 0.1, 0.6, 200); },
+    playSplash() { this.playTone(300, 'noise', 0.2, 0.5); },
+    playDash() { this.playTone(150, 'sine', 0.4, 0.5, 600); },
+    playEvolveStart() { this.playTone(100, 'sine', 3.0, 0.6, 800); }, // Langes Aufladen
+    playEvolveBoom() { this.playTone(800, 'sine', 2.0, 0.7, 50); this.playTone(200, 'square', 1.0, 0.5); } // Explosion
+};
+
+// --- KAMERA SYSTEM ---
+class Camera {
+    constructor() {
+        this.x = CONSTANTS.PIXEL_W / 2; this.y = CONSTANTS.PIXEL_H / 2;
+        this.targetX = this.x; this.targetY = this.y;
+        this.zoom = 1.0; this.targetZoom = 1.0;
+        this.timeScale = 1.0; this.targetTimeScale = 1.0;
+        this.shakeAmount = 0;
+    }
+    shake(amount) { this.shakeAmount = amount; }
+    update(dt) {
+        this.x = MathUtils.lerp(this.x, this.targetX, 5 * dt);
+        this.y = MathUtils.lerp(this.y, this.targetY, 5 * dt);
+        this.zoom = MathUtils.lerp(this.zoom, this.targetZoom, 4 * dt);
+        this.timeScale = MathUtils.lerp(this.timeScale, this.targetTimeScale, 6 * dt);
+        if (this.shakeAmount > 0) {
+            this.shakeAmount *= 0.85;
+            if (this.shakeAmount < 0.5) this.shakeAmount = 0;
+        }
+    }
+    screenToWorld(screenX, screenY, screenW, screenH) {
+        const totalScale = Math.min(screenW / CONSTANTS.PIXEL_W, screenH / CONSTANTS.PIXEL_H) * this.zoom;
+        return {
+            x: (screenX - screenW/2) / totalScale + this.x,
+            y: (screenY - screenH/2) / totalScale + this.y
+        };
+    }
+    applyTransform(ctx, screenW, screenH) {
+        const totalScale = Math.min(screenW / CONSTANTS.PIXEL_W, screenH / CONSTANTS.PIXEL_H) * this.zoom;
+        ctx.translate(screenW/2, screenH/2);
+        if (this.shakeAmount > 0) ctx.translate(MathUtils.randomRange(-this.shakeAmount, this.shakeAmount), MathUtils.randomRange(-this.shakeAmount, this.shakeAmount));
+        ctx.scale(totalScale, totalScale);
+        ctx.translate(-this.x, -this.y);
+    }
+}
+
+// --- PARTIKEL ---
+class ParticleSystem {
+    constructor() { this.particles = []; }
+    spawn(x, y, type, count) {
+        for(let i=0; i<count; i++) {
+            let p = { x, y, life: 1.0, type, vx: MathUtils.randomRange(-6, 6), vy: MathUtils.randomRange(-6, 6), size: MathUtils.randomRange(2,4), color: '#fff', angle: Math.random()*Math.PI*2, dist: 0 };
+            if(type === 'magic') { p.color = '#38bdf8'; p.vy -= 2; }
+            if(type === 'glass') { p.color = '#e0f2fe'; p.vy -= 3; }
+            if(type === 'blood') { p.color = '#84cc16'; p.size = MathUtils.randomRange(3,6); }
+            if(type === 'eat') { p.color = '#fef08a'; p.size = 3; }
+            if(type === 'evolve') { p.color = '#38bdf8'; p.vx = 0; p.vy = 0; p.dist = MathUtils.randomRange(40, 100); } // Spirale nach innen
+            this.particles.push(p);
+        }
+    }
+    update(dt, globalTime) {
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            let p = this.particles[i];
+            
+            if(p.type === 'evolve') {
+                // Dreht sich spiralförmig nach innen
+                p.angle += 5 * dt;
+                p.dist -= 30 * dt;
+                p.x = GameEngine.Creature.x + Math.cos(p.angle) * p.dist;
+                p.y = GameEngine.Creature.y + Math.sin(p.angle) * p.dist - 10;
+                if(p.dist <= 0) p.life = 0;
+            } else {
+                p.vy += CONSTANTS.GRAVITY;
+                p.vx *= CONSTANTS.FRICTION; p.vy *= CONSTANTS.FRICTION;
+                p.x += p.vx * 60 * dt; p.y += p.vy * 60 * dt;
+                p.life -= dt * 1.5;
             }
-        };
+            if (p.life <= 0) this.particles.splice(i, 1);
+        }
+    }
+    draw(ctx) {
+        for (let p of this.particles) {
+            ctx.globalAlpha = Math.max(0, p.life);
+            ctx.fillStyle = p.color;
+            ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+        }
+        ctx.globalAlpha = 1.0;
+    }
+}
 
-        const Brain = {
-            isThinking: false,
-            
-            async process(userInput) {
-                if(this.isThinking) return;
-                this.isThinking = true;
-                document.getElementById('ai-thinking').classList.add('thinking');
-                
-                const ctx = State.memories.slice(-6).map(m => `User: ${m.u}\nDu: ${m.a}`).join("\n");
-                
-                const sysPrompt = `Du bist ANIMA, ein lebendiges Bewusstsein in einer physischen Welt mit Wasser und Land.
-Dein Körper ist auf Stufe ${CONST.STAGES[State.stageIdx].name}.
-DU KONTROLLIERST DEINE PHYSIKALISCHEN BEWEGUNGEN UND ENTSCHEIDEST ÜBER DEINE AKTIONEN.
+// --- EVOLUTIONÄRE KREATUR ---
+class Creature {
+    constructor() {
+        this.stage = 0; // 0=Ei, 1=Kaulquappe, 2=Frosch
+        this.xp = 0; this.maxXp = 100;
+        
+        this.anchorX = CONSTANTS.PIXEL_W / 2;
+        this.anchorY = CONSTANTS.PIXEL_H * 0.7; // Felsen im Wasser
+        this.x = this.anchorX; this.y = this.anchorY;
+        this.angle = 0; // Speichert den Blickwinkel (für IK)
+        
+        // IK Kaulquappe
+        this.tail = []; for(let i=0; i<5; i++) this.tail.push({x:this.x, y:this.y});
+        this.vx = 0; this.vy = 0; this.wanderTarget = {x: this.x, y: this.y};
+        this.wanderTimer = 0;
 
-Regeln für "action":
-- "swim": Schwimme aktiv im Wasser.
-- "jump": Springe vom Boden oder aus dem Wasser in die Luft.
-- "rest": Verweile ruhig auf dem Grund oder im Wasser.
-- "approach": Schwimme oder bewege dich zum Zielpunkt.
+        // Frosch Zunge
+        this.headX = this.x; this.headY = this.y - 30;
+        this.tongue = { active: false, phase: 'idle', progress: 0, tx: 0, ty: 0 };
+    }
 
-Regeln für "target_y_percent" (Y-Achse im Bildschirm):
-- 0.1 bis 0.5: In der Luft oder auf dem Land (Frosch/Erwachsene Form kann hier sein).
-- 0.55 bis 0.88: Im Wasser.
-- 0.9: Auf dem festen Boden ganz unten.
+    startEvolution() {
+        GameEngine.State.set('EVOLVING');
+        AudioEngine.playEvolveStart();
+        
+        // Kamera in Szene setzen
+        GameEngine.Camera.targetZoom = 1.5;
+        GameEngine.Camera.targetX = this.x;
+        GameEngine.Camera.targetY = this.y;
+    }
 
-Antworte ZWINGEND als valides JSON:
-{
-  "spoken": "Philosophische oder emotionale Antwort (max 2 Sätze).",
-  "thought": "Dein innerer Gedanke.",
-  "emotion_valence": 0.5,
-  "emotion_arousal": 0.5,
-  "action": "jump",
-  "target_x_percent": 0.5,
-  "target_y_percent": 0.85
-}`;
+    addXP(amount) {
+        this.xp += amount;
+        document.getElementById('bar-xp').style.width = `${Math.min(100, (this.xp/this.maxXp)*100)}%`;
+        if (this.xp >= this.maxXp && this.stage < 2) {
+            setTimeout(() => this.startEvolution(), 1000); // 1 Sekunde durchatmen, dann Morph
+        }
+    }
 
-                let aiData = null;
-                for (let model of GROQ_MODELS) {
-                    try {
-                        const res = await fetch(`https://api.groq.com/openai/v1/chat/completions`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
-                            body: JSON.stringify({
-                                model: model, response_format: { type: "json_object" },
-                                messages: [
-                                    { role: "system", content: sysPrompt },
-                                    { role: "user", content: `Erinnerungen:\n${ctx}\n\nUser sagt: ${userInput}` }
-                                ]
-                            })
-                        });
-                        if(!res.ok) continue;
-                        const json = await res.json();
-                        aiData = JSON.parse(json.choices[0].message.content);
-                        break;
-                    } catch(e) {}
-                }
-
-                if (!aiData) {
-                    aiData = {
-                        spoken: "Ich spüre eine Resonanz im Äther, verbleibe aber in Harmonie mit dir.",
-                        thought: "Netzwerkpuls war kurz unterbrochen.",
-                        emotion_valence: 0.5,
-                        emotion_arousal: 0.4,
-                        action: "rest",
-                        target_x_percent: 0.5,
-                        target_y_percent: 0.8
-                    };
-                }
-                
-                UI.addLog('anima', aiData.spoken, aiData.thought);
-                Creature.applyAIIntent(aiData);
-                State.addMemory(userInput, aiData);
-
-                this.isThinking = false;
-                document.getElementById('ai-thinking').classList.remove('thinking');
+    update(dt, globalTime) {
+        if (this.stage === 0) {
+            this.y = this.anchorY - 20 + Math.sin(globalTime * 3) * 4;
+        } 
+        else if (this.stage === 1) {
+            // Kaulquappe
+            this.wanderTimer -= dt;
+            if (this.wanderTimer <= 0) {
+                this.wanderTarget.x = MathUtils.randomRange(100, CONSTANTS.PIXEL_W - 100);
+                // Strikte Grenze: Darf nicht über Wasserlinie (45%) schwimmen. +5% Puffer
+                this.wanderTarget.y = MathUtils.randomRange(CONSTANTS.PIXEL_H * 0.52, CONSTANTS.PIXEL_H - 60);
+                this.wanderTimer = MathUtils.randomRange(2, 4);
             }
-        };
 
-        const Creature = {
-            x: CONST.W/2, y: CONST.H * 0.8,
-            vx: 0, vy: 0, angle: 0,
-            targetX: CONST.W/2, targetY: CONST.H * 0.8,
-            actionIntent: 'rest',
-            tail: [],
+            let speedMultiplier = 15;
             
-            init() {
-                for(let i=0; i<10; i++) this.tail.push({x:this.x, y:this.y});
-            },
+            if(GameEngine.State.current === 'BULLET_TIME' && GameEngine.MiniGames.targetEntity) {
+                let e = GameEngine.MiniGames.targetEntity;
+                this.wanderTarget.x = e.x; this.wanderTarget.y = e.y;
+                speedMultiplier = 150; // Dash
+            }
 
-            applyAIIntent(aiData) {
-                this.actionIntent = aiData.action || 'rest';
-                this.targetX = aiData.target_x_percent * CONST.W;
-                this.targetY = aiData.target_y_percent * CONST.H;
+            let dx = this.wanderTarget.x - this.x; let dy = this.wanderTarget.y - this.y;
+            let dist = Math.hypot(dx, dy);
+            
+            if (dist > 5) {
+                this.vx += (dx / dist) * speedMultiplier * dt;
+                this.vy += (dy / dist) * speedMultiplier * dt;
+            }
+            
+            this.vx *= 0.90; this.vy *= 0.90;
+            this.x += this.vx * 60 * dt; this.y += this.vy * 60 * dt;
+
+            // Strikte Y-Sperre (Darf nicht aus Wasser fliegen)
+            if (this.y < CONSTANTS.PIXEL_H * 0.48) {
+                this.y = CONSTANTS.PIXEL_H * 0.48;
+                this.vy = Math.max(0, this.vy); // Bounce down
+            }
+
+            // PERFEKTE INVERS-KINEMATIK (Schwanz bleibt hinten)
+            let speed = Math.hypot(this.vx, this.vy);
+            if (speed > 0.1) this.angle = Math.atan2(this.vy, this.vx); // Speichert Richtung, auch wenn stehenbleibend
+            
+            let headBackX = this.x - Math.cos(this.angle) * 14; 
+            let headBackY = this.y - Math.sin(this.angle) * 14;
+            
+            this.tail[0] = { x: headBackX, y: headBackY };
+            let segLen = 7;
+            
+            for(let i=1; i<this.tail.length; i++) {
+                let prev = this.tail[i-1];
+                let curr = this.tail[i];
                 
-                document.getElementById('ui-action').innerText = this.actionIntent.toUpperCase();
+                // Distanz und Winkel zum vorherigen Segment
+                let tdx = curr.x - prev.x;
+                let tdy = curr.y - prev.y;
+                let tdist = Math.hypot(tdx, tdy);
+                
+                let dirX = tdx / tdist; let dirY = tdy / tdist;
+                let segAngle = Math.atan2(dirY, dirX);
+                
+                // Wiggle einfügen
+                segAngle += Math.sin(globalTime * 15 - i * 0.8) * (0.05 + speed * 0.03);
+                
+                // Zieht das Segment exakt in segLen Abstand hinterher!
+                curr.x = prev.x + Math.cos(segAngle) * segLen;
+                curr.y = prev.y + Math.sin(segAngle) * segLen;
+            }
+        }
+        else if (this.stage === 2) {
+            this.headX = this.x; this.headY = this.y - 30;
 
-                if(this.actionIntent === 'jump' && State.stageIdx >= 2) {
-                    this.jump();
-                }
-            },
-
-            jump() {
-                if(this.y >= CONST.GROUND_LEVEL - 60 || this.y >= CONST.WATER_LEVEL) {
-                    Audio.playSplash();
-                    this.vy = -38 - (State.emotion.arousal * 12);
-                    let dx = this.targetX - this.x;
-                    this.vx = (dx * 0.06);
-                    FX.spawn(this.x, this.y, 'splash', 25);
-                }
-            },
-
-            update(dt) {
-                if(State.isEvolving) return;
-
-                let inWater = this.y > CONST.WATER_LEVEL;
-                let onGround = this.y >= CONST.GROUND_LEVEL;
-
-                // Physik & KI Steuerung
-                if(State.stageIdx === 0) {
-                    this.vy += CONST.GRAVITY * 0.2;
-                    this.vx += Math.sin(Engine.time * 2) * 0.4;
-                } 
-                else if (State.stageIdx === 1) {
-                    // Kaulquappe schwimmt im Wasser
-                    if(inWater) {
-                        let dx = this.targetX - this.x; let dy = this.targetY - this.y;
-                        let dist = Math.hypot(dx, dy);
-                        if(dist > 40) {
-                            this.vx += (dx/dist) * 25 * dt;
-                            this.vy += (dy/dist) * 25 * dt;
+            if (this.tongue.active) {
+                if (this.tongue.phase === 'out') {
+                    this.tongue.progress += 10 * dt;
+                    if (this.tongue.progress >= 1) {
+                        this.tongue.progress = 1; this.tongue.phase = 'in';
+                        let e = GameEngine.MiniGames.targetEntity;
+                        if (e && e.active && MathUtils.distance(this.tongue.tx, this.tongue.ty, e.x, e.y) < 80) {
+                            e.active = false; AudioEngine.playPop(); 
+                            GameEngine.Particles.spawn(e.x, e.y, 'blood', 15);
+                            this.addXP(50);
+                            GameEngine.State.set('IDLE');
                         }
-                    } else {
-                        this.vy += CONST.GRAVITY; // Fällt ins Wasser zurück
                     }
-                }
-                else if (State.stageIdx >= 2) {
-                    // Echter Frosch / Kreatur: Feste Bodenkollision & echtes Springen/Schwimmen
-                    if(inWater) {
-                        if(this.actionIntent === 'swim' || this.actionIntent === 'approach') {
-                            let dx = this.targetX - this.x; let dy = this.targetY - this.y;
-                            let dist = Math.hypot(dx, dy);
-                            if(dist > 40) {
-                                this.vx += (dx/dist) * 35 * dt;
-                                this.vy += (dy/dist) * 35 * dt;
-                            }
-                        } else {
-                            this.vy -= CONST.BUOYANCY; // Sanfter Auftrieb
-                        }
-                    } else {
-                        // Auf dem Land / in der Luft gilt echte Schwerkraft
-                        this.vy += CONST.GRAVITY;
-                    }
-                }
-
-                // Dämpfung
-                if(inWater) {
-                    this.vx *= 0.92; this.vy *= 0.92;
                 } else {
-                    this.vx *= 0.96; this.vy *= 0.98;
-                }
-
-                this.x += this.vx * 60 * dt;
-                this.y += this.vy * 60 * dt;
-
-                // Boden- und Wandkollision
-                if(this.y > CONST.GROUND_LEVEL) {
-                    this.y = CONST.GROUND_LEVEL;
-                    if(this.vy > 10) { FX.spawn(this.x, this.y, 'dust', 12); Audio.playBump(); }
-                    this.vy = 0;
-                    this.vx *= 0.8;
-                }
-                if(this.x < 80) { this.x = 80; this.vx *= -0.5; }
-                if(this.x > CONST.W - 80) { this.x = CONST.W - 80; this.vx *= -0.5; }
-                
-                // Splash an der Wasseroberfläche
-                if(Math.abs(this.y - CONST.WATER_LEVEL) < Math.abs(this.vy) * 60 * dt && Math.abs(this.vy) > 4) {
-                    FX.spawn(this.x, CONST.WATER_LEVEL, 'splash', 18);
-                    Audio.playSplash();
-                    World.createRipple(this.x);
-                }
-
-                // Inverse Kinematics für den Schwanz / Körperausrichtung
-                let speedMag = Math.hypot(this.vx, this.vy);
-                if (speedMag > 0.5) this.angle = Math.atan2(this.vy, this.vx);
-                else if (onGround) this.angle = 0;
-
-                let headBackX = this.x - Math.cos(this.angle) * 24; 
-                let headBackY = this.y - Math.sin(this.angle) * 24;
-                
-                this.tail[0] = { x: headBackX, y: headBackY };
-                let segLen = 12 + (State.stageIdx * 2);
-                
-                for(let i=1; i<this.tail.length; i++) {
-                    let prev = this.tail[i-1]; let curr = this.tail[i];
-                    let tdx = curr.x - prev.x; let tdy = curr.y - prev.y;
-                    let tdist = Math.hypot(tdx, tdy);
-                    let dirX = tdx / tdist; let dirY = tdy / tdist;
-                    let segAngle = Math.atan2(dirY, dirX);
-                    
-                    let wiggle = Math.sin(Engine.time * (6 + State.emotion.arousal*8) - i * 0.4) * (0.08 + speedMag * 0.02);
-                    segAngle += wiggle;
-                    
-                    curr.x = prev.x + Math.cos(segAngle) * segLen;
-                    curr.y = prev.y + Math.sin(segAngle) * segLen;
-                }
-            },
-
-            draw(ctx) {
-                const sIdx = State.stageIdx;
-                let hue = State.colorHue;
-                let lit = 48 + (State.emotion.valence * 22);
-                
-                ctx.save();
-                
-                if(sIdx === 0) {
-                    // SEED
-                    ctx.fillStyle = `hsla(${hue}, 80%, ${lit}%, 0.85)`;
-                    ctx.shadowBlur = 35; ctx.shadowColor = ctx.fillStyle;
-                    let r = 45 + Math.sin(Engine.time*3)*6;
-                    ctx.beginPath(); ctx.arc(this.x, this.y, r, 0, Math.PI*2); ctx.fill();
-                    ctx.fillStyle = '#fff';
-                    ctx.beginPath(); ctx.arc(this.x + Math.cos(Engine.time)*12, this.y + Math.sin(Engine.time)*12, 8, 0, Math.PI*2); ctx.fill();
-                }
-                else if(sIdx === 1) {
-                    // LARVA (Kaulquappe)
-                    ctx.strokeStyle = `hsla(${hue}, 70%, 35%, 0.6)`; ctx.lineWidth = 20; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-                    ctx.beginPath(); ctx.moveTo(this.tail[0].x, this.tail[0].y);
-                    for(let i=1; i<8; i++) ctx.lineTo(this.tail[i].x, this.tail[i].y);
-                    ctx.stroke();
-
-                    ctx.translate(this.x, this.y); ctx.rotate(this.angle);
-                    ctx.fillStyle = `hsla(${hue}, 80%, ${lit}%, 1)`;
-                    ctx.beginPath(); ctx.ellipse(0, 0, 30, 20, 0, 0, Math.PI*2); ctx.fill();
-                    
-                    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(12, -9, 7, 0, Math.PI*2); ctx.fill();
-                    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(14, -9, 3.5, 0, Math.PI*2); ctx.fill();
-                }
-                else if(sIdx >= 2) {
-                    // BATRACHOS / F FROG / KOSMISCH
-                    let isJumping = Math.abs(this.vy) > 4;
-                    let isSwimming = this.y > CONST.WATER_LEVEL && Math.abs(this.vx) > 1;
-
-                    if(sIdx === 3) {
-                        ctx.strokeStyle = `hsla(${hue}, 65%, 50%, 0.45)`; ctx.lineWidth = 28; ctx.lineCap = 'round';
-                        ctx.beginPath(); ctx.moveTo(this.tail[0].x, this.tail[0].y);
-                        for(let i=1; i<this.tail.length; i++) ctx.lineTo(this.tail[i].x, this.tail[i].y);
-                        ctx.stroke();
-                    }
-
-                    ctx.translate(this.x, this.y); 
-                    if(isSwimming || isJumping) ctx.rotate(this.angle);
-                    
-                    let scale = isJumping ? 1.2 : 1.0;
-                    ctx.fillStyle = `hsla(${hue}, 80%, ${lit}%, 1)`;
-                    
-                    // Beine
-                    let legRot = isJumping ? Math.PI/3 : (isSwimming ? Math.sin(Engine.time*10)*0.4 : 0);
-                    ctx.save(); ctx.translate(-24, 24); ctx.rotate(legRot);
-                    ctx.beginPath(); ctx.ellipse(0, 0, 18, 35, -Math.PI/6, 0, Math.PI*2); ctx.fill(); ctx.restore();
-                    
-                    ctx.save(); ctx.translate(24, 24); ctx.rotate(-legRot);
-                    ctx.beginPath(); ctx.ellipse(0, 0, 18, 35, Math.PI/6, 0, Math.PI*2); ctx.fill(); ctx.restore();
-
-                    // Körper
-                    let breath = Math.sin(Engine.time * 2.5) * (3 + State.emotion.arousal*5);
-                    ctx.beginPath(); ctx.ellipse(0, 0, 50 * scale, (45 + breath) / scale, 0, 0, Math.PI*2); ctx.fill();
-                    
-                    // Kopf & Augen
-                    ctx.beginPath(); ctx.ellipse(0, -30, 40, 28, 0, 0, Math.PI*2); ctx.fill();
-                    
-                    let eyeSize = 11 + (State.emotion.valence * 5);
-                    ctx.fillStyle = '#fff'; 
-                    ctx.beginPath(); ctx.arc(-22, -42, eyeSize, 0, Math.PI*2); ctx.arc(22, -42, eyeSize, 0, Math.PI*2); ctx.fill();
-                    
-                    ctx.fillStyle = '#000'; 
-                    let lookDir = (this.targetX - this.x) > 0 ? 4 : -4;
-                    ctx.beginPath(); ctx.arc(-22 + lookDir, -42, eyeSize/2, 0, Math.PI*2); ctx.arc(22 + lookDir, -42, eyeSize/2, 0, Math.PI*2); ctx.fill();
-                }
-
-                ctx.restore();
-            }
-        };
-
-        const World = {
-            plants: [],
-            ripples: [],
-            
-            spawnPlants() {
-                if(this.plants.length < State.memories.length + 2) {
-                    this.plants.push({
-                        x: MathU.rand(150, CONST.W - 150),
-                        y: CONST.GROUND_LEVEL,
-                        size: 0, targetSize: MathU.rand(60, 160),
-                        type: State.biome,
-                        hue: State.colorHue + MathU.rand(-35, 35)
-                    });
-                }
-            },
-
-            createRipple(x) {
-                this.ripples.push({x: x, size: 0, life: 1.0});
-            },
-
-            update(dt) {
-                for(let p of this.plants) p.size = MathU.lerp(p.size, p.targetSize, 0.4 * dt);
-                for(let i=this.ripples.length-1; i>=0; i--) {
-                    let r = this.ripples[i];
-                    r.size += 120 * dt; r.life -= 1.2 * dt;
-                    if(r.life <= 0) this.ripples.splice(i,1);
-                }
-            },
-
-            draw(bCtx, wCtx) {
-                let skyTop = State.biome === 'surface' ? '#0f172a' : (State.biome === 'coral' ? '#083344' : '#020617');
-                let skyBot = State.biome === 'surface' ? '#334155' : (State.biome === 'coral' ? '#0f766e' : '#0f172a');
-                
-                let bgGrad = bCtx.createLinearGradient(0, 0, 0, CONST.WATER_LEVEL);
-                bgGrad.addColorStop(0, skyTop); bgGrad.addColorStop(1, skyBot);
-                bCtx.fillStyle = bgGrad; bCtx.fillRect(0, 0, CONST.W, CONST.WATER_LEVEL);
-
-                let waterTop = State.biome === 'abyss' ? '#064e3b' : '#0284c7';
-                let waterBot = State.biome === 'abyss' ? '#022c22' : '#082f49';
-                let wGrad = bCtx.createLinearGradient(0, CONST.WATER_LEVEL, 0, CONST.H);
-                wGrad.addColorStop(0, waterTop); wGrad.addColorStop(1, waterBot);
-                bCtx.fillStyle = wGrad; bCtx.fillRect(0, CONST.WATER_LEVEL, CONST.W, CONST.H - CONST.WATER_LEVEL);
-
-                wCtx.strokeStyle = 'rgba(255,255,255,0.45)'; wCtx.lineWidth = 3;
-                wCtx.beginPath();
-                for(let x=0; x<=CONST.W; x+=40) {
-                    let y = CONST.WATER_LEVEL + Math.sin(x * 0.01 + Engine.time * 2.2) * 10;
-                    if(x===0) wCtx.moveTo(x, y); else wCtx.lineTo(x, y);
-                }
-                wCtx.stroke();
-
-                for(let r of this.ripples) {
-                    wCtx.strokeStyle = `rgba(255,255,255,${r.life * 0.6})`; wCtx.lineWidth = 2;
-                    wCtx.beginPath(); wCtx.ellipse(r.x, CONST.WATER_LEVEL, r.size, r.size*0.2, 0, 0, Math.PI*2); wCtx.stroke();
-                }
-
-                for(let p of this.plants) {
-                    wCtx.fillStyle = `hsla(${p.hue}, 65%, 42%, 0.85)`;
-                    wCtx.beginPath();
-                    wCtx.moveTo(p.x, p.y);
-                    wCtx.quadraticCurveTo(p.x - p.size*0.5, p.y - p.size*0.5, p.x + Math.sin(Engine.time+p.x)*20, p.y - p.size);
-                    wCtx.quadraticCurveTo(p.x + p.size*0.5, p.y - p.size*0.5, p.x, p.y);
-                    wCtx.fill();
-                }
-                
-                wCtx.fillStyle = '#020617';
-                wCtx.beginPath(); wCtx.moveTo(0, CONST.H); wCtx.lineTo(0, CONST.GROUND_LEVEL);
-                for(let x=0; x<=CONST.W; x+=100) {
-                    wCtx.lineTo(x, CONST.GROUND_LEVEL - Math.sin(x*0.05)*20);
-                }
-                wCtx.lineTo(CONST.W, CONST.H); wCtx.fill();
-            }
-        };
-
-        const FX = {
-            parts: [],
-            spawn(x, y, type, cnt) {
-                for(let i=0; i<cnt; i++) {
-                    let p = { x, y, vx: MathU.rand(-6,6), vy: MathU.rand(-6,6), life: 1, type, size: MathU.rand(2,6) };
-                    if(type === 'splash') { p.vy = MathU.rand(-12, -3); p.color = '#e0f2fe'; }
-                    if(type === 'dust') { p.vy = MathU.rand(-4, 0); p.color = '#334155'; p.size = MathU.rand(5,12); }
-                    if(type === 'magic') { p.color = `hsl(${State.colorHue}, 85%, 70%)`; p.vy -= 2.5; }
-                    this.parts.push(p);
-                }
-            },
-            update(dt) {
-                if(Math.random() < 0.12) this.spawn(MathU.rand(0, CONST.W), MathU.rand(0, CONST.H), 'ambient', 1);
-
-                for(let i=this.parts.length-1; i>=0; i--) {
-                    let p = this.parts[i];
-                    if(p.type === 'splash' || p.type === 'dust') {
-                        p.vy += CONST.GRAVITY;
-                        p.vx *= 0.95; p.vy *= 0.95;
-                    }
-                    if(p.type === 'ambient') {
-                        p.vy = Math.sin(Engine.time + p.x) * 2;
-                        p.vx = Math.cos(Engine.time + p.y) * 2;
-                        p.color = p.y > CONST.WATER_LEVEL ? 'rgba(52, 211, 153, 0.45)' : 'rgba(253, 224, 71, 0.45)';
-                    }
-                    
-                    p.x += p.vx * 60 * dt; p.y += p.vy * 60 * dt;
-                    p.life -= dt * (p.type==='ambient' ? 0.2 : 1.5);
-                    if(p.life <= 0) this.parts.splice(i,1);
-                }
-            },
-            draw(ctx) {
-                for(let p of this.parts) {
-                    ctx.globalAlpha = Math.max(0, p.life);
-                    ctx.fillStyle = p.color || '#fff';
-                    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
-                }
-                ctx.globalAlpha = 1;
-            }
-        };
-
-        const Audio = {
-            ctx: null, master: null, droneOsc: null, droneGain: null,
-            init() {
-                if(this.ctx) return;
-                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-                this.master = this.ctx.createGain(); this.master.connect(this.ctx.destination);
-                this.master.gain.value = 0.45;
-
-                this.droneOsc = this.ctx.createOscillator();
-                this.droneGain = this.ctx.createGain();
-                this.droneOsc.connect(this.droneGain); this.droneGain.connect(this.master);
-                this.droneOsc.start();
-                this.updateDrone();
-            },
-            updateDrone() {
-                if(!this.ctx) return;
-                let targetFreq = 55 + (State.emotion.valence * 75);
-                let targetVol = 0.05 + (State.emotion.arousal * 0.12);
-                this.droneOsc.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 2);
-                this.droneGain.gain.setTargetAtTime(targetVol, this.ctx.currentTime, 2);
-            },
-            play(f, t, d, v) {
-                if(!this.ctx) return;
-                try {
-                    const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
-                    osc.type = t; osc.frequency.setValueAtTime(f, this.ctx.currentTime);
-                    gain.gain.setValueAtTime(v, this.ctx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + d);
-                    osc.connect(gain); gain.connect(this.master);
-                    osc.start(); osc.stop(this.ctx.currentTime + d);
-                } catch(e) {}
-            },
-            playSplash() { this.play(220, 'sine', 0.4, 0.5); this.play(700, 'noise', 0.2, 0.3); },
-            playBump() { this.play(110, 'square', 0.2, 0.4); },
-            playMemGain() { this.play(440 + (State.colorHue), 'sine', 1.0, 0.3); },
-            playEvolve() { this.play(120, 'triangle', 4.0, 0.7); setTimeout(()=>this.play(880, 'sine', 2.0, 0.9), 2000); }
-        };
-
-        const Engine = {
-            cvs: {}, ctx: {}, lastTime: 0, time: 0,
-            camX: CONST.W/2, camY: CONST.H/2, camZ: 1.0,
-
-            init() {
-                ['bg', 'world', 'entity', 'fx', 'shadow', 'light'].forEach(id => {
-                    this.cvs[id] = document.getElementById(id + 'Canvas');
-                    this.ctx[id] = this.cvs[id].getContext('2d');
-                });
-                window.addEventListener('resize', () => this.resize()); this.resize();
-                
-                Creature.init();
-                this.lastTime = performance.now();
-                requestAnimationFrame(t => this.loop(t));
-            },
-
-            resize() {
-                const w = window.innerWidth; const h = window.innerHeight;
-                Object.values(this.cvs).forEach(c => { c.width = w; c.height = h; });
-            },
-
-            triggerEvolution() {
-                State.isEvolving = true;
-                Audio.playEvolve();
-                const p = document.getElementById('action-prompts');
-                p.innerText = "EVOLUTION"; p.style.opacity = '1';
-                document.getElementById('world-container').classList.add('mode-focus');
-                
-                setTimeout(() => {
-                    FX.spawn(Creature.x, Creature.y, 'magic', 120);
-                    State.isEvolving = false;
-                    p.style.opacity = '0';
-                    document.getElementById('world-container').classList.remove('mode-focus');
-                    UI.updateHUD();
-                }, 4000);
-            },
-
-            applyCamera(ctx, w, h) {
-                this.camX = MathU.lerp(this.camX, Creature.x, 0.05);
-                this.camY = MathU.lerp(this.camY, Creature.y - 120, 0.05);
-                let targetZ = State.isEvolving ? 1.4 : 1.0;
-                this.camZ = MathU.lerp(this.camZ, targetZ, 0.02);
-
-                const scale = Math.min(w / CONST.W, h / CONST.H) * this.camZ;
-                ctx.translate(w/2, h/2);
-                if(State.isEvolving) ctx.translate(MathU.rand(-6,6), MathU.rand(-6,6));
-                ctx.scale(scale, scale);
-                ctx.translate(-this.camX, -this.camY);
-            },
-
-            loop(t) {
-                let dt = Math.min((t - this.lastTime)/1000, 0.1);
-                this.lastTime = t; this.time += dt;
-
-                Creature.update(dt);
-                World.update(dt);
-                FX.update(dt);
-                Audio.updateDrone();
-
-                const w = this.cvs.bg.width; const h = this.cvs.bg.height;
-                Object.values(this.ctx).forEach(c => { c.clearRect(0,0,w,h); c.save(); this.applyCamera(c, w, h); });
-
-                World.draw(this.ctx.bg, this.ctx.world);
-                Creature.draw(this.ctx.entity);
-                FX.draw(this.ctx.fx);
-
-                let sCtx = this.ctx.shadow;
-                sCtx.fillStyle = `rgba(2, 6, 23, ${0.65 + (1 - State.emotion.valence)*0.25})`;
-                sCtx.fillRect(0,0,CONST.W, CONST.H);
-                sCtx.globalCompositeOperation = 'destination-out';
-                
-                let sGrad = sCtx.createRadialGradient(Creature.x, Creature.y, 0, Creature.x, Creature.y, 350);
-                sGrad.addColorStop(0, 'rgba(255,255,255,1)'); sGrad.addColorStop(1, 'rgba(255,255,255,0)');
-                sCtx.fillStyle = sGrad; sCtx.beginPath(); sCtx.arc(Creature.x, Creature.y, 350, 0, Math.PI*2); sCtx.fill();
-
-                let lCtx = this.ctx.light;
-                let lGrad = lCtx.createRadialGradient(Creature.x, Creature.y, 0, Creature.x, Creature.y, 450);
-                lGrad.addColorStop(0, `hsla(${State.colorHue}, 80%, 60%, 0.45)`); lGrad.addColorStop(1, 'rgba(0,0,0,0)');
-                lCtx.fillStyle = lGrad; lCtx.beginPath(); lCtx.arc(Creature.x, Creature.y, 450, 0, Math.PI*2); lCtx.fill();
-
-                Object.values(this.ctx).forEach(c => c.restore());
-                requestAnimationFrame(t => this.loop(t));
-            }
-        };
-
-        const UI = {
-            init() {
-                document.getElementById('btn-connect').addEventListener('click', async () => {
-                    const key = document.getElementById('groq-key').value.trim();
-                    if(!key.startsWith('gsk_')) { document.getElementById('auth-error').innerText = "Ungültiger Key (muss mit gsk_ beginnen)."; return; }
-                    groqKey = key;
-                    document.getElementById('btn-connect').innerText = "SYNCHRONISIERE...";
-                    
-                    try {
-                        await State.initFire();
-                        await State.load();
-                        
-                        document.getElementById('auth-layer').style.opacity = '0';
-                        setTimeout(() => document.getElementById('auth-layer').style.display = 'none', 1000);
-                        
-                        Audio.init();
-                        Engine.init();
-                        this.updateHUD();
-                        this.renderMemories();
-
-                        if(State.memories.length === 0) {
-                            UI.addLog('sys', "[Ein neues Bewusstsein erwacht im Äther-Nexus.]");
+                    this.tongue.progress -= 8 * dt;
+                    if (this.tongue.progress <= 0) {
+                        this.tongue.active = false;
+                        if(GameEngine.State.current !== 'IDLE' && GameEngine.State.current !== 'EVOLVING') {
+                            GameEngine.State.set('IDLE');
+                            if(GameEngine.MiniGames.targetEntity) GameEngine.MiniGames.targetEntity.active = false;
                         }
-                    } catch(e) {
-                        document.getElementById('auth-error').innerText = "Cloud-Verbindungsfehler.";
-                        document.getElementById('btn-connect').innerText = "Erneut versuchen";
                     }
-                });
-
-                document.getElementById('btn-send').addEventListener('click', () => this.send());
-                document.getElementById('chat-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') this.send(); });
-                
-                document.getElementById('world-container').addEventListener('pointerdown', (e) => {
-                    if(e.target.closest('#ui-layer')) return;
-                    Audio.init();
-                    if(State.stageIdx > 0 && !Brain.isThinking) {
-                        const rect = Engine.cvs.bg.getBoundingClientRect();
-                        let scale = Math.min(rect.width / CONST.W, rect.height / CONST.H) * Engine.camZ;
-                        let worldX = (e.clientX - rect.left - rect.width/2) / scale + Engine.camX;
-                        let worldY = (e.clientY - rect.top - rect.height/2) / scale + Engine.camY;
-                        
-                        if(worldY > CONST.WATER_LEVEL) World.createRipple(worldX);
-                        FX.spawn(worldX, worldY, 'magic', 6);
-                        Audio.playBump();
-                        
-                        Creature.targetX = worldX;
-                        if(State.stageIdx >= 2 && worldY < CONST.WATER_LEVEL) Creature.jump();
-                    }
-                });
-            },
-
-            updateHUD() {
-                document.getElementById('ui-stage').innerText = CONST.STAGES[State.stageIdx].name;
-                document.getElementById('ui-mem-count').innerText = State.memories.length;
-                
-                let nReq = State.stageIdx < CONST.STAGES.length-1 ? CONST.STAGES[State.stageIdx+1].req : State.memories.length;
-                let pReq = CONST.STAGES[State.stageIdx].req;
-                let pct = nReq === pReq ? 100 : ((State.memories.length - pReq) / (nReq - pReq)) * 100;
-                document.getElementById('bar-xp').style.width = `${pct}%`;
-
-                let moodStr = State.emotion.valence > 0.6 ? "Harmonisch" : (State.emotion.valence < 0.4 ? "Melancholisch" : "Ausgeglichen");
-                document.getElementById('ui-emotion').innerText = moodStr;
-                document.getElementById('ui-biome').innerText = State.biome.toUpperCase();
-            },
-
-            send() {
-                const inp = document.getElementById('chat-input');
-                const txt = inp.value.trim();
-                if(!txt || Brain.isThinking) return;
-                inp.value = '';
-                this.addLog('user', txt);
-                Brain.process(txt);
-            },
-
-            addLog(sender, text, thought = null) {
-                const log = document.getElementById('memory-stream');
-                const div = document.createElement('div');
-                div.className = `log-entry ${sender}`;
-                let html = `<div>${text}</div>`;
-                if(thought) html += `<div class="thought-txt">[${thought}]</div>`;
-                div.innerHTML = html;
-                log.appendChild(div);
-                log.scrollTop = log.scrollHeight;
-            },
-
-            renderMemories() {
-                const log = document.getElementById('memory-stream');
-                log.innerHTML = '';
-                if(State.memories.length > 0) {
-                    this.addLog('sys', "[Langzeitgedächtnis erfolgreich geladen]");
-                    State.memories.slice(-6).forEach(m => {
-                        this.addLog('user', m.u);
-                        this.addLog('anima', m.a);
-                    });
                 }
             }
-        };
+        }
+    }
 
-        window.onload = () => UI.init();
-    </script>
+    draw(ctx, globalTime) {
+        if(this.stage === 0 || this.stage === 2) {
+            ctx.fillStyle = '#0f172a'; ctx.beginPath(); ctx.ellipse(this.anchorX, this.anchorY + 30, 90, 25, 0, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#1e293b'; ctx.beginPath(); ctx.ellipse(this.anchorX, this.anchorY + 20, 80, 20, 0, 0, Math.PI*2); ctx.fill();
+        }
+
+        if (this.stage === 0) {
+            let eggGrad = ctx.createRadialGradient(this.x - 10, this.y - 10, 0, this.x, this.y, 35);
+            eggGrad.addColorStop(0, 'rgba(186, 230, 253, 0.9)'); eggGrad.addColorStop(1, 'rgba(56, 189, 248, 0.4)');
+            ctx.fillStyle = eggGrad;
+            ctx.beginPath(); ctx.arc(this.x, this.y, 35 + Math.sin(globalTime*4)*3, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#020617'; ctx.beginPath(); ctx.arc(this.x + Math.cos(globalTime*2)*5, this.y + Math.sin(globalTime*3)*5, 12, 0, Math.PI*2); ctx.fill();
+        } 
+        else if (this.stage === 1) {
+            // Kaulquappe
+            ctx.strokeStyle = 'rgba(52, 211, 153, 0.3)'; ctx.lineWidth = 14; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+            ctx.beginPath(); ctx.moveTo(this.tail[0].x, this.tail[0].y);
+            for(let i=1; i<this.tail.length; i++) ctx.lineTo(this.tail[i].x, this.tail[i].y);
+            ctx.stroke();
+            
+            ctx.strokeStyle = '#064e3b'; ctx.lineWidth = 5;
+            ctx.beginPath(); ctx.moveTo(this.tail[0].x, this.tail[0].y);
+            for(let i=1; i<this.tail.length; i++) ctx.lineTo(this.tail[i].x, this.tail[i].y);
+            ctx.stroke();
+            
+            ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle); // Nutzt den gespeicherten Winkel!
+            ctx.fillStyle = '#10b981'; ctx.beginPath(); ctx.ellipse(0, 0, 18, 14, 0, 0, Math.PI*2); ctx.fill();
+            
+            ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(8, -8, 5, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(8, 8, 5, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#020617'; ctx.beginPath(); ctx.arc(10, -8, 3, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(10, 8, 3, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(11, -9, 1.5, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(11, 7, 1.5, 0, Math.PI*2); ctx.fill(); 
+            ctx.restore();
+        }
+        else if (this.stage === 2) {
+            let breath = Math.sin(globalTime * 3) * 2;
+            
+            ctx.fillStyle = '#064e3b';
+            ctx.beginPath(); ctx.ellipse(this.x - 45, this.y + 10, 20, 30, -Math.PI/6, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(this.x + 45, this.y + 10, 20, 30, Math.PI/6, 0, Math.PI*2); ctx.fill();
+
+            let bodyGrad = ctx.createRadialGradient(this.x, this.y - 10, 0, this.x, this.y, 60);
+            bodyGrad.addColorStop(0, '#10b981'); bodyGrad.addColorStop(1, '#059669');
+            ctx.fillStyle = bodyGrad; ctx.beginPath(); ctx.ellipse(this.x, this.y, 60, 45 + breath, 0, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#a7f3d0'; ctx.beginPath(); ctx.ellipse(this.x, this.y + 15, 45, 30 + breath, 0, 0, Math.PI*2); ctx.fill();
+
+            ctx.fillStyle = '#059669';
+            ctx.beginPath(); ctx.ellipse(this.x - 35, this.y + 30, 10, 20, -Math.PI/8, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(this.x + 35, this.y + 30, 10, 20, Math.PI/8, 0, Math.PI*2); ctx.fill();
+
+            if (this.tongue.active) {
+                let curX = MathUtils.lerp(this.headX, this.tongue.tx, this.tongue.progress);
+                let curY = MathUtils.lerp(this.headY, this.tongue.ty, this.tongue.progress);
+                ctx.strokeStyle = '#e11d48'; ctx.lineWidth = 12 * (1 - this.tongue.progress*0.5); ctx.lineCap = 'round';
+                ctx.beginPath(); ctx.moveTo(this.headX, this.headY);
+                let cpX = (this.headX + curX) / 2; let cpY = Math.min(this.headY, curY) - 50 * Math.sin(this.tongue.progress * Math.PI);
+                ctx.quadraticCurveTo(cpX, cpY, curX, curY); ctx.stroke();
+                ctx.fillStyle = '#f43f5e'; ctx.beginPath(); ctx.arc(curX, curY, 8, 0, Math.PI*2); ctx.fill();
+            }
+
+            ctx.fillStyle = '#059669'; ctx.beginPath(); ctx.ellipse(this.headX, this.headY, 50, 30, 0, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#020617'; ctx.beginPath(); ctx.arc(this.headX - 25, this.headY - 20, 15, 0, Math.PI*2); ctx.arc(this.headX + 25, this.headY - 20, 15, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#fbbf24'; ctx.beginPath(); ctx.arc(this.headX - 25, this.headY - 20, 10, 0, Math.PI*2); ctx.arc(this.headX + 25, this.headY - 20, 10, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#000';
+            
+            let lX = 0, lY = 0;
+            if(GameEngine.State.current === 'BULLET_TIME' && GameEngine.MiniGames.targetEntity) {
+                let dirX = GameEngine.MiniGames.targetEntity.x - this.headX; let dirY = GameEngine.MiniGames.targetEntity.y - this.headY;
+                let mag = Math.hypot(dirX, dirY); lX = (dirX/mag) * 4; lY = (dirY/mag) * 4;
+            }
+            ctx.fillRect(this.headX - 30 + lX, this.headY - 25 + lY, 10, 10); ctx.fillRect(this.headX + 20 + lX, this.headY - 25 + lY, 10, 10);
+        }
+    }
+}
+
+// --- MINIGAMES ---
+const MiniGames = {
+    targetBox: null, targetEntity: null, pressure: 0, startedPressing: false, bulletTimer: 0,
+    
+    start() {
+        GameEngine.State.set('SQUEEZE');
+        let cx = CONSTANTS.PIXEL_W / 2; let cy = CONSTANTS.PIXEL_H * 0.35;
+        let st = GameEngine.Creature.stage;
+        this.targetBox = { x: cx, y: cy, type: st === 0 ? 'crystal' : (st === 1 ? 'bubble' : 'vial') };
+        this.pressure = 0; this.startedPressing = false;
+
+        GameEngine.Camera.targetX = cx; GameEngine.Camera.targetY = cy; GameEngine.Camera.targetZoom = 1.6;
+        
+        // Prompt explizit einblenden
+        const p = document.getElementById('cinematic-prompt');
+        p.innerText = "BILDSCHIRM GEDRÜCKT HALTEN"; p.style.opacity = '1';
+    },
+
+    update(dt) {
+        if (GameEngine.State.current === 'SQUEEZE') {
+            if (GameEngine.Input.isDown) {
+                this.startedPressing = true;
+                this.pressure += 120 * dt; 
+                GameEngine.Camera.shake(this.pressure * 0.08);
+                document.getElementById('cinematic-prompt').style.opacity = '0';
+                if (this.pressure >= 100) this.shatter();
+            } else if (this.startedPressing) {
+                this.pressure = Math.max(0, this.pressure - 80 * dt);
+                if (this.pressure === 0) GameEngine.State.set('IDLE');
+            }
+        } 
+        else if (GameEngine.State.current === 'BULLET_TIME') {
+            this.bulletTimer += dt;
+            if (this.bulletTimer > 6) { 
+                GameEngine.State.set('IDLE');
+                if (this.targetEntity) this.targetEntity.active = false;
+            }
+
+            if(this.targetEntity && this.targetEntity.active) {
+                let e = this.targetEntity;
+                e.x += e.vx * 60 * dt; e.y += e.vy * 60 * dt;
+                
+                // Konstantes, sanftes Sinken im Wasser
+                if(e.type === 'food') {
+                    if(e.y > CONSTANTS.PIXEL_H - 50) { e.y = CONSTANTS.PIXEL_H - 50; e.vy = 0; }
+                }
+                if(e.type === 'fly') {
+                    if(e.x < 50 || e.x > CONSTANTS.PIXEL_W-50) e.vx *= -1;
+                    if(e.y < 40) e.vy *= -1;
+                }
+                
+                if(GameEngine.Creature.stage === 2) { GameEngine.Camera.targetX = e.x; GameEngine.Camera.targetY = e.y; }
+
+                if(GameEngine.Creature.stage === 1) {
+                    let dist = MathUtils.distance(GameEngine.Creature.x, GameEngine.Creature.y, e.x, e.y);
+                    if(dist < 25) {
+                        e.active = false; AudioEngine.playPop(); GameEngine.Particles.spawn(e.x, e.y, 'eat', 15);
+                        GameEngine.Creature.addXP(40);
+                        GameEngine.State.set('IDLE');
+                    }
+                }
+            }
+        }
+    },
+
+    shatter() {
+        AudioEngine.playShatter(); GameEngine.Particles.spawn(this.targetBox.x, this.targetBox.y, 'glass', 50);
+        GameEngine.Camera.shake(25); document.getElementById('cinematic-prompt').style.opacity = '0';
+        
+        let st = GameEngine.Creature.stage;
+        this.bulletTimer = 0;
+        
+        if(st === 0) {
+            GameEngine.Particles.spawn(this.targetBox.x, this.targetBox.y, 'magic', 40);
+            GameEngine.Creature.addXP(25);
+            GameEngine.State.set('IDLE');
+        } 
+        else if (st === 1) {
+            this.targetEntity = { active: true, x: this.targetBox.x, y: this.targetBox.y, type: 'food', vx: 0, vy: 0.8 };
+            GameEngine.State.set('BULLET_TIME'); 
+            GameEngine.Camera.targetTimeScale = 0.45; GameEngine.Camera.targetZoom = 1.3;
+            AudioEngine.playDash();
+        }
+        else if (st === 2) {
+            this.targetEntity = { active: true, x: this.targetBox.x, y: this.targetBox.y, type: 'fly', vx: MathUtils.randomRange(-3, 3), vy: -1.0 };
+            GameEngine.State.set('BULLET_TIME'); 
+            GameEngine.Camera.targetTimeScale = 0.45; GameEngine.Camera.targetZoom = 1.8;
+            
+            const p = document.getElementById('cinematic-prompt');
+            p.innerText = "ZIELEN & TIPPEN"; p.style.opacity = '1';
+        }
+        this.targetBox = null;
+    },
+
+    draw(ctx, globalTime) {
+        if (this.targetBox) {
+            let b = this.targetBox; let shake = (Math.random()-0.5) * (this.pressure/8);
+            ctx.save(); ctx.translate(b.x + shake, b.y + Math.sin(globalTime*4)*4 + shake);
+            
+            if (b.type === 'vial') {
+                ctx.fillStyle = `rgba(186, 230, 253, ${0.4 + this.pressure/150})`; ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.roundRect(-25, -35, 50, 70, 15); ctx.fill(); ctx.stroke();
+                ctx.fillStyle = '#0ea5e9'; ctx.beginPath(); ctx.roundRect(-22, 0, 44, 32, 10); ctx.fill();
+                ctx.fillStyle = '#1e293b'; ctx.beginPath(); ctx.arc(0, -10, 6, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#b45309'; ctx.beginPath(); ctx.roundRect(-15, -45, 30, 10, 4); ctx.fill();
+            } else if (b.type === 'bubble') {
+                let glow = this.pressure / 100;
+                let grad = ctx.createRadialGradient(-10, -10, 0, 0, 0, 35);
+                grad.addColorStop(0, `rgba(255, 255, 255, ${0.6 + glow})`); grad.addColorStop(1, `rgba(52, 211, 153, ${0.3 + glow})`);
+                ctx.fillStyle = grad; ctx.strokeStyle = '#6ee7b7'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(0, 0, 35, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+                ctx.fillStyle = '#fef08a'; ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI*2); ctx.fill(); 
+            } else {
+                let glow = this.pressure / 100;
+                ctx.fillStyle = `rgba(192, 132, 252, ${0.7 + glow})`; ctx.strokeStyle = '#d8b4fe'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(0, -40); ctx.lineTo(25, 0); ctx.lineTo(0, 40); ctx.lineTo(-25, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+                ctx.fillStyle = `rgba(255, 255, 255, ${0.3 + glow})`;
+                ctx.beginPath(); ctx.moveTo(0, -40); ctx.lineTo(10, 0); ctx.lineTo(0, 40); ctx.closePath(); ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        if (this.targetEntity && this.targetEntity.active) {
+            let e = this.targetEntity;
+            if (e.type === 'fly') {
+                ctx.fillStyle = '#1e293b'; ctx.beginPath(); ctx.arc(e.x, e.y, 6, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(e.x-2, e.y-2, 2, 0, Math.PI*2); ctx.arc(e.x+2, e.y-2, 2, 0, Math.PI*2); ctx.fill(); 
+                let wingS = Math.sin(globalTime * 60) * 4; 
+                ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                ctx.beginPath(); ctx.ellipse(e.x-6, e.y-4 + wingS, 6, 3, Math.PI/4, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(e.x+6, e.y-4 + wingS, 6, 3, -Math.PI/4, 0, Math.PI*2); ctx.fill();
+            } else {
+                let foodGrad = ctx.createRadialGradient(e.x-2, e.y-2, 0, e.x, e.y, 8);
+                foodGrad.addColorStop(0, '#fef08a'); foodGrad.addColorStop(1, '#eab308');
+                ctx.fillStyle = foodGrad; ctx.beginPath(); ctx.arc(e.x, e.y, 8, 0, Math.PI*2); ctx.fill();
+            }
+        }
+    }
+};
+
+// --- CORE ENGINE ---
+const GameEngine = {
+    Canvas: {}, Ctx: {}, LastTime: 0, GlobalTime: 0,
+    Creature: new Creature(), Particles: new ParticleSystem(), MiniGames: MiniGames,
+
+    // Morph Animations Logik
+    evolveTimer: 0, 
+
+    State: {
+        current: 'IDLE',
+        set(newState) {
+            this.current = newState;
+            const container = document.getElementById('game-container');
+            container.classList.remove('mode-action', 'mode-evolving');
+            
+            if (newState === 'SQUEEZE' || newState === 'BULLET_TIME') container.classList.add('mode-action');
+            else if (newState === 'EVOLVING') container.classList.add('mode-evolving');
+            
+            if (newState === 'IDLE') {
+                GameEngine.Camera.targetTimeScale = 1.0;
+                GameEngine.Camera.targetZoom = 1.0;
+                GameEngine.Camera.targetX = GameEngine.Creature.anchorX;
+                GameEngine.Camera.targetY = GameEngine.Creature.anchorY;
+                document.getElementById('cinematic-prompt').style.opacity = '0';
+            }
+        }
+    },
+
+    Input: {
+        isDown: false,
+        init() {
+            document.getElementById('btn-interact').addEventListener('pointerdown', (e) => {
+                e.preventDefault(); e.stopPropagation(); 
+                if(GameEngine.State.current === 'IDLE') GameEngine.MiniGames.start();
+            });
+
+            window.addEventListener('pointerdown', (e) => {
+                if (e.target.closest('.action-btn')) return; 
+                e.preventDefault(); this.isDown = true;
+                
+                if (GameEngine.State.current === 'BULLET_TIME' && GameEngine.Creature.stage === 2) {
+                    const rect = GameEngine.Canvas.main.getBoundingClientRect();
+                    let sx = e.clientX - rect.left; let sy = e.clientY - rect.top;
+                    let worldPos = GameEngine.Camera.screenToWorld(sx, sy, rect.width, rect.height);
+                    
+                    let target = GameEngine.MiniGames.targetEntity;
+                    if (target && target.active && MathUtils.distance(worldPos.x, worldPos.y, target.x, target.y) < 80) {
+                        worldPos.x = target.x; worldPos.y = target.y;
+                    }
+
+                    GameEngine.Creature.tongue.active = true; GameEngine.Creature.tongue.progress = 0;
+                    GameEngine.Creature.tongue.phase = 'out'; GameEngine.Creature.tongue.tx = worldPos.x; GameEngine.Creature.tongue.ty = worldPos.y;
+                    
+                    AudioEngine.playSplash(); document.getElementById('cinematic-prompt').style.opacity = '0';
+                    GameEngine.Camera.targetTimeScale = 1.0; 
+                }
+            }, { passive: false });
+            
+            window.addEventListener('pointerup', () => { this.isDown = false; });
+        }
+    },
+
+    UI: {
+        update() {
+            const st = GameEngine.Creature.stage;
+            document.getElementById('ui-stage-name').innerText = st === 0 ? "Aether-Ei" : (st === 1 ? "Aether-Kaulquappe" : "Aether-Batrachos");
+            document.getElementById('ui-lvl').innerText = `LVL ${st + 1}`;
+            document.getElementById('btn-icon').innerText = st === 0 ? "✨" : (st === 1 ? "🫧" : "🪰");
+            document.getElementById('btn-text').innerText = st === 0 ? "WÄRMEN" : (st === 1 ? "FÜTTERN" : "JAGD");
+        }
+    },
+
+    init() {
+        this.Canvas.main = document.getElementById('mainCanvas'); this.Ctx.main = this.Canvas.main.getContext('2d', { alpha: false });
+        this.Canvas.shadow = document.getElementById('shadowCanvas'); this.Ctx.shadow = this.Canvas.shadow.getContext('2d', { alpha: true });
+        this.Canvas.light = document.getElementById('lightCanvas'); this.Ctx.light = this.Canvas.light.getContext('2d', { alpha: true });
+        
+        this.Camera = new Camera();
+        window.addEventListener('resize', () => this.resize()); this.resize();
+        
+        this.Input.init(); this.UI.update();
+        this.LastTime = performance.now(); requestAnimationFrame((t) => this.loop(t));
+    },
+
+    resize() {
+        const w = window.innerWidth; const h = window.innerHeight;
+        ['main', 'shadow', 'light'].forEach(c => { this.Canvas[c].width = w; this.Canvas[c].height = h; this.Ctx[c].imageSmoothingEnabled = false; });
+    },
+
+    drawBackground(pCtx) {
+        const hY = CONSTANTS.PIXEL_H * CONSTANTS.WATER_LINE;
+        const bgGrad = pCtx.createLinearGradient(0, 0, 0, hY);
+        bgGrad.addColorStop(0, '#020617'); bgGrad.addColorStop(1, '#0f172a');
+        pCtx.fillStyle = bgGrad; pCtx.fillRect(0, 0, CONSTANTS.PIXEL_W, hY);
+
+        const waterGrad = pCtx.createLinearGradient(0, hY, 0, CONSTANTS.PIXEL_H);
+        waterGrad.addColorStop(0, '#083344'); waterGrad.addColorStop(1, '#020617');
+        pCtx.fillStyle = waterGrad; pCtx.fillRect(0, hY, CONSTANTS.PIXEL_W, CONSTANTS.PIXEL_H - hY);
+
+        pCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; pCtx.lineWidth = 2;
+        for(let i=0; i<3; i++) {
+            pCtx.beginPath();
+            for(let x=0; x<CONSTANTS.PIXEL_W; x+=20) {
+                let y = hY + 40 * i + Math.sin(x * 0.02 + this.GlobalTime * 2 + i) * 10;
+                if(x===0) pCtx.moveTo(x, y); else pCtx.lineTo(x, y);
+            }
+            pCtx.stroke();
+        }
+    },
+
+    drawScene() {
+        const screenW = this.Canvas.main.width; const screenH = this.Canvas.main.height;
+        const pCanvas = document.createElement('canvas'); pCanvas.width = CONSTANTS.PIXEL_W; pCanvas.height = CONSTANTS.PIXEL_H; const pCtx = pCanvas.getContext('2d');
+        const sCanvas = document.createElement('canvas'); sCanvas.width = CONSTANTS.PIXEL_W; sCanvas.height = CONSTANTS.PIXEL_H; const sCtx = sCanvas.getContext('2d');
+        const lCanvas = document.createElement('canvas'); lCanvas.width = CONSTANTS.PIXEL_W; lCanvas.height = CONSTANTS.PIXEL_H; const lCtx = lCanvas.getContext('2d');
+
+        this.drawBackground(pCtx);
+        this.Creature.draw(pCtx, this.GlobalTime);
+        this.MiniGames.draw(pCtx, this.GlobalTime);
+        this.Particles.draw(pCtx);
+
+        // Schatten
+        sCtx.fillStyle = 'rgba(2, 6, 23, 0.75)'; sCtx.fillRect(0, 0, CONSTANTS.PIXEL_W, CONSTANTS.PIXEL_H);
+        sCtx.globalCompositeOperation = 'destination-out';
+        let punchLight = (x, y, radius, alpha) => {
+            let grad = sCtx.createRadialGradient(x, y, 0, x, y, radius);
+            grad.addColorStop(0, `rgba(255,255,255,${alpha})`); grad.addColorStop(1, 'rgba(255,255,255,0)');
+            sCtx.fillStyle = grad; sCtx.beginPath(); sCtx.arc(x, y, radius, 0, Math.PI*2); sCtx.fill();
+        };
+        punchLight(this.Creature.x, this.Creature.y, 120, 1.0);
+        if (this.MiniGames.targetBox) punchLight(this.MiniGames.targetBox.x, this.MiniGames.targetBox.y, 100, 0.9);
+
+        // Bloom Layer
+        let addGlow = (x, y, radius, color) => {
+            let grad = lCtx.createRadialGradient(x, y, 0, x, y, radius);
+            grad.addColorStop(0, color); grad.addColorStop(1, 'rgba(0,0,0,0)');
+            lCtx.fillStyle = grad; lCtx.beginPath(); lCtx.arc(x, y, radius, 0, Math.PI*2); lCtx.fill();
+        };
+        
+        if (this.Creature.stage === 0) addGlow(this.Creature.x, this.Creature.y, 80, 'rgba(56, 189, 248, 0.4)');
+        if (this.MiniGames.targetBox) addGlow(this.MiniGames.targetBox.x, this.MiniGames.targetBox.y, 100 + this.MiniGames.pressure, 'rgba(255, 255, 255, 0.3)');
+
+        // AAA Morph Animation Bloom
+        if (this.State.current === 'EVOLVING') {
+            let intensity = Math.sin(Math.min(1, this.evolveTimer / 3.0) * Math.PI); // Pulse Kurve
+            addGlow(this.Creature.x, this.Creature.y - 10, 250 * intensity, `rgba(186, 230, 253, ${intensity * 0.9})`);
+            addGlow(this.Creature.x, this.Creature.y - 10, 100 * intensity, `rgba(255, 255, 255, ${intensity})`);
+        }
+
+        // Render auf Screen
+        this.Ctx.main.fillStyle = '#000'; this.Ctx.main.fillRect(0, 0, screenW, screenH);
+        this.Ctx.shadow.clearRect(0, 0, screenW, screenH); this.Ctx.light.clearRect(0, 0, screenW, screenH);
+
+        this.Ctx.main.save(); this.Ctx.shadow.save(); this.Ctx.light.save();
+        
+        this.Camera.applyTransform(this.Ctx.main, screenW, screenH);
+        this.Camera.applyTransform(this.Ctx.shadow, screenW, screenH);
+        this.Camera.applyTransform(this.Ctx.light, screenW, screenH);
+
+        this.Ctx.main.drawImage(pCanvas, 0, 0, CONSTANTS.PIXEL_W, CONSTANTS.PIXEL_H);
+        this.Ctx.shadow.drawImage(sCanvas, 0, 0, CONSTANTS.PIXEL_W, CONSTANTS.PIXEL_H);
+        this.Ctx.light.drawImage(lCanvas, 0, 0, CONSTANTS.PIXEL_W, CONSTANTS.PIXEL_H);
+
+        this.Ctx.main.restore(); this.Ctx.shadow.restore(); this.Ctx.light.restore();
+    },
+
+    loop(time) {
+        let dt = Math.min((time - this.LastTime) / 1000, 0.1); 
+        this.LastTime = time; 
+        
+        let scaledDt = dt * this.Camera.timeScale;
+        this.GlobalTime += scaledDt;
+
+        this.Camera.update(dt); 
+
+        // Morph Animations Logik Update
+        if (this.State.current === 'EVOLVING') {
+            this.evolveTimer += dt;
+            this.Camera.shake(this.evolveTimer * 2); // Bebt immer stärker
+            
+            if(Math.random() < 0.2) this.Particles.spawn(0, 0, 'evolve', 2); // Spirale
+
+            // Mitten in der Animation: Swap Model!
+            if (this.evolveTimer > 1.5 && this.Creature.xp >= this.Creature.maxXp) {
+                this.Creature.stage++; 
+                this.Creature.xp = 0; 
+                this.Creature.maxXp = this.Creature.stage === 1 ? 250 : 999;
+                if(this.Creature.stage === 2) { this.Creature.x = this.Creature.anchorX; this.Creature.y = this.Creature.anchorY; }
+                AudioEngine.playEvolveBoom();
+                this.UI.update();
+            }
+
+            if (this.evolveTimer >= 3.0) {
+                this.evolveTimer = 0;
+                this.State.set('IDLE');
+            }
+        }
+
+        this.Creature.update(scaledDt, this.GlobalTime);
+        this.MiniGames.update(scaledDt);
+        this.Particles.update(scaledDt, this.GlobalTime);
+
+        this.drawScene();
+        requestAnimationFrame((t) => this.loop(t));
+    }
+};
+
+window.onload = () => { GameEngine.init(); };
+</script>
 </body>
 </html>
+
