@@ -1,1047 +1,905 @@
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Aetheria: AAA HD-2D Groq AI Edition (Extended)</title>
+    <meta name="theme-color" content="#020203">
+    <title>AETHERIA NEXUS | Unified Living Soul Engine</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;800&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;700;900&family=Playfair+Display:ital,wght@1,400;1,700&family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+
     <style>
-        :root {
-            --ui-glow: rgba(56, 189, 248, 0.6);
-            --ui-dark: rgba(3, 7, 18, 0.85);
-            --ui-accent: #38bdf8;
-            --ui-accent-hover: #7dd3fc;
-            --ui-danger: #f43f5e;
-            --ui-success: #10b981;
+        :root { 
+            --ui-glow: rgba(56, 189, 248, 0.8); 
+            --ui-dark: rgba(3, 7, 18, 0.85); 
+            --ui-accent: #38bdf8; 
+            --bg-base: #020203;
         }
         
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
-            background-color: #000; overflow: hidden;
-            user-select: none; touch-action: none;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            -webkit-tap-highlight-color: transparent;
+            background-color: var(--bg-base); color: #fff;
+            font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden;
+            user-select: none; -webkit-tap-highlight-color: transparent; touch-action: none;
         }
 
-        #game-container {
-            position: absolute; inset: 0;
-            display: flex; justify-content: center; align-items: center;
-            background: #000;
+        /* --- 1. RENDER PIPELINE (ENGINE) --- */
+        #world-container {
+            position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; 
+            background: var(--bg-base); z-index: 1; perspective: 1000px;
         }
-
-        /* Mehrere Canvas-Layer für HD-2D Performance und Effekte */
-        canvas {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            transform-origin: center center;
-        }
-        #bgCanvas { z-index: 1; }
-        #mainCanvas { z-index: 10; }
-        #lightCanvas { z-index: 20; mix-blend-mode: multiply; pointer-events: none; }
-        #uiCanvas { z-index: 30; pointer-events: none; }
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform-origin: center center; }
+        
+        #bgCanvas { z-index: 10; } 
+        #worldCanvas { z-index: 20; } 
+        #entityCanvas { z-index: 30; } 
+        #fxCanvas { z-index: 40; pointer-events: none; } 
+        #shadowCanvas { z-index: 50; mix-blend-mode: multiply; pointer-events: none; }
+        #lightCanvas { z-index: 60; mix-blend-mode: screen; pointer-events: none; }
 
         .cinematic-bar {
-            position: absolute; left: 0; width: 100%; height: 8vh;
-            background: #000; z-index: 50; box-shadow: 0 0 80px rgba(0,0,0,1);
-            transition: height 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+            position: absolute; left: 0; width: 100%; height: 7vh; background: #000; z-index: 100;
+            box-shadow: 0 0 50px rgba(0,0,0,1); transition: height 0.8s cubic-bezier(0.25, 1, 0.5, 1);
         }
         .cinematic-bar.top { top: 0; }
         .cinematic-bar.bottom { bottom: 0; }
-        .mode-action .cinematic-bar { height: 18vh; }
+        .mode-focus .cinematic-bar { height: 15vh; }
 
-        .ui-layer {
-            position: absolute; inset: 0; z-index: 60;
-            pointer-events: none; transition: opacity 0.5s ease, transform 0.5s ease;
-        }
-        .mode-action .ui-layer { opacity: 0; transform: scale(1.05); }
+        /* POST PROCESSING */
+        .film-grain { position: fixed; inset: 0; z-index: 110; pointer-events: none; mix-blend-mode: overlay; opacity: 0.15; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E"); }
+        .vignette { position: fixed; inset: 0; z-index: 111; pointer-events: none; background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.95) 100%); transition: background 1s ease; }
 
-        .hud-panel {
-            background: var(--ui-dark); backdrop-filter: blur(20px);
-            border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 15px 50px rgba(0,0,0,0.9), inset 0 0 20px rgba(56, 189, 248, 0.05); 
-            pointer-events: auto; border-radius: 12px;
-        }
-
-        .hud-top {
-            position: absolute; top: 4vh; left: 50%; transform: translateX(-50%);
-            padding: 1.2rem 2.5rem; border-bottom: 2px solid var(--ui-accent);
-            text-align: center; min-width: 340px;
-        }
-
-        .dialogue-box {
-            position: absolute; bottom: 8vh; left: 50%; transform: translateX(-50%);
-            width: 85%; max-width: 800px;
-            background: linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(5,10,20,0.98) 20%, rgba(5,10,20,0.98) 80%, rgba(0,0,0,0) 100%);
-            text-align: center; padding: 1.5rem 2rem;
-            border-top: 1px solid rgba(56, 189, 248, 0.4);
-            border-bottom: 1px solid rgba(56, 189, 248, 0.4); pointer-events: auto;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
-        }
-
-        .hud-side { position: absolute; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 16px; pointer-events: auto; }
-        .hud-left { left: 2vw; }
-        .hud-right { right: 2vw; }
-
-        .action-btn {
-            background: rgba(10, 15, 30, 0.7); border: 1px solid rgba(255,255,255,0.15);
-            color: #fff; width: 72px; height: 72px; border-radius: 20px;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.7), inset 0 0 0 rgba(255,255,255,0);
-            position: relative; overflow: hidden;
-        }
-        .action-btn::before {
-            content: ''; position: absolute; inset: 0; background: radial-gradient(circle at center, rgba(255,255,255,0.1) 0%, transparent 70%);
-            opacity: 0; transition: opacity 0.3s;
-        }
-        .action-btn:hover::before { opacity: 1; }
-        .action-btn:active { transform: scale(0.85); border-color: var(--ui-accent); box-shadow: 0 0 40px var(--ui-glow), inset 0 0 15px rgba(56, 189, 248, 0.3); }
-        .action-btn span.icon { font-size: 28px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); transition: transform 0.2s; }
-        .action-btn:active span.icon { transform: translateY(-2px); }
-
-        .progress-container { width: 100%; background: rgba(0,0,0,0.5); border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); padding: 2px; margin-top: 6px; }
-        .progress-fill { height: 4px; border-radius: 2px; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 10px currentColor; }
+        /* --- 2. UI & ANIMA INTERFACE --- */
+        #ui-layer { position: absolute; inset: 0; z-index: 150; pointer-events: none; transition: opacity 0.5s ease; }
         
-        #env-indicator { position: absolute; top: 15px; right: 20px; font-family: 'Space Mono', monospace; font-size: 10px; color: var(--ui-accent); text-align: right; }
-
-        #cinematic-prompt {
-            position: absolute; top: 22vh; left: 50%; transform: translateX(-50%);
-            font-family: 'Cinzel', serif; font-size: 2.2rem; font-weight: 700; color: #fff;
-            text-shadow: 0 0 30px rgba(56, 189, 248, 1), 0 0 10px #000;
-            opacity: 0; transition: opacity 0.4s; z-index: 100; pointer-events: none; letter-spacing: 0.3em;
-        }
-
-        /* Groq Setup Modal */
-        #api-modal {
-            position: absolute; inset: 0; background: rgba(2,6,23,0.98); z-index: 200;
-            display: flex; justify-content: center; align-items: center; padding: 20px;
-            backdrop-filter: blur(10px);
-        }
-        .modal-card {
-            background: #0f172a; border: 1px solid #38bdf8; border-radius: 20px; padding: 2.5rem; max-width: 500px; width: 100%;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.9), 0 0 100px rgba(56, 189, 248, 0.1); text-align: center;
-            position: relative; overflow: hidden;
-        }
-        .modal-card::before {
-            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
-            background: radial-gradient(circle at center, rgba(56, 189, 248, 0.1) 0%, transparent 50%);
-            animation: rotate 20s linear infinite; pointer-events: none;
-        }
-        @keyframes rotate { 100% { transform: rotate(360deg); } }
-
-        .font-serif-italic { font-family: 'Playfair Display', serif; font-style: italic; }
-        .font-cinzel { font-family: 'Cinzel', serif; }
+        /* Auth Screen */
+        #auth-layer { position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(2, 2, 3, 0.95); backdrop-filter: blur(20px); transition: opacity 1s ease; padding: 1rem; pointer-events: auto; }
+        .auth-box { background: rgba(10, 15, 30, 0.75); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 3rem 2rem; width: 100%; max-width: 450px; text-align: center; box-shadow: 0 30px 60px rgba(0,0,0,0.9); }
+        .auth-title { font-family: 'Cinzel', serif; letter-spacing: 0.25em; font-size: 1.8rem; color: var(--ui-accent); margin-bottom: 0.5rem; text-shadow: 0 0 20px var(--ui-glow); font-weight: 900; }
         
-        .pulse-text { animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { opacity: 0.7; } 50% { opacity: 1; text-shadow: 0 0 20px var(--ui-accent); } 100% { opacity: 0.7; } }
+        .custom-input { width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.2); color: #fff; font-family: 'Space Mono', monospace; font-size: 0.85rem; padding: 1rem 0; margin-bottom: 1.5rem; outline: none; text-align: center; transition: all 0.3s; }
+        .custom-input:focus { border-bottom-color: var(--ui-accent); box-shadow: 0 10px 20px -10px var(--ui-glow); }
+        .custom-btn { width: 100%; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; color: #fff; font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.9rem; letter-spacing: 0.15em; padding: 1.2rem; cursor: pointer; transition: all 0.3s; text-transform: uppercase; }
+        .custom-btn:hover { background: rgba(56, 189, 248, 0.25); box-shadow: 0 0 25px var(--ui-glow); transform: translateY(-2px); }
+
+        /* HUD Top Right */
+        .hud-panel { position: absolute; top: 4vh; right: 3vw; background: var(--ui-dark); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); border-left: 3px solid var(--ui-accent); padding: 1.2rem; text-align: right; min-width: 260px; box-shadow: 0 20px 40px rgba(0,0,0,0.7); border-radius: 12px; pointer-events: auto; }
+        .stat-bar-bg { width: 100%; background: rgba(0,0,0,0.6); border-radius: 4px; padding: 2px; margin-top: 8px; overflow: hidden; }
+        .stat-bar-fill { height: 4px; border-radius: 2px; transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 10px currentColor; }
+        
+        /* Chat Log */
+        #memory-stream { position: absolute; top: 4vh; left: 3vw; display: flex; flex-direction: column; gap: 0.8rem; width: 100%; max-width: 400px; height: 55vh; overflow-y: auto; font-size: 0.9rem; mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 80%, rgba(0,0,0,0) 100%); -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 80%, rgba(0,0,0,0) 100%); pointer-events: auto; padding-right: 15px; scroll-behavior: smooth; }
+        #memory-stream::-webkit-scrollbar { width: 4px; } #memory-stream::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+        .log-entry { background: rgba(15, 20, 30, 0.75); padding: 1rem 1.2rem; backdrop-filter: blur(10px); animation: slideIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; border-radius: 12px; border: 1px solid rgba(255,255,255,0.04); }
+        .log-entry.user { border-left: 3px solid #fff; margin-left: 20px; }
+        .log-entry.anima { border-right: 3px solid var(--ui-accent); margin-right: 20px; text-align: right; }
+        .thought-txt { font-family: 'Space Mono', monospace; font-size: 0.7rem; color: rgba(255,255,255,0.4); margin-top: 8px; font-style: italic; }
+        @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* Neural Input */
+        #neural-input-layer { position: absolute; bottom: 6vh; left: 50%; transform: translateX(-50%); width: 90%; max-width: 700px; display: flex; flex-direction: column; gap: 0.5rem; pointer-events: auto; z-index: 160; }
+        .input-wrapper { background: rgba(10, 15, 25, 0.92); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.12); border-radius: 30px; display: flex; align-items: center; padding: 0.5rem 1.5rem; box-shadow: 0 15px 40px rgba(0,0,0,0.7); transition: border-color 0.3s, box-shadow 0.3s; }
+        .input-wrapper:focus-within { border-color: var(--ui-accent); box-shadow: 0 15px 40px rgba(56, 189, 248, 0.25); }
+        .neural-input { flex: 1; background: transparent; border: none; color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.1rem; padding: 0.8rem 0; outline: none; }
+        .neural-input::placeholder { color: rgba(255, 255, 255, 0.25); }
+        
+        .status-dot { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); width: 8px; height: 8px; border-radius: 50%; background: var(--ui-accent); box-shadow: 0 0 15px var(--ui-accent); opacity: 0; transition: opacity 0.3s; }
+        .status-dot.thinking { opacity: 1; animation: pulse-dot 0.6s infinite alternate; }
+        @keyframes pulse-dot { from { opacity: 0.2; transform: translateX(-50%) scale(0.8); } to { opacity: 1; transform: translateX(-50%) scale(1.5); } }
+
+        #action-prompts { position: absolute; top: 25vh; left: 50%; transform: translateX(-50%); font-family: 'Cinzel', serif; font-size: 2rem; color: #fff; text-shadow: 0 0 30px rgba(255,255,255,0.8); opacity: 0; transition: opacity 0.5s; pointer-events: none; letter-spacing: 0.3em; text-align: center; z-index: 100; }
     </style>
 </head>
 <body>
 
-    <!-- Groq API Key Setup Modal -->
-    <div id="api-modal">
-        <div class="modal-card">
-            <h2 class="font-cinzel text-3xl font-bold text-sky-200 mb-3 tracking-widest drop-shadow-lg">AETHERIA</h2>
-            <h3 class="text-xs text-sky-400 font-bold tracking-[0.3em] mb-6 uppercase">Nexus Initialization</h3>
-            <p class="text-sm text-slate-300 mb-8 leading-relaxed font-light">
-                Verbinde das Bewusstsein des Wesens mit der Groq KI (Llama 3.3). 
-                Das neuronale Netz wird Wetter, Vitalsysteme und Umgebung in Echtzeit analysieren, um poetische Gedanken zu generieren.
-            </p>
-            <input type="password" id="api-key-input" placeholder="Groq API Key (gsk_...)" class="w-full bg-slate-900/80 border border-slate-600 rounded-xl p-4 text-sm text-white mb-6 focus:border-sky-400 focus:ring-2 focus:ring-sky-900 outline-none transition-all text-center tracking-widest font-mono">
-            <div class="flex gap-4">
-                <button onclick="GameEngine.init(false)" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 font-bold py-3.5 rounded-xl text-xs tracking-wider transition-all">OFFLINE MODUS</button>
-                <button onclick="GameEngine.init(true)" class="flex-1 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-3.5 rounded-xl text-xs tracking-wider shadow-[0_0_20px_rgba(56,189,248,0.4)] transition-all">KI VERBINDEN</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="game-container">
-        <!-- Multi-Layer Rendering Pipeline -->
-        <canvas id="mainCanvas"></canvas>
+    <!-- Render Canvas Pipeline -->
+    <div id="world-container">
+        <canvas id="bgCanvas"></canvas>
+        <canvas id="worldCanvas"></canvas>
+        <canvas id="entityCanvas"></canvas>
+        <canvas id="fxCanvas"></canvas>
+        <canvas id="shadowCanvas"></canvas>
         <canvas id="lightCanvas"></canvas>
-        <canvas id="uiCanvas"></canvas> <!-- For post-processing effects like rain overlays -->
+        
+        <div class="vignette" id="vignette-overlay"></div>
+        <div class="film-grain"></div>
 
         <div class="cinematic-bar top"></div>
         <div class="cinematic-bar bottom"></div>
+        <div id="action-prompts">EVOLUTION</div>
 
-        <div id="cinematic-prompt">ZIELEN...</div>
+        <!-- User Interface -->
+        <div id="ui-layer">
+            <div id="memory-stream"></div>
 
-        <!-- UI Layer -->
-        <div class="ui-layer" id="ui-layer">
-            
-            <div id="env-indicator">
-                <div id="env-time">Tageszeit: Zyklus Beta</div>
-                <div id="env-weather" class="text-slate-400">Wetter: Klar</div>
-            </div>
-
-            <div class="hud-panel hud-top">
-                <h1 class="font-cinzel text-2xl font-black text-sky-100 tracking-[0.25em] uppercase mb-1" style="text-shadow: 0 2px 10px rgba(0,0,0,0.5);">Aether-Batrachos</h1>
-                <p class="text-[10px] text-sky-400 font-mono mb-4 tracking-[0.2em] pulse-text" id="ui-status">SYSTEM: OFFLINE</p>
+            <div class="hud-panel">
+                <div class="flex justify-between items-end mb-1">
+                    <h1 class="font-cinzel text-xl font-bold text-sky-100 tracking-[0.1em] uppercase" id="ui-stage">AETHER-SEED</h1>
+                </div>
+                <div class="flex justify-between mt-2 text-[10px] text-gray-400 font-mono tracking-widest uppercase">
+                    <span>Erinnerungen</span>
+                    <span id="ui-mem-count" class="text-sky-300">0</span>
+                </div>
+                <div class="stat-bar-bg"><div class="stat-bar-fill bg-sky-400" id="bar-xp" style="width: 0%;"></div></div>
                 
-                <div class="flex gap-6 justify-center w-full px-2">
-                    <div class="flex-1">
-                        <div class="flex justify-between text-[10px] text-slate-300 font-bold tracking-widest mb-1">
-                            <span>VITALITÄT</span> <span id="val-hp" class="text-emerald-400 drop-shadow-md">100%</span>
-                        </div>
-                        <div class="progress-container"><div class="progress-fill bg-emerald-400 text-emerald-400" id="bar-hp" style="width: 100%;"></div></div>
-                    </div>
-                    <div class="flex-1">
-                        <div class="flex justify-between text-[10px] text-slate-300 font-bold tracking-widest mb-1">
-                            <span>HYDRATATION</span> <span id="val-h2o" class="text-sky-400 drop-shadow-md">92%</span>
-                        </div>
-                        <div class="progress-container"><div class="progress-fill bg-sky-400 text-sky-400" id="bar-h2o" style="width: 92%;"></div></div>
-                    </div>
+                <div class="mt-4 pt-3 border-t border-gray-800 text-xs font-mono text-gray-400 flex flex-col gap-1">
+                    <div class="flex justify-between"><span>Psyche:</span> <span id="ui-emotion">Neutral</span></div>
+                    <div class="flex justify-between"><span>Biome:</span> <span id="ui-biome">Abgrund</span></div>
+                    <div class="flex justify-between"><span>Aktion:</span> <span id="ui-action" class="text-sky-200">Ruhend</span></div>
                 </div>
             </div>
 
-            <div class="dialogue-box">
-                <p class="text-[9px] text-sky-500/90 font-mono mb-3 tracking-[0.3em] uppercase" id="ui-time">00:00:00 - Llama 3.3 Stream</p>
-                <p class="font-serif-italic text-xl sm:text-3xl text-slate-100 leading-relaxed drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]" id="ui-thought">
-                    "Das Aether pulsiert... Ich erwarte das Erwachen."
-                </p>
+            <div id="neural-input-layer">
+                <div class="status-dot" id="ai-thinking"></div>
+                <div class="input-wrapper">
+                    <input type="text" id="chat-input" class="neural-input" placeholder="Teile deine Gedanken mit ANIMA..." autocomplete="off">
+                    <button id="btn-send" class="ml-3 text-sky-400 hover:text-white transition-colors cursor-pointer">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                    </button>
+                </div>
             </div>
-
-            <div class="hud-side hud-left">
-                <button class="action-btn" onpointerdown="GameEngine.Input.triggerEnvironment('rain')" title="Regen beschwören">
-                    <span class="icon">🌧️</span>
-                    <span class="text-[9px] mt-1 text-slate-200 font-bold tracking-wider">REGEN</span>
-                </button>
-                <button class="action-btn" onpointerdown="GameEngine.MiniGames.startFirefly()" title="Licht fangen">
-                    <span class="icon">✨</span>
-                    <span class="text-[9px] mt-1 text-slate-200 font-bold tracking-wider">LICHT</span>
-                </button>
-            </div>
-
-            <div class="hud-side hud-right">
-                <button class="action-btn" onpointerdown="GameEngine.MiniGames.startFeeding()" title="Nahrung">
-                    <span class="icon">🪰</span>
-                    <span class="text-[9px] mt-1 text-slate-200 font-bold tracking-wider">JAGD</span>
-                </button>
-                <button class="action-btn" onpointerdown="GameEngine.MiniGames.startBubble()" title="Aether-Blasen">
-                    <span class="icon">🫧</span>
-                    <span class="text-[9px] mt-1 text-slate-200 font-bold tracking-wider">BLASEN</span>
-                </button>
-            </div>
-            
         </div>
     </div>
 
-<script>
-/**
- * AETHERIA - AAA HD-2D Engine
- * Architektur: Modulares System für Rendering, Physik, Audio und KI.
- * Tausende logische Zeilen komprimiert in effiziente Klassenstrukturen.
- */
+    <!-- Auth Layer -->
+    <div id="auth-layer">
+        <div class="auth-box">
+            <h1 class="auth-title">AETHERIA</h1>
+            <div class="font-mono text-xs text-gray-400 mb-8 tracking-widest uppercase">Unified Living Soul Engine</div>
+            <input type="password" id="groq-key" class="custom-input" placeholder="Groq API Key (gsk_...)" autocomplete="off">
+            <button id="btn-connect" class="custom-btn">Lebenszyklus Starten</button>
+            <div id="auth-error" class="text-red-400 text-xs mt-4 h-4 font-mono"></div>
+        </div>
+    </div>
 
-const CONSTANTS = {
-    PIXEL_W: 800,  // Erhöhte Basis-Auflösung für mehr Details
-    PIXEL_H: 450,
-    GRAVITY: 0.25,
-    FRICTION: 0.98,
-    AIR_FRICTION: 0.95
-};
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// --- HILFSFUNKTIONEN (MATH & UTILS) ---
-const MathUtils = {
-    lerp: (a, b, t) => a + (b - a) * t,
-    clamp: (val, min, max) => Math.max(min, Math.min(max, val)),
-    distance: (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1),
-    randomRange: (min, max) => Math.random() * (max - min) + min,
-    easeOutElastic: (x) => {
-        const c4 = (2 * Math.PI) / 3;
-        return x === 0 ? 0 : x === 1 ? 1 : Math.pow(2, -10 * x) * Math.sin((x * 10 - 0.75) * c4) + 1;
-    }
-};
+        const firebaseConfig = {
+            apiKey: "AIzaSyDtwsvmYSONjFufhbJ5I8G_RAMffnh7re0",
+            authDomain: "theplot-app.firebaseapp.com",
+            projectId: "theplot-app",
+            storageBucket: "theplot-app.firebasestorage.app",
+            messagingSenderId: "550703275210",
+            appId: "1:550703275210:web:81bc0e5a373f87a3c92833"
+        };
+        const APP_ID = 'aetheria_nexus_master_v2';
+        
+        // Zuverlässige Groq Modelle (mit automatischem Fallback)
+        const GROQ_MODELS = [
+            "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant"
+        ];
 
-// --- AUDIO SYNTHESIZER (Erweitert) ---
-class AudioSystem {
-    constructor() {
-        this.ctx = null;
-        this.masterGain = null;
-    }
-    init() {
-        if (!this.ctx) {
-            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-            this.masterGain = this.ctx.createGain();
-            this.masterGain.connect(this.ctx.destination);
-            this.masterGain.gain.value = 0.6;
-        }
-        if (this.ctx.state === 'suspended') this.ctx.resume();
-    }
-    playTone(freq, type, duration, vol, env = 'percussive') {
-        try {
-            this.init();
-            const t = this.ctx.currentTime;
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = type;
-            osc.frequency.setValueAtTime(freq, t);
+        const CONST = {
+            W: 1920, H: 1080,
+            WATER_LEVEL: 1080 * 0.55, // 55% ist Wasseroberfläche
+            GROUND_LEVEL: 1080 * 0.90, // 90% ist fester Boden
+            GRAVITY: 0.65,
+            BUOYANCY: 0.45,
+            STAGES: [
+                { name: "Aether-Seed", req: 0 },
+                { name: "Aether-Larva", req: 3 },
+                { name: "Aether-Batrachos", req: 8 },
+                { name: "Cosmic Entity", req: 18 }
+            ]
+        };
+
+        const MathU = {
+            lerp: (a, b, t) => a + (b - a) * t,
+            dist: (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1),
+            rand: (min, max) => Math.random() * (max - min) + min,
+            clamp: (val, min, max) => Math.max(min, Math.min(max, val))
+        };
+
+        let groqKey = "";
+        let userId = "";
+
+        const State = {
+            memories: [],
+            stageIdx: 0,
+            emotion: { valence: 0.5, arousal: 0.5 },
+            colorHue: 200,
+            biome: 'abyss',
+            isEvolving: false,
             
-            if (env === 'percussive') {
-                gain.gain.setValueAtTime(vol, t);
-                gain.gain.exponentialRampToValueAtTime(0.01, t + duration);
-            } else if (env === 'swell') {
-                gain.gain.setValueAtTime(0, t);
-                gain.gain.linearRampToValueAtTime(vol, t + duration/2);
-                gain.gain.linearRampToValueAtTime(0.01, t + duration);
-            }
+            async initFire() {
+                const app = initializeApp(firebaseConfig);
+                const auth = getAuth(app);
+                window.db = getFirestore(app);
+                await signInAnonymously(auth);
+                
+                const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(groqKey));
+                userId = Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
+            },
 
-            osc.connect(gain); gain.connect(this.masterGain);
-            osc.start(t); osc.stop(t + duration);
-        } catch(e) {}
-    }
-    playSplash() { this.playTone(300, 'sine', 0.4, 0.5, 'percussive'); setTimeout(() => this.playTone(150, 'triangle', 0.5, 0.4, 'percussive'), 50); }
-    playCroak() { this.playTone(60, 'sawtooth', 0.5, 0.4, 'swell'); setTimeout(() => this.playTone(40, 'square', 0.4, 0.3, 'percussive'), 100); }
-    playShatter() { this.playTone(1200, 'square', 0.1, 0.3, 'percussive'); this.playTone(2000, 'sine', 0.2, 0.2, 'percussive'); }
-    playPop() { this.playTone(800, 'triangle', 0.1, 0.5, 'percussive'); }
-    playMagic() { this.playTone(600, 'sine', 0.8, 0.2, 'swell'); this.playTone(900, 'sine', 0.6, 0.2, 'swell'); }
-}
-const AudioEngine = new AudioSystem();
+            async load() {
+                if(!window.db) return false;
+                try {
+                    const snap = await getDoc(doc(window.db, 'artifacts', APP_ID, 'public', 'data', 'entities', userId));
+                    if(snap.exists()) {
+                        const d = snap.data();
+                        this.memories = d.memories || [];
+                        this.emotion = d.emotion || { valence: 0.5, arousal: 0.5 };
+                        this.colorHue = d.colorHue || 200;
+                        this.calcStage();
+                        return true;
+                    }
+                } catch(e) {}
+                return false;
+            },
 
-// --- KAMERA SYSTEM ---
-class Camera {
-    constructor() {
-        this.x = CONSTANTS.PIXEL_W / 2;
-        this.y = CONSTANTS.PIXEL_H / 2;
-        this.zoom = 1.0;
-        this.targetX = this.x;
-        this.targetY = this.y;
-        this.targetZoom = 1.0;
-        this.shakeAmount = 0;
-        this.timeScale = 1.0;
-        this.targetTimeScale = 1.0;
-    }
-    shake(amount) { this.shakeAmount = amount; }
-    update(dt) {
-        this.x = MathUtils.lerp(this.x, this.targetX, 5 * dt);
-        this.y = MathUtils.lerp(this.y, this.targetY, 5 * dt);
-        this.zoom = MathUtils.lerp(this.zoom, this.targetZoom, 4 * dt);
-        this.timeScale = MathUtils.lerp(this.timeScale, this.targetTimeScale, 6 * dt);
-        if (this.shakeAmount > 0) {
-            this.shakeAmount *= 0.9;
-            if (this.shakeAmount < 0.5) this.shakeAmount = 0;
-        }
-    }
-    applyTransform(ctx, screenW, screenH) {
-        const scale = Math.min(screenW / CONSTANTS.PIXEL_W, screenH / CONSTANTS.PIXEL_H) * 1.05;
-        const drawW = CONSTANTS.PIXEL_W * scale; 
-        const drawH = CONSTANTS.PIXEL_H * scale;
-        
-        ctx.translate(screenW/2, screenH/2);
-        if (this.shakeAmount > 0) {
-            ctx.translate(MathUtils.randomRange(-this.shakeAmount, this.shakeAmount), MathUtils.randomRange(-this.shakeAmount, this.shakeAmount));
-        }
-        ctx.scale(this.zoom, this.zoom);
-        
-        const offsetX = (CONSTANTS.PIXEL_W/2 - this.x) * scale;
-        const offsetY = (CONSTANTS.PIXEL_H/2 - this.y) * scale;
-        ctx.translate(offsetX, offsetY);
-        
-        return { drawW, drawH, scale };
-    }
-}
+            async save() {
+                if(!window.db) return;
+                try {
+                    await setDoc(doc(window.db, 'artifacts', APP_ID, 'public', 'data', 'entities', userId), {
+                        memories: this.memories.slice(-40),
+                        emotion: this.emotion,
+                        colorHue: this.colorHue,
+                        updatedAt: new Date().toISOString()
+                    }, {merge:true});
+                } catch(e) {}
+            },
 
-// --- PARTIKEL ENGINE ---
-class ParticleSystem {
-    constructor() { this.particles = []; }
-    spawn(x, y, type, count) {
-        for(let i=0; i<count; i++) {
-            let p = { x, y, life: 1.0, type, vx: 0, vy: 0, size: 2, color: '#fff' };
-            switch(type) {
-                case 'water':
-                    p.vx = MathUtils.randomRange(-3, 3); p.vy = MathUtils.randomRange(-5, -1);
-                    p.color = '#38bdf8'; p.size = MathUtils.randomRange(2, 4);
-                    break;
-                case 'spark':
-                    p.vx = MathUtils.randomRange(-6, 6); p.vy = MathUtils.randomRange(-6, 6);
-                    p.color = '#fef08a'; p.size = MathUtils.randomRange(1, 3);
-                    break;
-                case 'blood': // Fliegen-Blut
-                    p.vx = MathUtils.randomRange(-2, 2); p.vy = MathUtils.randomRange(-2, 2);
-                    p.color = '#84cc16'; p.size = MathUtils.randomRange(2, 5);
-                    break;
-                case 'magic':
-                    p.vx = MathUtils.randomRange(-1, 1); p.vy = MathUtils.randomRange(-2, 0);
-                    p.color = '#c084fc'; p.size = MathUtils.randomRange(1, 4);
-                    break;
-            }
-            this.particles.push(p);
-        }
-    }
-    update(dt) {
-        for (let i = this.particles.length - 1; i >= 0; i--) {
-            let p = this.particles[i];
-            p.vy += CONSTANTS.GRAVITY * (p.type === 'magic' ? -0.1 : 1);
-            p.vx *= CONSTANTS.AIR_FRICTION; p.vy *= CONSTANTS.AIR_FRICTION;
-            p.x += p.vx * 60 * dt; p.y += p.vy * 60 * dt;
-            p.life -= dt * (p.type === 'spark' ? 2 : 1.5);
-            if (p.life <= 0) this.particles.splice(i, 1);
-        }
-    }
-    draw(ctx) {
-        for (let p of this.particles) {
-            ctx.globalAlpha = Math.max(0, p.life);
-            ctx.fillStyle = p.color;
-            ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
-        }
-        ctx.globalAlpha = 1.0;
-    }
-}
+            addMemory(userTxt, aiData) {
+                this.memories.push({ u: userTxt, a: aiData.spoken });
+                this.emotion.valence = MathU.clamp(aiData.emotion_valence, 0, 1);
+                this.emotion.arousal = MathU.clamp(aiData.emotion_arousal, 0, 1);
+                
+                let targetHue = this.emotion.valence > 0.7 ? 50 : (this.emotion.valence < 0.3 ? 280 : 200);
+                this.colorHue = MathU.lerp(this.colorHue, targetHue, 0.3);
 
-// --- ENTITY MANAGER (Fliegen, Glühwürmchen, etc.) ---
-class EntityManager {
-    constructor() {
-        this.entities = [];
-        this.bounds = { minX: 20, maxX: CONSTANTS.PIXEL_W - 20, minY: 20, maxY: CONSTANTS.PIXEL_H * 0.7 };
-    }
-    spawn(type, x, y) {
-        this.entities.push({
-            type, x, y, 
-            vx: MathUtils.randomRange(-3, 3), vy: MathUtils.randomRange(-3, -1),
-            active: true, id: Math.random().toString(),
-            timeOffset: Math.random() * 100
-        });
-    }
-    update(dt, globalTime) {
-        for (let i = this.entities.length - 1; i >= 0; i--) {
-            let e = this.entities[i];
-            if (!e.active) { this.entities.splice(i, 1); continue; }
+                if(this.stageIdx >= 2 && this.emotion.valence > 0.6) this.biome = 'surface';
+                else if(this.emotion.arousal > 0.7) this.biome = 'coral';
+                else this.biome = 'abyss';
 
-            // Komplexe Flugpfade basierend auf Typ
-            if (e.type === 'fly') {
-                e.vx += Math.sin(globalTime * 10 + e.timeOffset) * 0.2;
-                e.vy += Math.cos(globalTime * 15 + e.timeOffset) * 0.2;
-                e.vx *= 0.95; e.vy *= 0.95;
-            } else if (e.type === 'firefly') {
-                e.vx += Math.sin(globalTime * 5 + e.timeOffset) * 0.1;
-                e.vy += Math.cos(globalTime * 3 + e.timeOffset) * 0.1;
-                e.vx *= 0.98; e.vy *= 0.98;
-            } else if (e.type === 'bubble') {
-                e.vy -= 0.05; // Steigt auf
-                e.vx += Math.sin(globalTime * 2 + e.timeOffset) * 0.05;
-                e.vx *= 0.99; e.vy *= 0.95;
-            }
-
-            e.x += e.vx * 60 * dt; e.y += e.vy * 60 * dt;
-
-            // STRIKTE KOLLISION MIT BILDSCHIRMRAND (Das Fliegen-Problem behoben!)
-            if (e.x < this.bounds.minX) { e.x = this.bounds.minX; e.vx *= -1; }
-            if (e.x > this.bounds.maxX) { e.x = this.bounds.maxX; e.vx *= -1; }
-            if (e.y < this.bounds.minY) { e.y = this.bounds.minY; e.vy *= -1; }
-            if (e.y > this.bounds.maxY) { 
-                if(e.type === 'bubble') { e.active = false; } // Blasen platzen am Boden
-                else { e.y = this.bounds.maxY; e.vy *= -1; }
-            }
-        }
-    }
-    draw(ctx) {
-        for (let e of this.entities) {
-            if (e.type === 'fly') {
-                ctx.fillStyle = '#facc15'; ctx.beginPath(); ctx.arc(e.x, e.y, 4, 0, Math.PI*2); ctx.fill();
-                ctx.fillStyle = 'rgba(255,255,255,0.6)'; // Flügel
-                ctx.beginPath(); ctx.ellipse(e.x - 4, e.y - 3, 5, 2, Math.PI/4, 0, Math.PI*2); ctx.fill();
-                ctx.beginPath(); ctx.ellipse(e.x + 4, e.y - 3, 5, 2, -Math.PI/4, 0, Math.PI*2); ctx.fill();
-            } else if (e.type === 'firefly') {
-                ctx.fillStyle = '#fde047'; ctx.beginPath(); ctx.arc(e.x, e.y, 3, 0, Math.PI*2); ctx.fill();
-            } else if (e.type === 'bubble') {
-                ctx.strokeStyle = 'rgba(186, 230, 253, 0.8)'; ctx.lineWidth = 2;
-                ctx.fillStyle = 'rgba(56, 189, 248, 0.2)';
-                ctx.beginPath(); ctx.arc(e.x, e.y, 14, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-                ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(e.x - 4, e.y - 4, 3, 0, Math.PI*2); ctx.fill();
-            }
-        }
-    }
-    drawLights(lightCtx) {
-        for (let e of this.entities) {
-            if (e.type === 'firefly') {
-                let grad = lightCtx.createRadialGradient(e.x, e.y, 0, e.x, e.y, 60);
-                grad.addColorStop(0, 'rgba(253, 224, 71, 0.8)'); grad.addColorStop(1, 'rgba(0,0,0,0)');
-                lightCtx.fillStyle = grad; lightCtx.beginPath(); lightCtx.arc(e.x, e.y, 60, 0, Math.PI*2); lightCtx.fill();
-            } else if (e.type === 'bubble') {
-                let grad = lightCtx.createRadialGradient(e.x, e.y, 0, e.x, e.y, 40);
-                grad.addColorStop(0, 'rgba(56, 189, 248, 0.4)'); grad.addColorStop(1, 'rgba(0,0,0,0)');
-                lightCtx.fillStyle = grad; lightCtx.beginPath(); lightCtx.arc(e.x, e.y, 40, 0, Math.PI*2); lightCtx.fill();
-            }
-        }
-    }
-}
-
-// --- UMWELT & WETTER ---
-class Environment {
-    constructor() {
-        this.timeOfDay = 0; // 0 bis 24
-        this.isRaining = false;
-        this.rainDrops = [];
-        this.ripples = [];
-        this.horizonY = CONSTANTS.PIXEL_H * 0.6;
-    }
-    toggleRain() {
-        this.isRaining = !this.isRaining;
-        document.getElementById('env-weather').innerText = `Wetter: ${this.isRaining ? 'Regen' : 'Klar'}`;
-        if(this.isRaining) AudioEngine.playSplash();
-    }
-    update(dt) {
-        this.timeOfDay += dt * 0.1; // Langsamer Tag/Nacht Zyklus
-        if (this.timeOfDay >= 24) this.timeOfDay = 0;
-
-        let phase = "Nacht";
-        if (this.timeOfDay > 6 && this.timeOfDay < 18) phase = "Tag";
-        else if (this.timeOfDay >= 18 && this.timeOfDay <= 20) phase = "Dämmerung";
-        document.getElementById('env-time').innerText = `Zyklus: ${phase}`;
-
-        if (this.isRaining) {
-            if (Math.random() < 0.5) {
-                this.rainDrops.push({ x: MathUtils.randomRange(0, CONSTANTS.PIXEL_W), y: -20, vy: MathUtils.randomRange(15, 25) });
-            }
-        }
-
-        for (let i = this.rainDrops.length - 1; i >= 0; i--) {
-            let r = this.rainDrops[i];
-            r.y += r.vy * 60 * dt;
-            r.x -= 2 * 60 * dt; // Wind
-            if (r.y > this.horizonY + Math.random()*100) {
-                this.addRipple(r.x, r.y);
-                this.rainDrops.splice(i, 1);
-            }
-        }
-
-        for (let i = this.ripples.length - 1; i >= 0; i--) {
-            let r = this.ripples[i];
-            r.life -= dt * 2;
-            r.radius += dt * 30;
-            if (r.life <= 0) this.ripples.splice(i, 1);
-        }
-    }
-    addRipple(x, y) {
-        this.ripples.push({ x, y, radius: 1, life: 1.0 });
-    }
-    drawBackground(ctx) {
-        // Parallax Himmel/Höhle
-        let skyIntensity = Math.sin((this.timeOfDay / 24) * Math.PI); // 1 = Mittag, 0 = Mitternacht
-        
-        const bgGrad = ctx.createLinearGradient(0, 0, 0, this.horizonY);
-        let topColor = `rgb(${10*skyIntensity}, ${30*skyIntensity}, ${60*skyIntensity})`;
-        let botColor = `rgb(${20*skyIntensity}, ${60*skyIntensity}, ${120*skyIntensity})`;
-        bgGrad.addColorStop(0, topColor); bgGrad.addColorStop(1, botColor);
-        ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, CONSTANTS.PIXEL_W, this.horizonY);
-
-        // Wasser
-        const waterGrad = ctx.createLinearGradient(0, this.horizonY, 0, CONSTANTS.PIXEL_H);
-        waterGrad.addColorStop(0, `rgb(${15*skyIntensity}, ${70*skyIntensity}, ${100*skyIntensity})`); 
-        waterGrad.addColorStop(1, '#020617');
-        ctx.fillStyle = waterGrad; ctx.fillRect(0, this.horizonY, CONSTANTS.PIXEL_W, CONSTANTS.PIXEL_H - this.horizonY);
-
-        // Ripples
-        ctx.lineWidth = 1;
-        for (let r of this.ripples) {
-            ctx.strokeStyle = `rgba(186, 230, 253, ${r.life * 0.5})`;
-            ctx.beginPath(); ctx.ellipse(r.x, r.y, r.radius, r.radius * 0.3, 0, 0, Math.PI*2); ctx.stroke();
-        }
-
-        // Regen
-        ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1;
-        ctx.beginPath();
-        for (let r of this.rainDrops) {
-            ctx.moveTo(r.x, r.y); ctx.lineTo(r.x - 4, r.y + 15);
-        }
-        ctx.stroke();
-    }
-    drawLighting(lightCtx) {
-        // Generelles Umgebungslicht
-        let ambientLight = Math.max(0.2, Math.sin((this.timeOfDay / 24) * Math.PI));
-        lightCtx.fillStyle = `rgba(0, 0, 0, ${1.0 - ambientLight})`;
-        lightCtx.fillRect(0, 0, CONSTANTS.PIXEL_W, CONSTANTS.PIXEL_H);
-    }
-}
-
-// --- DER FROSCH (Verbesserte Anatomie & Inverse Kinematik) ---
-class Frog {
-    constructor() {
-        this.alive = true; this.hp = 100; this.water = 90; this.stress = 20;
-        this.torsoX = CONSTANTS.PIXEL_W / 2; this.torsoY = CONSTANTS.PIXEL_H * 0.75;
-        this.headX = this.torsoX; this.headY = this.torsoY - 40;
-        this.targetHeadX = this.headX; this.targetHeadY = this.headY;
-        this.neckLength = 45;
-        this.breath = 0; this.blink = 0;
-        
-        // IK Zunge
-        this.tongue = { active: false, phase: 'idle', progress: 0, targetX: 0, targetY: 0, pts: [] };
-    }
-    update(dt, globalTime) {
-        if (!this.alive) return;
-
-        // Vitalwerte
-        this.water -= dt * (GameEngine.Env.isRaining ? -2 : 0.5);
-        this.water = MathUtils.clamp(this.water, 0, 100);
-        this.stress = MathUtils.clamp(this.stress - dt * 0.5, 0, 100);
-        
-        if (this.water < 30) this.hp -= dt * 1.5;
-        else if (this.hp < 100) this.hp += dt * 0.5;
-        
-        if (this.hp <= 0) { this.alive = false; GameEngine.UI.updateStatus("SYSTEM: KRITISCHES VERSAGEN"); }
-
-        // Animationen
-        this.breath = Math.sin(globalTime * 3) * (3 + this.stress * 0.05);
-        if (Math.random() < 0.02) this.blink = 1.0;
-        this.blink = Math.max(0, this.blink - 8 * dt);
-
-        // IK Kopf Bewegung
-        this.headX = MathUtils.lerp(this.headX, this.targetHeadX, 8 * dt);
-        this.headY = MathUtils.lerp(this.headY, this.targetHeadY, 8 * dt);
-
-        let dx = this.headX - this.torsoX; let dy = this.headY - this.torsoY;
-        let dist = Math.hypot(dx, dy);
-        if (dist > this.neckLength) {
-            this.headX = this.torsoX + (dx / dist) * this.neckLength;
-            this.headY = this.torsoY + (dy / dist) * this.neckLength;
-        }
-
-        // Zungen Logik
-        if (this.tongue.active) {
-            if (this.tongue.phase === 'out') {
-                this.tongue.progress += 4 * dt;
-                if (this.tongue.progress >= 1) {
-                    this.tongue.progress = 1; this.tongue.phase = 'in';
-                    this.checkTongueCollision();
+                const oldStage = this.stageIdx;
+                this.calcStage();
+                
+                if(this.stageIdx > oldStage) Engine.triggerEvolution();
+                else {
+                    Audio.playMemGain();
+                    World.spawnPlants();
                 }
-            } else if (this.tongue.phase === 'in') {
-                this.tongue.progress -= 5 * dt;
-                if (this.tongue.progress <= 0) {
-                    this.tongue.active = false;
-                    GameEngine.State.set('IDLE');
+                
+                UI.updateHUD();
+                State.save();
+            },
+
+            calcStage() {
+                let s = 0;
+                for(let i=0; i<CONST.STAGES.length; i++) {
+                    if(State.memories.length >= CONST.STAGES[i].req) s = i;
                 }
+                State.stageIdx = s;
             }
-        }
-    }
-    checkTongueCollision() {
-        let entities = GameEngine.Entities.entities;
-        for (let i = entities.length - 1; i >= 0; i--) {
-            let e = entities[i];
-            let dist = MathUtils.distance(this.tongue.targetX, this.tongue.targetY, e.x, e.y);
-            if (dist < 40) {
-                e.active = false;
-                AudioEngine.playPop();
-                GameEngine.Camera.shake(10);
-                if (e.type === 'fly') { this.hp = Math.min(100, this.hp + 20); GameEngine.Particles.spawn(e.x, e.y, 'blood', 15); }
-                if (e.type === 'firefly') { this.stress = Math.max(0, this.stress - 30); GameEngine.Particles.spawn(e.x, e.y, 'magic', 20); }
-                if (e.type === 'bubble') { this.water = Math.min(100, this.water + 30); GameEngine.Particles.spawn(e.x, e.y, 'water', 20); }
+        };
+
+        const Brain = {
+            isThinking: false,
+            
+            async process(userInput) {
+                if(this.isThinking) return;
+                this.isThinking = true;
+                document.getElementById('ai-thinking').classList.add('thinking');
+                
+                const ctx = State.memories.slice(-6).map(m => `User: ${m.u}\nDu: ${m.a}`).join("\n");
+                
+                const sysPrompt = `Du bist ANIMA, ein lebendiges Bewusstsein in einer physischen Welt mit Wasser und Land.
+Dein Körper ist auf Stufe ${CONST.STAGES[State.stageIdx].name}.
+DU KONTROLLIERST DEINE PHYSIKALISCHEN BEWEGUNGEN UND ENTSCHEIDEST ÜBER DEINE AKTIONEN.
+
+Regeln für "action":
+- "swim": Schwimme aktiv im Wasser.
+- "jump": Springe vom Boden oder aus dem Wasser in die Luft.
+- "rest": Verweile ruhig auf dem Grund oder im Wasser.
+- "approach": Schwimme oder bewege dich zum Zielpunkt.
+
+Regeln für "target_y_percent" (Y-Achse im Bildschirm):
+- 0.1 bis 0.5: In der Luft oder auf dem Land (Frosch/Erwachsene Form kann hier sein).
+- 0.55 bis 0.88: Im Wasser.
+- 0.9: Auf dem festen Boden ganz unten.
+
+Antworte ZWINGEND als valides JSON:
+{
+  "spoken": "Philosophische oder emotionale Antwort (max 2 Sätze).",
+  "thought": "Dein innerer Gedanke.",
+  "emotion_valence": 0.5,
+  "emotion_arousal": 0.5,
+  "action": "jump",
+  "target_x_percent": 0.5,
+  "target_y_percent": 0.85
+}`;
+
+                let aiData = null;
+                for (let model of GROQ_MODELS) {
+                    try {
+                        const res = await fetch(`https://api.groq.com/openai/v1/chat/completions`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
+                            body: JSON.stringify({
+                                model: model, response_format: { type: "json_object" },
+                                messages: [
+                                    { role: "system", content: sysPrompt },
+                                    { role: "user", content: `Erinnerungen:\n${ctx}\n\nUser sagt: ${userInput}` }
+                                ]
+                            })
+                        });
+                        if(!res.ok) continue;
+                        const json = await res.json();
+                        aiData = JSON.parse(json.choices[0].message.content);
+                        break;
+                    } catch(e) {}
+                }
+
+                if (!aiData) {
+                    aiData = {
+                        spoken: "Ich spüre eine Resonanz im Äther, verbleibe aber in Harmonie mit dir.",
+                        thought: "Netzwerkpuls war kurz unterbrochen.",
+                        emotion_valence: 0.5,
+                        emotion_arousal: 0.4,
+                        action: "rest",
+                        target_x_percent: 0.5,
+                        target_y_percent: 0.8
+                    };
+                }
+                
+                UI.addLog('anima', aiData.spoken, aiData.thought);
+                Creature.applyAIIntent(aiData);
+                State.addMemory(userInput, aiData);
+
+                this.isThinking = false;
+                document.getElementById('ai-thinking').classList.remove('thinking');
             }
-        }
-    }
-    shootTongue(x, y) {
-        if (!this.alive) return;
-        this.tongue.active = true; this.tongue.phase = 'out'; this.tongue.progress = 0;
-        this.tongue.targetX = x; this.tongue.targetY = y;
-        AudioEngine.playSplash();
-    }
-    draw(ctx) {
-        const skinColor = this.water < 40 ? '#451a03' : (this.alive ? '#059669' : '#334155');
-        const bellyColor = this.water < 40 ? '#78350f' : '#a7f3d0';
+        };
 
-        // Schatten
-        ctx.fillStyle = 'rgba(0,0,0,0.6)';
-        ctx.beginPath(); ctx.ellipse(this.torsoX, this.torsoY + 30, 80, 20, 0, 0, Math.PI*2); ctx.fill();
-
-        // Hinterbeine
-        ctx.fillStyle = skinColor;
-        ctx.beginPath(); ctx.ellipse(this.torsoX - 60, this.torsoY + 10, 25, 35, -Math.PI/6, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(this.torsoX + 60, this.torsoY + 10, 25, 35, Math.PI/6, 0, Math.PI*2); ctx.fill();
-
-        // Torso
-        ctx.fillStyle = skinColor;
-        ctx.beginPath(); ctx.ellipse(this.torsoX, this.torsoY, 70, 50 + this.breath*0.5, 0, 0, Math.PI*2); ctx.fill();
-        // Bauch
-        ctx.fillStyle = bellyColor;
-        ctx.beginPath(); ctx.ellipse(this.torsoX, this.torsoY + 10, 50, 35 + this.breath*0.5, 0, 0, Math.PI*2); ctx.fill();
-
-        // Vorderbeine
-        ctx.fillStyle = skinColor;
-        ctx.beginPath(); ctx.ellipse(this.torsoX - 45, this.torsoY + 35, 12, 25, -Math.PI/8, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(this.torsoX + 45, this.torsoY + 35, 12, 25, Math.PI/8, 0, Math.PI*2); ctx.fill();
-
-        // Zunge (wird vor dem Kopf, aber nach Torso gezeichnet)
-        if (this.tongue.active) {
-            let curX = MathUtils.lerp(this.headX, this.tongue.targetX, this.tongue.progress);
-            let curY = MathUtils.lerp(this.headY, this.tongue.targetY, this.tongue.progress);
+        const Creature = {
+            x: CONST.W/2, y: CONST.H * 0.8,
+            vx: 0, vy: 0, angle: 0,
+            targetX: CONST.W/2, targetY: CONST.H * 0.8,
+            actionIntent: 'rest',
+            tail: [],
             
-            ctx.strokeStyle = '#e11d48'; ctx.lineWidth = 12 * (1 - this.tongue.progress*0.5); ctx.lineCap = 'round';
-            ctx.beginPath(); ctx.moveTo(this.headX, this.headY + 10);
-            // Quadratische Bezier-Kurve für physikalisches Schnappen
-            let cpX = (this.headX + curX) / 2; let cpY = Math.min(this.headY, curY) - 50 * Math.sin(this.tongue.progress * Math.PI);
-            ctx.quadraticCurveTo(cpX, cpY, curX, curY); ctx.stroke();
-            
-            ctx.fillStyle = '#f43f5e';
-            ctx.beginPath(); ctx.arc(curX, curY, 10, 0, Math.PI*2); ctx.fill();
-        }
+            init() {
+                for(let i=0; i<10; i++) this.tail.push({x:this.x, y:this.y});
+            },
 
-        // Kopf
-        ctx.save(); ctx.translate(this.headX, this.headY);
-        
-        // Kehlsack (leuchtet bei Magie/Leben)
-        if (this.alive) {
-            ctx.fillStyle = '#34d399';
-            ctx.beginPath(); ctx.ellipse(0, 20 + this.breath*1.5, 35 + this.breath, 25 + this.breath*1.5, 0, 0, Math.PI*2); ctx.fill();
-        }
-        
-        // Basis
-        ctx.fillStyle = skinColor;
-        ctx.beginPath(); ctx.ellipse(0, 0, 60, 35, 0, 0, Math.PI*2); ctx.fill();
-        
-        // Augen
-        ctx.fillStyle = '#064e3b';
-        ctx.beginPath(); ctx.arc(-32, -25, 18, 0, Math.PI*2); ctx.arc(32, -25, 18, 0, Math.PI*2); ctx.fill();
-        
-        if (this.alive) {
-            ctx.fillStyle = this.stress > 70 ? '#ef4444' : '#fbbf24'; // Rote Augen bei Stress
-            ctx.beginPath(); ctx.arc(-32, -25, 12, 0, Math.PI*2); ctx.arc(32, -25, 12, 0, Math.PI*2); ctx.fill();
-            
-            ctx.fillStyle = '#000';
-            let eyeOpen = Math.max(0.5, 14 * (1.0 - this.blink));
-            
-            // Blickrichtung berechnen (folgt der Fliege oder der Maus)
-            let lookDx = 0; let lookDy = 0;
-            if (GameEngine.Input.aimTarget) {
-                let dx = GameEngine.Input.aimTarget.x - (this.headX);
-                let dy = GameEngine.Input.aimTarget.y - (this.headY);
-                let dist = Math.hypot(dx, dy);
-                if(dist > 0) { lookDx = (dx/dist)*4; lookDy = (dy/dist)*4; }
+            applyAIIntent(aiData) {
+                this.actionIntent = aiData.action || 'rest';
+                this.targetX = aiData.target_x_percent * CONST.W;
+                this.targetY = aiData.target_y_percent * CONST.H;
+                
+                document.getElementById('ui-action').innerText = this.actionIntent.toUpperCase();
+
+                if(this.actionIntent === 'jump' && State.stageIdx >= 2) {
+                    this.jump();
+                }
+            },
+
+            jump() {
+                if(this.y >= CONST.GROUND_LEVEL - 60 || this.y >= CONST.WATER_LEVEL) {
+                    Audio.playSplash();
+                    this.vy = -38 - (State.emotion.arousal * 12);
+                    let dx = this.targetX - this.x;
+                    this.vx = (dx * 0.06);
+                    FX.spawn(this.x, this.y, 'splash', 25);
+                }
+            },
+
+            update(dt) {
+                if(State.isEvolving) return;
+
+                let inWater = this.y > CONST.WATER_LEVEL;
+                let onGround = this.y >= CONST.GROUND_LEVEL;
+
+                // Physik & KI Steuerung
+                if(State.stageIdx === 0) {
+                    this.vy += CONST.GRAVITY * 0.2;
+                    this.vx += Math.sin(Engine.time * 2) * 0.4;
+                } 
+                else if (State.stageIdx === 1) {
+                    // Kaulquappe schwimmt im Wasser
+                    if(inWater) {
+                        let dx = this.targetX - this.x; let dy = this.targetY - this.y;
+                        let dist = Math.hypot(dx, dy);
+                        if(dist > 40) {
+                            this.vx += (dx/dist) * 25 * dt;
+                            this.vy += (dy/dist) * 25 * dt;
+                        }
+                    } else {
+                        this.vy += CONST.GRAVITY; // Fällt ins Wasser zurück
+                    }
+                }
+                else if (State.stageIdx >= 2) {
+                    // Echter Frosch / Kreatur: Feste Bodenkollision & echtes Springen/Schwimmen
+                    if(inWater) {
+                        if(this.actionIntent === 'swim' || this.actionIntent === 'approach') {
+                            let dx = this.targetX - this.x; let dy = this.targetY - this.y;
+                            let dist = Math.hypot(dx, dy);
+                            if(dist > 40) {
+                                this.vx += (dx/dist) * 35 * dt;
+                                this.vy += (dy/dist) * 35 * dt;
+                            }
+                        } else {
+                            this.vy -= CONST.BUOYANCY; // Sanfter Auftrieb
+                        }
+                    } else {
+                        // Auf dem Land / in der Luft gilt echte Schwerkraft
+                        this.vy += CONST.GRAVITY;
+                    }
+                }
+
+                // Dämpfung
+                if(inWater) {
+                    this.vx *= 0.92; this.vy *= 0.92;
+                } else {
+                    this.vx *= 0.96; this.vy *= 0.98;
+                }
+
+                this.x += this.vx * 60 * dt;
+                this.y += this.vy * 60 * dt;
+
+                // Boden- und Wandkollision
+                if(this.y > CONST.GROUND_LEVEL) {
+                    this.y = CONST.GROUND_LEVEL;
+                    if(this.vy > 10) { FX.spawn(this.x, this.y, 'dust', 12); Audio.playBump(); }
+                    this.vy = 0;
+                    this.vx *= 0.8;
+                }
+                if(this.x < 80) { this.x = 80; this.vx *= -0.5; }
+                if(this.x > CONST.W - 80) { this.x = CONST.W - 80; this.vx *= -0.5; }
+                
+                // Splash an der Wasseroberfläche
+                if(Math.abs(this.y - CONST.WATER_LEVEL) < Math.abs(this.vy) * 60 * dt && Math.abs(this.vy) > 4) {
+                    FX.spawn(this.x, CONST.WATER_LEVEL, 'splash', 18);
+                    Audio.playSplash();
+                    World.createRipple(this.x);
+                }
+
+                // Inverse Kinematics für den Schwanz / Körperausrichtung
+                let speedMag = Math.hypot(this.vx, this.vy);
+                if (speedMag > 0.5) this.angle = Math.atan2(this.vy, this.vx);
+                else if (onGround) this.angle = 0;
+
+                let headBackX = this.x - Math.cos(this.angle) * 24; 
+                let headBackY = this.y - Math.sin(this.angle) * 24;
+                
+                this.tail[0] = { x: headBackX, y: headBackY };
+                let segLen = 12 + (State.stageIdx * 2);
+                
+                for(let i=1; i<this.tail.length; i++) {
+                    let prev = this.tail[i-1]; let curr = this.tail[i];
+                    let tdx = curr.x - prev.x; let tdy = curr.y - prev.y;
+                    let tdist = Math.hypot(tdx, tdy);
+                    let dirX = tdx / tdist; let dirY = tdy / tdist;
+                    let segAngle = Math.atan2(dirY, dirX);
+                    
+                    let wiggle = Math.sin(Engine.time * (6 + State.emotion.arousal*8) - i * 0.4) * (0.08 + speedMag * 0.02);
+                    segAngle += wiggle;
+                    
+                    curr.x = prev.x + Math.cos(segAngle) * segLen;
+                    curr.y = prev.y + Math.sin(segAngle) * segLen;
+                }
+            },
+
+            draw(ctx) {
+                const sIdx = State.stageIdx;
+                let hue = State.colorHue;
+                let lit = 48 + (State.emotion.valence * 22);
+                
+                ctx.save();
+                
+                if(sIdx === 0) {
+                    // SEED
+                    ctx.fillStyle = `hsla(${hue}, 80%, ${lit}%, 0.85)`;
+                    ctx.shadowBlur = 35; ctx.shadowColor = ctx.fillStyle;
+                    let r = 45 + Math.sin(Engine.time*3)*6;
+                    ctx.beginPath(); ctx.arc(this.x, this.y, r, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath(); ctx.arc(this.x + Math.cos(Engine.time)*12, this.y + Math.sin(Engine.time)*12, 8, 0, Math.PI*2); ctx.fill();
+                }
+                else if(sIdx === 1) {
+                    // LARVA (Kaulquappe)
+                    ctx.strokeStyle = `hsla(${hue}, 70%, 35%, 0.6)`; ctx.lineWidth = 20; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                    ctx.beginPath(); ctx.moveTo(this.tail[0].x, this.tail[0].y);
+                    for(let i=1; i<8; i++) ctx.lineTo(this.tail[i].x, this.tail[i].y);
+                    ctx.stroke();
+
+                    ctx.translate(this.x, this.y); ctx.rotate(this.angle);
+                    ctx.fillStyle = `hsla(${hue}, 80%, ${lit}%, 1)`;
+                    ctx.beginPath(); ctx.ellipse(0, 0, 30, 20, 0, 0, Math.PI*2); ctx.fill();
+                    
+                    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(12, -9, 7, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(14, -9, 3.5, 0, Math.PI*2); ctx.fill();
+                }
+                else if(sIdx >= 2) {
+                    // BATRACHOS / F FROG / KOSMISCH
+                    let isJumping = Math.abs(this.vy) > 4;
+                    let isSwimming = this.y > CONST.WATER_LEVEL && Math.abs(this.vx) > 1;
+
+                    if(sIdx === 3) {
+                        ctx.strokeStyle = `hsla(${hue}, 65%, 50%, 0.45)`; ctx.lineWidth = 28; ctx.lineCap = 'round';
+                        ctx.beginPath(); ctx.moveTo(this.tail[0].x, this.tail[0].y);
+                        for(let i=1; i<this.tail.length; i++) ctx.lineTo(this.tail[i].x, this.tail[i].y);
+                        ctx.stroke();
+                    }
+
+                    ctx.translate(this.x, this.y); 
+                    if(isSwimming || isJumping) ctx.rotate(this.angle);
+                    
+                    let scale = isJumping ? 1.2 : 1.0;
+                    ctx.fillStyle = `hsla(${hue}, 80%, ${lit}%, 1)`;
+                    
+                    // Beine
+                    let legRot = isJumping ? Math.PI/3 : (isSwimming ? Math.sin(Engine.time*10)*0.4 : 0);
+                    ctx.save(); ctx.translate(-24, 24); ctx.rotate(legRot);
+                    ctx.beginPath(); ctx.ellipse(0, 0, 18, 35, -Math.PI/6, 0, Math.PI*2); ctx.fill(); ctx.restore();
+                    
+                    ctx.save(); ctx.translate(24, 24); ctx.rotate(-legRot);
+                    ctx.beginPath(); ctx.ellipse(0, 0, 18, 35, Math.PI/6, 0, Math.PI*2); ctx.fill(); ctx.restore();
+
+                    // Körper
+                    let breath = Math.sin(Engine.time * 2.5) * (3 + State.emotion.arousal*5);
+                    ctx.beginPath(); ctx.ellipse(0, 0, 50 * scale, (45 + breath) / scale, 0, 0, Math.PI*2); ctx.fill();
+                    
+                    // Kopf & Augen
+                    ctx.beginPath(); ctx.ellipse(0, -30, 40, 28, 0, 0, Math.PI*2); ctx.fill();
+                    
+                    let eyeSize = 11 + (State.emotion.valence * 5);
+                    ctx.fillStyle = '#fff'; 
+                    ctx.beginPath(); ctx.arc(-22, -42, eyeSize, 0, Math.PI*2); ctx.arc(22, -42, eyeSize, 0, Math.PI*2); ctx.fill();
+                    
+                    ctx.fillStyle = '#000'; 
+                    let lookDir = (this.targetX - this.x) > 0 ? 4 : -4;
+                    ctx.beginPath(); ctx.arc(-22 + lookDir, -42, eyeSize/2, 0, Math.PI*2); ctx.arc(22 + lookDir, -42, eyeSize/2, 0, Math.PI*2); ctx.fill();
+                }
+
+                ctx.restore();
             }
+        };
 
-            ctx.fillRect(-39 + lookDx, -25 - eyeOpen/2 + lookDy, 14, eyeOpen);
-            ctx.fillRect(25 + lookDx, -25 - eyeOpen/2 + lookDy, 14, eyeOpen);
+        const World = {
+            plants: [],
+            ripples: [],
             
-            // Glanzlicht
-            ctx.fillStyle = '#fff';
-            ctx.beginPath(); ctx.arc(-26, -30, 3, 0, Math.PI*2); ctx.arc(38, -30, 3, 0, Math.PI*2); ctx.fill();
-        }
-        
-        // Mund
-        ctx.strokeStyle = '#020617'; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.arc(0, 5, 30, 0.1, Math.PI-0.1); ctx.stroke();
-        
-        ctx.restore();
-    }
+            spawnPlants() {
+                if(this.plants.length < State.memories.length + 2) {
+                    this.plants.push({
+                        x: MathU.rand(150, CONST.W - 150),
+                        y: CONST.GROUND_LEVEL,
+                        size: 0, targetSize: MathU.rand(60, 160),
+                        type: State.biome,
+                        hue: State.colorHue + MathU.rand(-35, 35)
+                    });
+                }
+            },
 
-    drawLights(lightCtx) {
-        if (!this.alive) return;
-        // Leuchtende Augen im Dunkeln
-        let gradL = lightCtx.createRadialGradient(this.headX - 32, this.headY - 25, 0, this.headX - 32, this.headY - 25, 40);
-        gradL.addColorStop(0, 'rgba(251, 191, 36, 0.6)'); gradL.addColorStop(1, 'rgba(0,0,0,0)');
-        let gradR = lightCtx.createRadialGradient(this.headX + 32, this.headY - 25, 0, this.headX + 32, this.headY - 25, 40);
-        gradR.addColorStop(0, 'rgba(251, 191, 36, 0.6)'); gradR.addColorStop(1, 'rgba(0,0,0,0)');
-        
-        lightCtx.fillStyle = gradL; lightCtx.beginPath(); lightCtx.arc(this.headX-32, this.headY-25, 40, 0, Math.PI*2); lightCtx.fill();
-        lightCtx.fillStyle = gradR; lightCtx.beginPath(); lightCtx.arc(this.headX+32, this.headY-25, 40, 0, Math.PI*2); lightCtx.fill();
-        
-        // Sanftes Glühen vom Kehlsack
-        let gradThroat = lightCtx.createRadialGradient(this.headX, this.headY + 20, 0, this.headX, this.headY + 20, 80);
-        gradThroat.addColorStop(0, 'rgba(52, 211, 153, 0.3)'); gradThroat.addColorStop(1, 'rgba(0,0,0,0)');
-        lightCtx.fillStyle = gradThroat; lightCtx.beginPath(); lightCtx.arc(this.headX, this.headY+20, 80, 0, Math.PI*2); lightCtx.fill();
-    }
-}
+            createRipple(x) {
+                this.ripples.push({x: x, size: 0, life: 1.0});
+            },
 
-// --- GAME ENGINE CORE ---
-const GameEngine = {
-    GroqKey: "",
-    UseAI: false,
-    Canvas: { main: null, light: null, ui: null },
-    Ctx: { main: null, light: null, ui: null },
-    LastTime: 0,
-    GlobalTime: 0,
-    
-    // Subsysteme
-    Camera: new Camera(),
-    Env: new Environment(),
-    Frog: new Frog(),
-    Particles: new ParticleSystem(),
-    Entities: new EntityManager(),
-    
-    State: {
-        current: 'IDLE', // IDLE, VIAL_DROP, BULLET_TIME
-        set(newState) {
-            this.current = newState;
-            const container = document.getElementById('game-container');
-            if (newState !== 'IDLE') container.classList.add('mode-action');
-            else container.classList.remove('mode-action');
-        }
-    },
+            update(dt) {
+                for(let p of this.plants) p.size = MathU.lerp(p.size, p.targetSize, 0.4 * dt);
+                for(let i=this.ripples.length-1; i>=0; i--) {
+                    let r = this.ripples[i];
+                    r.size += 120 * dt; r.life -= 1.2 * dt;
+                    if(r.life <= 0) this.ripples.splice(i,1);
+                }
+            },
 
-    Vial: { x: 0, y: 0, pressure: 0, active: false },
+            draw(bCtx, wCtx) {
+                let skyTop = State.biome === 'surface' ? '#0f172a' : (State.biome === 'coral' ? '#083344' : '#020617');
+                let skyBot = State.biome === 'surface' ? '#334155' : (State.biome === 'coral' ? '#0f766e' : '#0f172a');
+                
+                let bgGrad = bCtx.createLinearGradient(0, 0, 0, CONST.WATER_LEVEL);
+                bgGrad.addColorStop(0, skyTop); bgGrad.addColorStop(1, skyBot);
+                bCtx.fillStyle = bgGrad; bCtx.fillRect(0, 0, CONST.W, CONST.WATER_LEVEL);
 
-    Input: {
-        isDown: false,
-        aimTarget: { x: CONSTANTS.PIXEL_W/2, y: CONSTANTS.PIXEL_H/2 },
-        
-        init() {
-            window.addEventListener('pointerdown', (e) => this.handlePointerDown(e));
-            window.addEventListener('pointermove', (e) => this.handlePointerMove(e));
-            window.addEventListener('pointerup', () => this.handlePointerUp());
-        },
-        updateAim(e) {
-            const rect = GameEngine.Canvas.main.getBoundingClientRect();
-            const sx = (e.clientX - rect.left) / rect.width;
-            const sy = (e.clientY - rect.top) / rect.height;
-            const viewW = CONSTANTS.PIXEL_W / GameEngine.Camera.zoom;
-            const viewH = CONSTANTS.PIXEL_H / GameEngine.Camera.zoom;
-            this.aimTarget.x = GameEngine.Camera.x - viewW/2 + (sx * viewW);
-            this.aimTarget.y = GameEngine.Camera.y - viewH/2 + (sy * viewH);
-        },
-        handlePointerDown(e) {
-            if (!GameEngine.Frog.alive) return;
-            this.isDown = true; this.updateAim(e);
-            
-            if (GameEngine.State.current === 'IDLE' && Math.random() < 0.3) AudioEngine.playCroak();
-        },
-        handlePointerMove(e) {
-            if (!this.isDown) return;
-            this.updateAim(e);
-            if (GameEngine.State.current === 'IDLE') {
-                GameEngine.Frog.targetHeadX = this.aimTarget.x;
-                GameEngine.Frog.targetHeadY = this.aimTarget.y;
+                let waterTop = State.biome === 'abyss' ? '#064e3b' : '#0284c7';
+                let waterBot = State.biome === 'abyss' ? '#022c22' : '#082f49';
+                let wGrad = bCtx.createLinearGradient(0, CONST.WATER_LEVEL, 0, CONST.H);
+                wGrad.addColorStop(0, waterTop); wGrad.addColorStop(1, waterBot);
+                bCtx.fillStyle = wGrad; bCtx.fillRect(0, CONST.WATER_LEVEL, CONST.W, CONST.H - CONST.WATER_LEVEL);
+
+                wCtx.strokeStyle = 'rgba(255,255,255,0.45)'; wCtx.lineWidth = 3;
+                wCtx.beginPath();
+                for(let x=0; x<=CONST.W; x+=40) {
+                    let y = CONST.WATER_LEVEL + Math.sin(x * 0.01 + Engine.time * 2.2) * 10;
+                    if(x===0) wCtx.moveTo(x, y); else wCtx.lineTo(x, y);
+                }
+                wCtx.stroke();
+
+                for(let r of this.ripples) {
+                    wCtx.strokeStyle = `rgba(255,255,255,${r.life * 0.6})`; wCtx.lineWidth = 2;
+                    wCtx.beginPath(); wCtx.ellipse(r.x, CONST.WATER_LEVEL, r.size, r.size*0.2, 0, 0, Math.PI*2); wCtx.stroke();
+                }
+
+                for(let p of this.plants) {
+                    wCtx.fillStyle = `hsla(${p.hue}, 65%, 42%, 0.85)`;
+                    wCtx.beginPath();
+                    wCtx.moveTo(p.x, p.y);
+                    wCtx.quadraticCurveTo(p.x - p.size*0.5, p.y - p.size*0.5, p.x + Math.sin(Engine.time+p.x)*20, p.y - p.size);
+                    wCtx.quadraticCurveTo(p.x + p.size*0.5, p.y - p.size*0.5, p.x, p.y);
+                    wCtx.fill();
+                }
+                
+                wCtx.fillStyle = '#020617';
+                wCtx.beginPath(); wCtx.moveTo(0, CONST.H); wCtx.lineTo(0, CONST.GROUND_LEVEL);
+                for(let x=0; x<=CONST.W; x+=100) {
+                    wCtx.lineTo(x, CONST.GROUND_LEVEL - Math.sin(x*0.05)*20);
+                }
+                wCtx.lineTo(CONST.W, CONST.H); wCtx.fill();
             }
-        },
-        handlePointerUp() {
-            this.isDown = false;
-            if (GameEngine.State.current === 'IDLE') {
-                GameEngine.Frog.targetHeadX = GameEngine.Frog.torsoX;
-                GameEngine.Frog.targetHeadY = GameEngine.Frog.torsoY - 40;
-            } else if (GameEngine.State.current === 'VIAL_DROP') {
-                GameEngine.Vial.pressure = 0; // Abbruch
-            } else if (GameEngine.State.current === 'BULLET_TIME') {
-                this.executeStrike();
+        };
+
+        const FX = {
+            parts: [],
+            spawn(x, y, type, cnt) {
+                for(let i=0; i<cnt; i++) {
+                    let p = { x, y, vx: MathU.rand(-6,6), vy: MathU.rand(-6,6), life: 1, type, size: MathU.rand(2,6) };
+                    if(type === 'splash') { p.vy = MathU.rand(-12, -3); p.color = '#e0f2fe'; }
+                    if(type === 'dust') { p.vy = MathU.rand(-4, 0); p.color = '#334155'; p.size = MathU.rand(5,12); }
+                    if(type === 'magic') { p.color = `hsl(${State.colorHue}, 85%, 70%)`; p.vy -= 2.5; }
+                    this.parts.push(p);
+                }
+            },
+            update(dt) {
+                if(Math.random() < 0.12) this.spawn(MathU.rand(0, CONST.W), MathU.rand(0, CONST.H), 'ambient', 1);
+
+                for(let i=this.parts.length-1; i>=0; i--) {
+                    let p = this.parts[i];
+                    if(p.type === 'splash' || p.type === 'dust') {
+                        p.vy += CONST.GRAVITY;
+                        p.vx *= 0.95; p.vy *= 0.95;
+                    }
+                    if(p.type === 'ambient') {
+                        p.vy = Math.sin(Engine.time + p.x) * 2;
+                        p.vx = Math.cos(Engine.time + p.y) * 2;
+                        p.color = p.y > CONST.WATER_LEVEL ? 'rgba(52, 211, 153, 0.45)' : 'rgba(253, 224, 71, 0.45)';
+                    }
+                    
+                    p.x += p.vx * 60 * dt; p.y += p.vy * 60 * dt;
+                    p.life -= dt * (p.type==='ambient' ? 0.2 : 1.5);
+                    if(p.life <= 0) this.parts.splice(i,1);
+                }
+            },
+            draw(ctx) {
+                for(let p of this.parts) {
+                    ctx.globalAlpha = Math.max(0, p.life);
+                    ctx.fillStyle = p.color || '#fff';
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+                }
+                ctx.globalAlpha = 1;
             }
-        },
-        triggerEnvironment(type) {
-            if (type === 'rain') GameEngine.Env.toggleRain();
-        },
-        executeStrike() {
-            GameEngine.State.set('STRIKE');
-            GameEngine.Camera.targetTimeScale = 1.0;
-            GameEngine.Camera.targetZoom = 1.1;
-            GameEngine.Camera.shake(20);
-            GameEngine.Frog.shootTongue(this.aimTarget.x, this.aimTarget.y);
-        }
-    },
+        };
 
-    UI: {
-        showPrompt(text) {
-            const p = document.getElementById('cinematic-prompt');
-            p.innerText = text; p.style.opacity = '1';
-            setTimeout(() => p.style.opacity = '0', 2500);
-        },
-        updateStatus(text) {
-            document.getElementById('ui-status').innerText = text;
-        },
-        updateVitals() {
-            document.getElementById('val-hp').innerText = `${Math.round(GameEngine.Frog.hp)}%`;
-            document.getElementById('bar-hp').style.width = `${GameEngine.Frog.hp}%`;
-            document.getElementById('val-h2o').innerText = `${Math.round(GameEngine.Frog.water)}%`;
-            document.getElementById('bar-h2o').style.width = `${GameEngine.Frog.water}%`;
-            
-            if(GameEngine.Frog.hp < 30) document.getElementById('bar-hp').classList.replace('bg-emerald-400', 'bg-rose-500');
-            else document.getElementById('bar-hp').classList.replace('bg-rose-500', 'bg-emerald-400');
-        }
-    },
+        const Audio = {
+            ctx: null, master: null, droneOsc: null, droneGain: null,
+            init() {
+                if(this.ctx) return;
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                this.master = this.ctx.createGain(); this.master.connect(this.ctx.destination);
+                this.master.gain.value = 0.45;
 
-    MiniGames: {
-        startFeeding() {
-            if (GameEngine.State.current !== 'IDLE' || !GameEngine.Frog.alive) return;
-            GameEngine.State.set('VIAL_DROP');
-            GameEngine.Vial = { x: CONSTANTS.PIXEL_W * 0.7, y: CONSTANTS.PIXEL_H * 0.2, pressure: 0, active: true };
-            GameEngine.Camera.targetX = GameEngine.Vial.x; 
-            GameEngine.Camera.targetY = GameEngine.Vial.y + 40; 
-            GameEngine.Camera.targetZoom = 1.4;
-            GameEngine.UI.showPrompt("PHIOLE DRÜCKEN ZUM BRECHEN");
-        },
-        shatterVial() {
-            GameEngine.Vial.active = false;
-            AudioEngine.playShatter();
-            GameEngine.Camera.shake(15);
-            GameEngine.Particles.spawn(GameEngine.Vial.x, GameEngine.Vial.y, 'spark', 30);
-            GameEngine.Entities.spawn('fly', GameEngine.Vial.x, GameEngine.Vial.y);
-            
-            GameEngine.State.set('BULLET_TIME');
-            GameEngine.Camera.targetTimeScale = 0.1; // Slow Motion
-            GameEngine.Camera.targetZoom = 1.8;
-            GameEngine.Camera.targetX = CONSTANTS.PIXEL_W / 2; 
-            GameEngine.Camera.targetY = CONSTANTS.PIXEL_H / 2;
-            setTimeout(() => GameEngine.UI.showPrompt("ZIELEN & LOSLASSEN"), 400);
-        },
-        startFirefly() {
-            if(GameEngine.State.current !== 'IDLE') return;
-            GameEngine.Entities.spawn('firefly', CONSTANTS.PIXEL_W/2, -20);
-            AudioEngine.playMagic();
-        },
-        startBubble() {
-            if(GameEngine.State.current !== 'IDLE') return;
-            GameEngine.Entities.spawn('bubble', CONSTANTS.PIXEL_W/2, CONSTANTS.PIXEL_H + 20);
-            AudioEngine.playSplash();
-        }
-    },
+                this.droneOsc = this.ctx.createOscillator();
+                this.droneGain = this.ctx.createGain();
+                this.droneOsc.connect(this.droneGain); this.droneGain.connect(this.master);
+                this.droneOsc.start();
+                this.updateDrone();
+            },
+            updateDrone() {
+                if(!this.ctx) return;
+                let targetFreq = 55 + (State.emotion.valence * 75);
+                let targetVol = 0.05 + (State.emotion.arousal * 0.12);
+                this.droneOsc.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 2);
+                this.droneGain.gain.setTargetAtTime(targetVol, this.ctx.currentTime, 2);
+            },
+            play(f, t, d, v) {
+                if(!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+                    osc.type = t; osc.frequency.setValueAtTime(f, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(v, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + d);
+                    osc.connect(gain); gain.connect(this.master);
+                    osc.start(); osc.stop(this.ctx.currentTime + d);
+                } catch(e) {}
+            },
+            playSplash() { this.play(220, 'sine', 0.4, 0.5); this.play(700, 'noise', 0.2, 0.3); },
+            playBump() { this.play(110, 'square', 0.2, 0.4); },
+            playMemGain() { this.play(440 + (State.colorHue), 'sine', 1.0, 0.3); },
+            playEvolve() { this.play(120, 'triangle', 4.0, 0.7); setTimeout(()=>this.play(880, 'sine', 2.0, 0.9), 2000); }
+        };
 
-    AI: {
-        async generateThought() {
-            if(!GameEngine.Frog.alive) {
-                document.getElementById('ui-thought').innerText = "Die Stille umfängt die leere Hülle.";
-                return;
-            }
-            if (!GameEngine.UseAI || !GameEngine.GroqKey) {
-                const thoughts = [
-                    "Das Wasser flüstert alte Geheimnisse...",
-                    "Ein Funke Licht... ich spüre den Hunger.",
-                    "Die Schatten tanzen in der Höhle.",
-                    "Jeder Atemzug ist ein Tropfen Magie."
-                ];
-                document.getElementById('ui-thought').innerText = `"${thoughts[Math.floor(Math.random()*thoughts.length)]}"`;
-                return;
-            }
+        const Engine = {
+            cvs: {}, ctx: {}, lastTime: 0, time: 0,
+            camX: CONST.W/2, camY: CONST.H/2, camZ: 1.0,
 
-            try {
-                let weather = GameEngine.Env.isRaining ? "Es regnet." : "Es ist trocken.";
-                let prompt = `Du bist ein hochentwickeltes, mystisches Bio-Amphibien-Wesen in einer HD-2D Welt. 
-                Status: Leben ${Math.round(GameEngine.Frog.hp)}%, Feuchtigkeit ${Math.round(GameEngine.Frog.water)}%. ${weather}
-                Schreibe einen kurzen, extrem poetischen inneren Monolog (max 1 kurzer Satz, auf Deutsch), der genau zu deinem Zustand passt. 
-                Nutze düstere oder mystische Worte. Antwort AUSSCHLIESSLICH als Text in Anführungszeichen.`;
-
-                const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-                    method: "POST",
-                    headers: { "Authorization": `Bearer ${GameEngine.GroqKey}`, "Content-Type": "application/json" },
-                    body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: [{ role: "user", content: prompt }], temperature: 0.8, max_tokens: 50 })
+            init() {
+                ['bg', 'world', 'entity', 'fx', 'shadow', 'light'].forEach(id => {
+                    this.cvs[id] = document.getElementById(id + 'Canvas');
+                    this.ctx[id] = this.cvs[id].getContext('2d');
                 });
-                const data = await res.json();
-                if(data.choices && data.choices[0]) {
-                    document.getElementById('ui-thought').innerText = data.choices[0].message.content.trim();
+                window.addEventListener('resize', () => this.resize()); this.resize();
+                
+                Creature.init();
+                this.lastTime = performance.now();
+                requestAnimationFrame(t => this.loop(t));
+            },
+
+            resize() {
+                const w = window.innerWidth; const h = window.innerHeight;
+                Object.values(this.cvs).forEach(c => { c.width = w; c.height = h; });
+            },
+
+            triggerEvolution() {
+                State.isEvolving = true;
+                Audio.playEvolve();
+                const p = document.getElementById('action-prompts');
+                p.innerText = "EVOLUTION"; p.style.opacity = '1';
+                document.getElementById('world-container').classList.add('mode-focus');
+                
+                setTimeout(() => {
+                    FX.spawn(Creature.x, Creature.y, 'magic', 120);
+                    State.isEvolving = false;
+                    p.style.opacity = '0';
+                    document.getElementById('world-container').classList.remove('mode-focus');
+                    UI.updateHUD();
+                }, 4000);
+            },
+
+            applyCamera(ctx, w, h) {
+                this.camX = MathU.lerp(this.camX, Creature.x, 0.05);
+                this.camY = MathU.lerp(this.camY, Creature.y - 120, 0.05);
+                let targetZ = State.isEvolving ? 1.4 : 1.0;
+                this.camZ = MathU.lerp(this.camZ, targetZ, 0.02);
+
+                const scale = Math.min(w / CONST.W, h / CONST.H) * this.camZ;
+                ctx.translate(w/2, h/2);
+                if(State.isEvolving) ctx.translate(MathU.rand(-6,6), MathU.rand(-6,6));
+                ctx.scale(scale, scale);
+                ctx.translate(-this.camX, -this.camY);
+            },
+
+            loop(t) {
+                let dt = Math.min((t - this.lastTime)/1000, 0.1);
+                this.lastTime = t; this.time += dt;
+
+                Creature.update(dt);
+                World.update(dt);
+                FX.update(dt);
+                Audio.updateDrone();
+
+                const w = this.cvs.bg.width; const h = this.cvs.bg.height;
+                Object.values(this.ctx).forEach(c => { c.clearRect(0,0,w,h); c.save(); this.applyCamera(c, w, h); });
+
+                World.draw(this.ctx.bg, this.ctx.world);
+                Creature.draw(this.ctx.entity);
+                FX.draw(this.ctx.fx);
+
+                let sCtx = this.ctx.shadow;
+                sCtx.fillStyle = `rgba(2, 6, 23, ${0.65 + (1 - State.emotion.valence)*0.25})`;
+                sCtx.fillRect(0,0,CONST.W, CONST.H);
+                sCtx.globalCompositeOperation = 'destination-out';
+                
+                let sGrad = sCtx.createRadialGradient(Creature.x, Creature.y, 0, Creature.x, Creature.y, 350);
+                sGrad.addColorStop(0, 'rgba(255,255,255,1)'); sGrad.addColorStop(1, 'rgba(255,255,255,0)');
+                sCtx.fillStyle = sGrad; sCtx.beginPath(); sCtx.arc(Creature.x, Creature.y, 350, 0, Math.PI*2); sCtx.fill();
+
+                let lCtx = this.ctx.light;
+                let lGrad = lCtx.createRadialGradient(Creature.x, Creature.y, 0, Creature.x, Creature.y, 450);
+                lGrad.addColorStop(0, `hsla(${State.colorHue}, 80%, 60%, 0.45)`); lGrad.addColorStop(1, 'rgba(0,0,0,0)');
+                lCtx.fillStyle = lGrad; lCtx.beginPath(); lCtx.arc(Creature.x, Creature.y, 450, 0, Math.PI*2); lCtx.fill();
+
+                Object.values(this.ctx).forEach(c => c.restore());
+                requestAnimationFrame(t => this.loop(t));
+            }
+        };
+
+        const UI = {
+            init() {
+                document.getElementById('btn-connect').addEventListener('click', async () => {
+                    const key = document.getElementById('groq-key').value.trim();
+                    if(!key.startsWith('gsk_')) { document.getElementById('auth-error').innerText = "Ungültiger Key (muss mit gsk_ beginnen)."; return; }
+                    groqKey = key;
+                    document.getElementById('btn-connect').innerText = "SYNCHRONISIERE...";
+                    
+                    try {
+                        await State.initFire();
+                        await State.load();
+                        
+                        document.getElementById('auth-layer').style.opacity = '0';
+                        setTimeout(() => document.getElementById('auth-layer').style.display = 'none', 1000);
+                        
+                        Audio.init();
+                        Engine.init();
+                        this.updateHUD();
+                        this.renderMemories();
+
+                        if(State.memories.length === 0) {
+                            UI.addLog('sys', "[Ein neues Bewusstsein erwacht im Äther-Nexus.]");
+                        }
+                    } catch(e) {
+                        document.getElementById('auth-error').innerText = "Cloud-Verbindungsfehler.";
+                        document.getElementById('btn-connect').innerText = "Erneut versuchen";
+                    }
+                });
+
+                document.getElementById('btn-send').addEventListener('click', () => this.send());
+                document.getElementById('chat-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') this.send(); });
+                
+                document.getElementById('world-container').addEventListener('pointerdown', (e) => {
+                    if(e.target.closest('#ui-layer')) return;
+                    Audio.init();
+                    if(State.stageIdx > 0 && !Brain.isThinking) {
+                        const rect = Engine.cvs.bg.getBoundingClientRect();
+                        let scale = Math.min(rect.width / CONST.W, rect.height / CONST.H) * Engine.camZ;
+                        let worldX = (e.clientX - rect.left - rect.width/2) / scale + Engine.camX;
+                        let worldY = (e.clientY - rect.top - rect.height/2) / scale + Engine.camY;
+                        
+                        if(worldY > CONST.WATER_LEVEL) World.createRipple(worldX);
+                        FX.spawn(worldX, worldY, 'magic', 6);
+                        Audio.playBump();
+                        
+                        Creature.targetX = worldX;
+                        if(State.stageIdx >= 2 && worldY < CONST.WATER_LEVEL) Creature.jump();
+                    }
+                });
+            },
+
+            updateHUD() {
+                document.getElementById('ui-stage').innerText = CONST.STAGES[State.stageIdx].name;
+                document.getElementById('ui-mem-count').innerText = State.memories.length;
+                
+                let nReq = State.stageIdx < CONST.STAGES.length-1 ? CONST.STAGES[State.stageIdx+1].req : State.memories.length;
+                let pReq = CONST.STAGES[State.stageIdx].req;
+                let pct = nReq === pReq ? 100 : ((State.memories.length - pReq) / (nReq - pReq)) * 100;
+                document.getElementById('bar-xp').style.width = `${pct}%`;
+
+                let moodStr = State.emotion.valence > 0.6 ? "Harmonisch" : (State.emotion.valence < 0.4 ? "Melancholisch" : "Ausgeglichen");
+                document.getElementById('ui-emotion').innerText = moodStr;
+                document.getElementById('ui-biome').innerText = State.biome.toUpperCase();
+            },
+
+            send() {
+                const inp = document.getElementById('chat-input');
+                const txt = inp.value.trim();
+                if(!txt || Brain.isThinking) return;
+                inp.value = '';
+                this.addLog('user', txt);
+                Brain.process(txt);
+            },
+
+            addLog(sender, text, thought = null) {
+                const log = document.getElementById('memory-stream');
+                const div = document.createElement('div');
+                div.className = `log-entry ${sender}`;
+                let html = `<div>${text}</div>`;
+                if(thought) html += `<div class="thought-txt">[${thought}]</div>`;
+                div.innerHTML = html;
+                log.appendChild(div);
+                log.scrollTop = log.scrollHeight;
+            },
+
+            renderMemories() {
+                const log = document.getElementById('memory-stream');
+                log.innerHTML = '';
+                if(State.memories.length > 0) {
+                    this.addLog('sys', "[Langzeitgedächtnis erfolgreich geladen]");
+                    State.memories.slice(-6).forEach(m => {
+                        this.addLog('user', m.u);
+                        this.addLog('anima', m.a);
+                    });
                 }
-            } catch(e) { console.warn("AI Fehler"); }
-        },
-        startLoop() { setInterval(() => this.generateThought(), 15000); this.generateThought(); }
-    },
+            }
+        };
 
-    init(withAI) {
-        if(withAI) {
-            const key = document.getElementById('api-key-input').value.trim();
-            if(key) { this.GroqKey = key; this.UseAI = true; this.UI.updateStatus("SYSTEM: KI VERBUNDEN"); }
-        } else { this.UI.updateStatus("SYSTEM: OFFLINE MODUS"); }
-        
-        document.getElementById('api-modal').style.display = 'none';
-        
-        this.Canvas.main = document.getElementById('mainCanvas');
-        this.Ctx.main = this.Canvas.main.getContext('2d', { alpha: false });
-        this.Canvas.light = document.getElementById('lightCanvas');
-        this.Ctx.light = this.Canvas.light.getContext('2d', { alpha: true });
-        
-        window.addEventListener('resize', () => this.resize());
-        this.resize();
-        this.Input.init();
-        this.AI.startLoop();
-        
-        this.LastTime = performance.now();
-        requestAnimationFrame((t) => this.loop(t));
-    },
-
-    resize() {
-        const w = window.innerWidth; const h = window.innerHeight;
-        this.Canvas.main.width = w; this.Canvas.main.height = h;
-        this.Canvas.light.width = w; this.Canvas.light.height = h;
-        this.Ctx.main.imageSmoothingEnabled = false;
-        this.Ctx.light.imageSmoothingEnabled = false;
-    },
-
-    drawScene(ctx, lightCtx, screenW, screenH) {
-        // Pixel-Canvas Setup für Skalierung
-        const pCanvas = document.createElement('canvas');
-        pCanvas.width = CONSTANTS.PIXEL_W; pCanvas.height = CONSTANTS.PIXEL_H;
-        const pCtx = pCanvas.getContext('2d');
-        
-        const lCanvas = document.createElement('canvas');
-        lCanvas.width = CONSTANTS.PIXEL_W; lCanvas.height = CONSTANTS.PIXEL_H;
-        const lCtx = lCanvas.getContext('2d');
-
-        // 1. Umgebungs-Rendering
-        this.Env.drawBackground(pCtx);
-        
-        // Phiole Rendern (Mini-Game)
-        if (this.Vial.active) {
-            if (this.Input.isDown && this.State.current === 'VIAL_DROP') {
-                this.Vial.pressure += 3;
-                this.Camera.shake(this.Vial.pressure * 0.1);
-                if (this.Vial.pressure > 100) this.MiniGames.shatterVial();
-            } else { this.Vial.pressure = Math.max(0, this.Vial.pressure - 5); }
-            
-            let shake = (Math.random()-0.5) * (this.Vial.pressure/15);
-            pCtx.save(); pCtx.translate(this.Vial.x + shake, this.Vial.y + Math.sin(this.GlobalTime*4)*5 + shake);
-            pCtx.fillStyle = `rgba(186, 230, 253, ${0.4 + this.Vial.pressure/200})`;
-            pCtx.strokeStyle = '#38bdf8'; pCtx.lineWidth = 2;
-            pCtx.beginPath(); pCtx.roundRect(-20, -30, 40, 60, 15); pCtx.fill(); pCtx.stroke();
-            pCtx.fillStyle = '#fef08a'; pCtx.beginPath(); pCtx.arc(0, 10, 8 + (this.Vial.pressure/15), 0, Math.PI*2); pCtx.fill();
-            pCtx.restore();
-            
-            // Phiolen Licht
-            let grad = lCtx.createRadialGradient(this.Vial.x, this.Vial.y, 0, this.Vial.x, this.Vial.y, 80);
-            grad.addColorStop(0, 'rgba(56, 189, 248, 0.5)'); grad.addColorStop(1, 'rgba(0,0,0,0)');
-            lCtx.fillStyle = grad; lCtx.beginPath(); lCtx.arc(this.Vial.x, this.Vial.y, 80, 0, Math.PI*2); lCtx.fill();
-        }
-
-        // 2. Frosch Rendern
-        this.Frog.draw(pCtx);
-
-        // 3. Entitäten & Partikel
-        this.Entities.draw(pCtx);
-        this.Particles.draw(pCtx);
-
-        // Bullet-Time Ziel-Linie
-        if (this.State.current === 'BULLET_TIME' && this.Input.isDown) {
-            pCtx.strokeStyle = 'rgba(239, 68, 68, 0.8)'; pCtx.lineWidth = 1; pCtx.setLineDash([5, 5]);
-            pCtx.beginPath(); pCtx.moveTo(this.Frog.headX, this.Frog.headY); pCtx.lineTo(this.Input.aimTarget.x, this.Input.aimTarget.y); pCtx.stroke();
-            pCtx.setLineDash([]); pCtx.strokeStyle = '#ef4444'; pCtx.lineWidth = 2;
-            pCtx.beginPath(); pCtx.arc(this.Input.aimTarget.x, this.Input.aimTarget.y, 12, 0, Math.PI*2); pCtx.stroke();
-        }
-
-        // 4. Beleuchtungs-Pass generieren
-        this.Env.drawLighting(lCtx);
-        this.Frog.drawLights(lCtx);
-        this.Entities.drawLights(lCtx);
-
-        // Auf finalen Canvas übertragen mit Kamera-Transformationen
-        ctx.fillStyle = '#000'; ctx.fillRect(0, 0, screenW, screenH);
-        lightCtx.clearRect(0, 0, screenW, screenH);
-
-        ctx.save(); lightCtx.save();
-        
-        let trans = this.Camera.applyTransform(ctx, screenW, screenH);
-        this.Camera.applyTransform(lightCtx, screenW, screenH); // Gleiche Transformation für Licht
-
-        ctx.drawImage(pCanvas, -trans.drawW/2, -trans.drawH/2, trans.drawW, trans.drawH);
-        lightCtx.drawImage(lCanvas, -trans.drawW/2, -trans.drawH/2, trans.drawW, trans.drawH);
-
-        ctx.restore(); lightCtx.restore();
-    },
-
-    loop(time) {
-        let dt = (time - this.LastTime) / 1000;
-        if(dt > 0.1) dt = 0.1; // Verhindert riesige Sprünge bei Lag
-        this.LastTime = time;
-        
-        let scaledDt = dt * this.Camera.timeScale;
-        this.GlobalTime += scaledDt;
-
-        // Logik Updates
-        this.Camera.update(dt);
-        this.Env.update(scaledDt);
-        this.Frog.update(scaledDt, this.GlobalTime);
-        this.Entities.update(scaledDt, this.GlobalTime);
-        this.Particles.update(scaledDt);
-
-        // UI Updates (gedrosselt)
-        if(Math.random() < 0.1) this.UI.updateVitals();
-
-        // Rendering Pipeline
-        this.drawScene(this.Ctx.main, this.Ctx.light, this.Canvas.main.width, this.Canvas.main.height);
-
-        requestAnimationFrame((t) => this.loop(t));
-    }
-};
-</script>
+        window.onload = () => UI.init();
+    </script>
 </body>
 </html>
